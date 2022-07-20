@@ -98,7 +98,7 @@ function replace_once($search, $replace, $string)
     return substr_replace($string, $replace, $pos, strlen($search));
 }
 
-const CURRENT_DIR = __DIR__ . DIRECTORY_SEPARATOR;
+const CURRENT_DIR = __DIR__ . DIRECTORY_SEPARATOR . "src" . DIRECTORY_SEPARATOR;
 //保存的文件
 $file = sprintf('%sphp_%s.js', CURRENT_DIR, date('Y_m_d_H_i_s'));
 $all_content = '';

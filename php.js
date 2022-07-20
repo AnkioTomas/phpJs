@@ -1348,9 +1348,13 @@ var php = {
         .replace(/[\\"']/g, '\\$&')
         .replace(/\u0000/g, '\\0');
   }, bin2hex: function (bin) {
-    return Array.from(bin).map(function (x) {
-      return x.toString(16).padStart(2, '0');
-    }).join('');
+    bin = unescape(encodeURIComponent(bin));
+    var chr, i = 0, l = bin.length, out = '';
+    for (; i < l; i++) {
+      chr = bin.charCodeAt(i).toString(16);
+      out += (chr.length % 2 === 0) ? chr : '0' + chr;
+    }
+    return out;
   }
   , chop: function (str, charlist) {
     //  discuss at: http://phpjs.org/functions/chop/
@@ -2106,12 +2110,7 @@ var php = {
 
     return hash_map;
   }, hex2bin: function (hex) {
-    var length = hex.length / 2;
-    var result = new Uint8Array(length);
-    for (var i = 0; i < length; ++i) {
-      result[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-    }
-    return result;
+    return decodeURIComponent(hex.replace(/../g, '%$&'));
   }
   , html_entity_decode: function (string, quote_style) {
     //  discuss at: http://phpjs.org/functions/html_entity_decode/
