@@ -1,6 +1,5 @@
 # js_for_php_function
 js实现php函数库，方便php开发人员快速在js业务中快速使用已经熟悉的php函数库。 使用方式，直接引入
-
 ```
 <script src="php.min.js"></script>
 <script type="text/javascript">
@@ -9,9 +8,7 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
     ));
 </script>
 ```
-
 已经实现的函数库如下：
-
 ## ctype
 
 [ctype_alnum](http://php.net/manual/zh/function.ctype-alnum.php)  
@@ -38,7 +35,6 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 [xdiff_string_patch](http://php.net/manual/zh/function.xdiff-string-patch.php)
 
 ## strings
-
 [addcslashes](http://php.net/manual/zh/function.addcslashes.php)  
 [addslashes](http://php.net/manual/zh/function.addslashes.php)  
 [bin2hex](http://php.net/manual/zh/function.bin2hex.php)  
@@ -142,7 +138,6 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 [bcsub](http://php.net/manual/zh/function.bcsub.php)
 
 ## array
-
 [array](http://php.net/manual/zh/function.array.php)  
 [array_change_key_case](http://php.net/manual/zh/function.array-change-key-case.php)  
 [array_chunk](http://php.net/manual/zh/function.array-chunk.php)  
@@ -246,7 +241,6 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 [setrawcookie](http://php.net/manual/zh/function.setrawcookie.php)
 
 ## var
-
 [doubleval](http://php.net/manual/zh/function.doubleval.php)  
 [empty](http://php.net/manual/zh/function.empty.php)  
 [floatval](http://php.net/manual/zh/function.floatval.php)  
@@ -288,7 +282,6 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 [realpath](http://php.net/manual/zh/function.realpath.php)
 
 ## math
-
 [abs](http://php.net/manual/zh/function.abs.php)  
 [acos](http://php.net/manual/zh/function.acos.php)  
 [acosh](http://php.net/manual/zh/function.acosh.php)  
@@ -336,6 +329,7 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 [tan](http://php.net/manual/zh/function.tan.php)  
 [tanh](http://php.net/manual/zh/function.tanh.php)  
 ## url
+
 [base64_decode](http://php.net/manual/zh/function.base64-decode.php)  
 [base64_encode](http://php.net/manual/zh/function.base64-encode.php)  
 [get_headers](http://php.net/manual/zh/function.get-headers.php)  
