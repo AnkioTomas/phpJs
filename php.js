@@ -1,4154 +1,5 @@
-php = {
-    array: function () {
-        //  discuss at: http://phpjs.org/functions/array/
-        // original by: d3x
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        test: skip
-        //   example 1: array('Kevin', 'van', 'Zonneveld');
-        //   returns 1: ['Kevin', 'van', 'Zonneveld']
-        //   example 2: ini_set('phpjs.return_phpjs_arrays', 'on');
-        //   example 2: array({0:2}, {a:41}, {2:3}).change_key_case('CASE_UPPER').keys();
-        //   returns 2: [0,'A',2]
-
-        try {
-            this.php_js = this.php_js || {};
-        } catch (e) {
-            this.php_js = {};
-        }
-
-        var arrInst, e, __, that = this,
-            PHPJS_Array = function PHPJS_Array() {
-            };
-        mainArgs = arguments, p = this.php_js,
-            _indexOf = function (value, from, strict) {
-                var i = from || 0,
-                    nonstrict = !strict,
-                    length = this.length;
-                while (i < length) {
-                    if (this[i] === value || (nonstrict && this[i] == value)) {
-                        return i;
-                    }
-                    i++;
-                }
-                return -1;
-            };
-        // BEGIN REDUNDANT
-        if (!p.Relator) {
-            p.Relator = (function () { // Used this functional class for giving privacy to the class we are creating
-                // Code adapted from http://www.devpro.it/code/192.html
-                // Relator explained at http://webreflection.blogspot.com/2008/07/javascript-relator-object-aka.html
-                // Its use as privacy technique described at http://webreflection.blogspot.com/2008/10/new-relator-object-plus-unshared.html
-                // 1) At top of closure, put: var __ = Relator.$();
-                // 2) In constructor, put: var _ = __.constructor(this);
-                // 3) At top of each prototype method, put: var _ = __.method(this);
-                // 4) Use like:  _.privateVar = 5;
-                function _indexOf(value) {
-                    var i = 0,
-                        length = this.length;
-                    while (i < length) {
-                        if (this[i] === value) {
-                            return i;
-                        }
-                        i++;
-                    }
-                    return -1;
-                }
-
-                function Relator() {
-                    var Stack = [],
-                        Array = [];
-                    if (!Stack.indexOf) {
-                        Stack.indexOf = _indexOf;
-                    }
-                    return {
-                        // create a new relator
-                        $: function () {
-                            return Relator();
-                        },
-                        constructor: function (that) {
-                            var i = Stack.indexOf(that);
-                            ~
-                                i ? Array[i] : Array[Stack.push(that) - 1] = {};
-                            this.method(that)
-                                .that = that;
-                            return this.method(that);
-                        },
-                        method: function (that) {
-                            return Array[Stack.indexOf(that)];
-                        }
-                    };
-                }
-
-                return Relator();
-            }());
-        }
-        // END REDUNDANT
-
-        if (p && p.ini && p.ini['phpjs.return_phpjs_arrays'].local_value.toLowerCase() === 'on') {
-            if (!p.PHPJS_Array) {
-                // We keep this Relator outside the class in case adding prototype methods below
-                // Prototype methods added elsewhere can also use this ArrayRelator to share these "pseudo-global mostly-private" variables
-                __ = p.ArrayRelator = p.ArrayRelator || p.Relator.$();
-                // We could instead allow arguments of {key:XX, value:YY} but even more cumbersome to write
-                p.PHPJS_Array = function PHPJS_Array() {
-                    var _ = __.constructor(this),
-                        args = arguments,
-                        i = 0,
-                        argl, p;
-                    args = (args.length === 1 && args[0] && typeof args[0] === 'object' &&
-                    args[0].length && !args[0].propertyIsEnumerable('length')) ? args[0] : args; // If first and only arg is an array, use that (Don't depend on this)
-                    if (!_.objectChain) {
-                        _.objectChain = args;
-                        _.object = {};
-                        _.keys = [];
-                        _.values = [];
-                    }
-                    for (argl = args.length; i < argl; i++) {
-                        for (p in args[i]) {
-                            // Allow for access by key; use of private members to store sequence allows these to be iterated via for...in (but for read-only use, with hasOwnProperty or function filtering to avoid prototype methods, and per ES, potentially out of order)
-                            this[p] = _.object[p] = args[i][p];
-                            // Allow for easier access by prototype methods
-                            _.keys[_.keys.length] = p;
-                            _.values[_.values.length] = args[i][p];
-                            break;
-                        }
-                    }
-                };
-                e = p.PHPJS_Array.prototype;
-                e.change_key_case = function (cs) {
-                    var _ = __.method(this),
-                        oldkey, newkey, i = 0,
-                        kl = _.keys.length,
-                        case_fn = (!cs || cs === 'CASE_LOWER') ? 'toLowerCase' : 'toUpperCase';
-                    while (i < kl) {
-                        oldkey = _.keys[i];
-                        newkey = _.keys[i] = _.keys[i][case_fn]();
-                        if (oldkey !== newkey) {
-                            this[oldkey] = _.object[oldkey] = _.objectChain[i][oldkey] = null; // Break reference before deleting
-                            delete this[oldkey];
-                            delete _.object[oldkey];
-                            delete _.objectChain[i][oldkey];
-                            this[newkey] = _.object[newkey] = _.objectChain[i][newkey] = _.values[i]; // Fix: should we make a deep copy?
-                        }
-                        i++;
-                    }
-                    return this;
-                };
-                e.flip = function () {
-                    var _ = __.method(this),
-                        i = 0,
-                        kl = _.keys.length;
-                    while (i < kl) {
-                        oldkey = _.keys[i];
-                        newkey = _.values[i];
-                        if (oldkey !== newkey) {
-                            this[oldkey] = _.object[oldkey] = _.objectChain[i][oldkey] = null; // Break reference before deleting
-                            delete this[oldkey];
-                            delete _.object[oldkey];
-                            delete _.objectChain[i][oldkey];
-                            this[newkey] = _.object[newkey] = _.objectChain[i][newkey] = oldkey;
-                            _.keys[i] = newkey;
-                        }
-                        i++;
-                    }
-                    return this;
-                };
-                e.walk = function (funcname, userdata) {
-                    var _ = __.method(this),
-                        obj, func, ini, i = 0,
-                        kl = 0;
-
-                    try {
-                        if (typeof funcname === 'function') {
-                            for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                if (arguments.length > 1) {
-                                    funcname(_.values[i], _.keys[i], userdata);
-                                } else {
-                                    funcname(_.values[i], _.keys[i]);
-                                }
-                            }
-                        } else if (typeof funcname === 'string') {
-                            this.php_js = this.php_js || {};
-                            this.php_js.ini = this.php_js.ini || {};
-                            ini = this.php_js.ini['phpjs.no-eval'];
-                            if (ini && (
-                                    parseInt(ini.local_value, 10) !== 0 && (!ini.local_value.toLowerCase || ini.local_value
-                                        .toLowerCase() !== 'off')
-                                )) {
-                                if (arguments.length > 1) {
-                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                        this.window[funcname](_.values[i], _.keys[i], userdata);
-                                    }
-                                } else {
-                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                        this.window[funcname](_.values[i], _.keys[i]);
-                                    }
-                                }
-                            } else {
-                                if (arguments.length > 1) {
-                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                        eval(funcname + '(_.values[i], _.keys[i], userdata)');
-                                    }
-                                } else {
-                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                        eval(funcname + '(_.values[i], _.keys[i])');
-                                    }
-                                }
-                            }
-                        } else if (funcname && typeof funcname === 'object' && funcname.length === 2) {
-                            obj = funcname[0];
-                            func = funcname[1];
-                            if (arguments.length > 1) {
-                                for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                    obj[func](_.values[i], _.keys[i], userdata);
-                                }
-                            } else {
-                                for (i = 0, kl = _.keys.length; i < kl; i++) {
-                                    obj[func](_.values[i], _.keys[i]);
-                                }
-                            }
-                        } else {
-                            return false;
-                        }
-                    } catch (e) {
-                        return false;
-                    }
-
-                    return this;
-                };
-                // Here we'll return actual arrays since most logical and practical for these functions to do this
-                e.keys = function (search_value, argStrict) {
-                    var _ = __.method(this),
-                        pos,
-                        search = typeof search_value !== 'undefined',
-                        tmp_arr = [],
-                        strict = !!argStrict;
-                    if (!search) {
-                        return _.keys;
-                    }
-                    while ((pos = _indexOf(_.values, pos, strict)) !== -1) {
-                        tmp_arr[tmp_arr.length] = _.keys[pos];
-                    }
-                    return tmp_arr;
-                };
-                e.values = function () {
-                    var _ = __.method(this);
-                    return _.values;
-                };
-                // Return non-object, non-array values, since most sensible
-                e.search = function (needle, argStrict) {
-                    var _ = __.method(this),
-                        strict = !!argStrict,
-                        haystack = _.values,
-                        i, vl, val, flags;
-                    if (typeof needle === 'object' && needle.exec) { // Duck-type for RegExp
-                        if (!strict) { // Let's consider case sensitive searches as strict
-                            flags = 'i' + (needle.global ? 'g' : '') +
-                                (needle.multiline ? 'm' : '') +
-                                (needle.sticky ? 'y' : ''); // sticky is FF only
-                            needle = new RegExp(needle.source, flags);
-                        }
-                        for (i = 0, vl = haystack.length; i < vl; i++) {
-                            val = haystack[i];
-                            if (needle.test(val)) {
-                                return _.keys[i];
-                            }
-                        }
-                        return false;
-                    }
-                    for (i = 0, vl = haystack.length; i < vl; i++) {
-                        val = haystack[i];
-                        if ((strict && val === needle) || (!strict && val == needle)) {
-                            return _.keys[i];
-                        }
-                    }
-                    return false;
-                };
-                e.sum = function () {
-                    var _ = __.method(this),
-                        sum = 0,
-                        i = 0,
-                        kl = _.keys.length;
-                    while (i < kl) {
-                        if (!isNaN(parseFloat(_.values[i]))) {
-                            sum += parseFloat(_.values[i]);
-                        }
-                        i++;
-                    }
-                    return sum;
-                };
-                // Experimental functions
-                e.foreach = function (handler) {
-                    var _ = __.method(this),
-                        i = 0,
-                        kl = _.keys.length;
-                    while (i < kl) {
-                        if (handler.length === 1) {
-                            handler(_.values[i]); // only pass the value
-                        } else {
-                            handler(_.keys[i], _.values[i]);
-                        }
-                        i++;
-                    }
-                    return this;
-                };
-                e.list = function () {
-                    var key, _ = __.method(this),
-                        i = 0,
-                        argl = arguments.length;
-                    while (i < argl) {
-                        key = _.keys[i];
-                        if (key && key.length === parseInt(key, 10)
-                                .toString()
-                                .length && // Key represents an int
-                            parseInt(key, 10) < argl) { // Key does not exceed arguments
-                            that.window[arguments[key]] = _.values[key];
-                        }
-                        i++;
-                    }
-                    return this;
-                };
-                // Parallel functionality and naming of built-in JavaScript array methods
-                e.forEach = function (handler) {
-                    var _ = __.method(this),
-                        i = 0,
-                        kl = _.keys.length;
-                    while (i < kl) {
-                        handler(_.values[i], _.keys[i], this);
-                        i++;
-                    }
-                    return this;
-                };
-                // Our own custom convenience functions
-                e.$object = function () {
-                    var _ = __.method(this);
-                    return _.object;
-                };
-                e.$objectChain = function () {
-                    var _ = __.method(this);
-                    return _.objectChain;
-                };
-            }
-            PHPJS_Array.prototype = p.PHPJS_Array.prototype;
-            arrInst = new PHPJS_Array();
-            p.PHPJS_Array.apply(arrInst, mainArgs);
-            return arrInst;
-        }
-        return Array.prototype.slice.call(mainArgs);
-    }, array_change_key_case: function (array, cs) {
-        //  discuss at: http://phpjs.org/functions/array_change_key_case/
-        // original by: Ates Goral (http://magnetiq.com)
-        // improved by: marrtins
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_change_key_case(42);
-        //   returns 1: false
-        //   example 2: array_change_key_case([ 3, 5 ]);
-        //   returns 2: [3, 5]
-        //   example 3: array_change_key_case({ FuBaR: 42 });
-        //   returns 3: {"fubar": 42}
-        //   example 4: array_change_key_case({ FuBaR: 42 }, 'CASE_LOWER');
-        //   returns 4: {"fubar": 42}
-        //   example 5: array_change_key_case({ FuBaR: 42 }, 'CASE_UPPER');
-        //   returns 5: {"FUBAR": 42}
-        //   example 6: array_change_key_case({ FuBaR: 42 }, 2);
-        //   returns 6: {"FUBAR": 42}
-        //   example 7: ini_set('phpjs.return_phpjs_arrays', 'on');
-        //   example 7: var arr = [{a: 0}, {B: 1}, {c: 2}];
-        //   example 7: var newArr = array_change_key_case(arr);
-        //   example 7: newArr.splice(1, 1);
-        //   returns 7: {b: 1}
-
-        var case_fn, key, tmp_ar = {};
-
-        if (Object.prototype.toString.call(array) === '[object Array]') {
-            return array;
-        }
-        if (array && typeof array === 'object' && array.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
-            return array.change_key_case(cs);
-        }
-        if (array && typeof array === 'object') {
-            case_fn = (!cs || cs === 'CASE_LOWER') ? 'toLowerCase' : 'toUpperCase';
-            for (key in array) {
-                tmp_ar[key[case_fn]()] = array[key];
-            }
-            return tmp_ar;
-        }
-
-        return false;
-    }, array_chunk: function (input, size, preserve_keys) {
-        //  discuss at: http://phpjs.org/functions/array_chunk/
-        // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: Important note: Per the ECMAScript specification, objects may not always iterate in a predictable order
-        //   example 1: array_chunk(['Kevin', 'van', 'Zonneveld'], 2);
-        //   returns 1: [['Kevin', 'van'], ['Zonneveld']]
-        //   example 2: array_chunk(['Kevin', 'van', 'Zonneveld'], 2, true);
-        //   returns 2: [{0:'Kevin', 1:'van'}, {2: 'Zonneveld'}]
-        //   example 3: array_chunk({1:'Kevin', 2:'van', 3:'Zonneveld'}, 2);
-        //   returns 3: [['Kevin', 'van'], ['Zonneveld']]
-        //   example 4: array_chunk({1:'Kevin', 2:'van', 3:'Zonneveld'}, 2, true);
-        //   returns 4: [{1: 'Kevin', 2: 'van'}, {3: 'Zonneveld'}]
-
-        var x, p = '',
-            i = 0,
-            c = -1,
-            l = input.length || 0,
-            n = [];
-
-        if (size < 1) {
-            return null;
-        }
-
-        if (Object.prototype.toString.call(input) === '[object Array]') {
-            if (preserve_keys) {
-                while (i < l) {
-                    (x = i % size) ? n[c][i] = input[i] : n[++c] = {}, n[c][i] = input[i];
-                    i++;
-                }
-            } else {
-                while (i < l) {
-                    (x = i % size) ? n[c][x] = input[i] : n[++c] = [input[i]];
-                    i++;
-                }
-            }
-        } else {
-            if (preserve_keys) {
-                for (p in input) {
-                    if (input.hasOwnProperty(p)) {
-                        (x = i % size) ? n[c][p] = input[p] : n[++c] = {}, n[c][p] = input[p];
-                        i++;
-                    }
-                }
-            } else {
-                for (p in input) {
-                    if (input.hasOwnProperty(p)) {
-                        (x = i % size) ? n[c][x] = input[p] : n[++c] = [input[p]];
-                        i++;
-                    }
-                }
-            }
-        }
-        return n;
-    }, array_combine: function (keys, values) {
-        //  discuss at: http://phpjs.org/functions/array_combine/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_combine([0,1,2], ['kevin','van','zonneveld']);
-        //   returns 1: {0: 'kevin', 1: 'van', 2: 'zonneveld'}
-
-        var new_array = {},
-            keycount = keys && keys.length,
-            i = 0;
-
-        // input sanitation
-        if (typeof keys !== 'object' || typeof values !== 'object' || // Only accept arrays or array-like objects
-            typeof keycount !== 'number' || typeof values.length !== 'number' || !keycount) { // Require arrays to have a count
-            return false;
-        }
-
-        // number of elements does not match
-        if (keycount != values.length) {
-            return false;
-        }
-
-        for (i = 0; i < keycount; i++) {
-            new_array[keys[i]] = values[i];
-        }
-
-        return new_array;
-    }, array_count_values: function (array) {
-        //  discuss at: http://phpjs.org/functions/array_count_values/
-        // original by: Ates Goral (http://magnetiq.com)
-        // improved by: Michael White (http://getsprink.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: sankai
-        //    input by: Shingo
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_count_values([ 3, 5, 3, "foo", "bar", "foo" ]);
-        //   returns 1: {3:2, 5:1, "foo":2, "bar":1}
-        //   example 2: array_count_values({ p1: 3, p2: 5, p3: 3, p4: "foo", p5: "bar", p6: "foo" });
-        //   returns 2: {3:2, 5:1, "foo":2, "bar":1}
-        //   example 3: array_count_values([ true, 4.2, 42, "fubar" ]);
-        //   returns 3: {42:1, "fubar":1}
-
-        var tmp_arr = {},
-            key = '',
-            t = '';
-
-        var __getType = function (obj) {
-            // Objects are php associative arrays.
-            var t = typeof obj;
-            t = t.toLowerCase();
-            if (t === 'object') {
-                t = 'array';
-            }
-            return t;
-        };
-
-        var __countValue = function (value) {
-            switch (typeof value) {
-                case 'number':
-                    if (Math.floor(value) !== value) {
-                        return;
-                    }
-                // Fall-through
-                case 'string':
-                    if (value in this && this.hasOwnProperty(value)) {
-                        ++this[value];
-                    } else {
-                        this[value] = 1;
-                    }
-            }
-        };
-
-        t = __getType(array);
-        if (t === 'array') {
-            for (key in array) {
-                if (array.hasOwnProperty(key)) {
-                    __countValue.call(tmp_arr, array[key]);
-                }
-            }
-        }
-
-        return tmp_arr;
-    }, array_diff: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_diff/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Sanjoy Roy
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_diff(['Kevin', 'van', 'Zonneveld'], ['van', 'Zonneveld']);
-        //   returns 1: {0:'Kevin'}
-
-        var retArr = {},
-            argl = arguments.length,
-            k1 = '',
-            i = 1,
-            k = '',
-            arr = {};
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < argl; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (arr[k] === arr1[k1]) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_diff_assoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_diff_assoc/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: 0m3r
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_diff_assoc({0: 'Kevin', 1: 'van', 2: 'Zonneveld'}, {0: 'Kevin', 4: 'van', 5: 'Zonneveld'});
-        //   returns 1: {1: 'van', 2: 'Zonneveld'}
-
-        var retArr = {},
-            argl = arguments.length,
-            k1 = '',
-            i = 1,
-            k = '',
-            arr = {};
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < argl; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (arr[k] === arr1[k1] && k === k1) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_diff_key: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_diff_key/
-        // original by: Ates Goral (http://magnetiq.com)
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Everlasto
-        //   example 1: array_diff_key({red: 1, green: 2, blue: 3, white: 4}, {red: 5});
-        //   returns 1: {"green":2, "blue":3, "white":4}
-        //   example 2: array_diff_key({red: 1, green: 2, blue: 3, white: 4}, {red: 5}, {red: 5});
-        //   returns 2: {"green":2, "blue":3, "white":4}
-
-        var argl = arguments.length,
-            retArr = {},
-            k1 = '',
-            i = 1,
-            k = '',
-            arr = {};
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < argl; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (k === k1) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_diff_uassoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_diff_uassoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_diff_uassoc($array1, $array2, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
-        //   returns 1: {b: 'brown', c: 'blue', 0: 'red'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            cb = arguments[arglm1],
-            arr = {},
-            i = 1,
-            k1 = '',
-            k = '';
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (arr[k] === arr1[k1] && cb(k, k1) === 0) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_diff_ukey: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_diff_ukey/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {blue: 1, red: 2, green: 3, purple: 4}
-        //   example 1: $array2 = {green: 5, blue: 6, yellow: 7, cyan: 8}
-        //   example 1: array_diff_ukey($array1, $array2, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
-        //   returns 1: {red: 2, purple: 4}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            cb = arguments[arglm1],
-            arr = {},
-            i = 1,
-            k1 = '',
-            k = '';
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb(k, k1) === 0) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_fill: function (start_index, num, mixed_val) {
-        //  discuss at: http://phpjs.org/functions/array_fill/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Waldo Malqui Silva
-        //   example 1: array_fill(5, 6, 'banana');
-        //   returns 1: { 5: 'banana', 6: 'banana', 7: 'banana', 8: 'banana', 9: 'banana', 10: 'banana' }
-
-        var key, tmp_arr = {};
-
-        if (!isNaN(start_index) && !isNaN(num)) {
-            for (key = 0; key < num; key++) {
-                tmp_arr[(key + start_index)] = mixed_val;
-            }
-        }
-
-        return tmp_arr;
-    }, array_fill_keys: function (keys, value) {
-        //  discuss at: http://phpjs.org/functions/array_fill_keys/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: keys = {'a': 'foo', 2: 5, 3: 10, 4: 'bar'}
-        //   example 1: array_fill_keys(keys, 'banana')
-        //   returns 1: {"foo": "banana", 5: "banana", 10: "banana", "bar": "banana"}
-
-        var retObj = {},
-            key = '';
-
-        for (key in keys) {
-            retObj[keys[key]] = value;
-        }
-
-        return retObj;
-    }, array_filter: function (arr, func) {
-        //  discuss at: http://phpjs.org/functions/array_filter/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //    input by: max4ever
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: Takes a function as an argument, not a function's name
-        //   example 1: var odd = function (num) {return (num & 1);};
-        //   example 1: array_filter({"a": 1, "b": 2, "c": 3, "d": 4, "e": 5}, odd);
-        //   returns 1: {"a": 1, "c": 3, "e": 5}
-        //   example 2: var even = function (num) {return (!(num & 1));}
-        //   example 2: array_filter([6, 7, 8, 9, 10, 11, 12], even);
-        //   returns 2: {0: 6, 2: 8, 4: 10, 6: 12}
-        //   example 3: array_filter({"a": 1, "b": false, "c": -1, "d": 0, "e": null, "f":'', "g":undefined});
-        //   returns 3: {"a":1, "c":-1};
-
-        var retObj = {},
-            k;
-
-        func = func || function (v) {
-                return v;
-            };
-
-        // Fix: Issue #73
-        if (Object.prototype.toString.call(arr) === '[object Array]') {
-            retObj = [];
-        }
-
-        for (k in arr) {
-            if (func(arr[k])) {
-                retObj[k] = arr[k];
-            }
-        }
-
-        return retObj;
-    }, array_flip: function (trans) {
-        //  discuss at: http://phpjs.org/functions/array_flip/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Pier Paolo Ramon (http://www.mastersoup.com/)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: array
-        //        test: skip
-        //   example 1: array_flip( {a: 1, b: 1, c: 2} );
-        //   returns 1: {1: 'b', 2: 'c'}
-        //   example 2: ini_set('phpjs.return_phpjs_arrays', 'on');
-        //   example 2: array_flip(array({a: 0}, {b: 1}, {c: 2}))[1];
-        //   returns 2: 'b'
-
-        var key, tmp_ar = {};
-
-        // Duck-type check for our own array()-created PHPJS_Array
-        if (trans && typeof trans === 'object' && trans.change_key_case) {
-            return trans.flip();
-        }
-
-        for (key in trans) {
-            if (!trans.hasOwnProperty(key)) {
-                continue;
-            }
-            tmp_ar[trans[key]] = key;
-        }
-
-        return tmp_ar;
-    }, array_intersect: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_intersect/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: These only output associative arrays (would need to be
-        //        note: all numeric and counting from zero to be numeric)
-        //   example 1: $array1 = {'a' : 'green', 0:'red', 1: 'blue'};
-        //   example 1: $array2 = {'b' : 'green', 0:'yellow', 1:'red'};
-        //   example 1: $array3 = ['green', 'red'];
-        //   example 1: $result = array_intersect($array1, $array2, $array3);
-        //   returns 1: {0: 'red', a: 'green'}
-
-        var retArr = {},
-            argl = arguments.length,
-            arglm1 = argl - 1,
-            k1 = '',
-            arr = {},
-            i = 0,
-            k = '';
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < argl; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (arr[k] === arr1[k1]) {
-                        if (i === arglm1) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_intersect_assoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_intersect_assoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: These only output associative arrays (would need to be
-        //        note: all numeric and counting from zero to be numeric)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'green', 0: 'yellow', 1: 'red'}
-        //   example 1: array_intersect_assoc($array1, $array2)
-        //   returns 1: {a: 'green'}
-
-        var retArr = {},
-            argl = arguments.length,
-            arglm1 = argl - 1,
-            k1 = '',
-            arr = {},
-            i = 0,
-            k = '';
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < argl; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (arr[k] === arr1[k1] && k === k1) {
-                        if (i === arglm1) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_intersect_key: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_intersect_key/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: These only output associative arrays (would need to be
-        //        note: all numeric and counting from zero to be numeric)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'green', 0: 'yellow', 1: 'red'}
-        //   example 1: array_intersect_key($array1, $array2)
-        //   returns 1: {0: 'red', a: 'green'}
-
-        var retArr = {},
-            argl = arguments.length,
-            arglm1 = argl - 1,
-            k1 = '',
-            arr = {},
-            i = 0,
-            k = '';
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < argl; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (k === k1) {
-                        if (i === arglm1) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_intersect_uassoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_intersect_uassoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_intersect_uassoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {b: 'brown'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            arglm2 = arglm1 - 1,
-            cb = arguments[arglm1],
-            k1 = '',
-            i = 1,
-            arr = {},
-            k = '';
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (arr[k] === arr1[k1] && cb(k, k1) === 0) {
-                        if (i === arglm2) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_intersect_ukey: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_intersect_ukey/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {blue: 1, red: 2, green: 3, purple: 4}
-        //   example 1: $array2 = {green: 5, blue: 6, yellow: 7, cyan: 8}
-        //   example 1: array_intersect_ukey ($array1, $array2, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
-        //   returns 1: {blue: 1, green: 3}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            arglm2 = arglm1 - 1,
-            cb = arguments[arglm1],
-            k1 = '',
-            i = 1,
-            arr = {},
-            k = '';
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb(k, k1) === 0) {
-                        if (i === arglm2) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_key_exists: function (key, search) {
-        //  discuss at: http://phpjs.org/functions/array_key_exists/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Felix Geisendoerfer (http://www.debuggable.com/felix)
-        //   example 1: array_key_exists('kevin', {'kevin': 'van Zonneveld'});
-        //   returns 1: true
-
-        if (!search || (search.constructor !== Array && search.constructor !== Object)) {
-            return false;
-        }
-
-        return key in search;
-    }, array_keys: function (input, search_value, argStrict) {
-        //  discuss at: http://phpjs.org/functions/array_keys/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        //    input by: P
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        // improved by: jd
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_keys( {firstname: 'Kevin', surname: 'van Zonneveld'} );
-        //   returns 1: {0: 'firstname', 1: 'surname'}
-
-        var search = typeof search_value !== 'undefined',
-            tmp_arr = [],
-            strict = !!argStrict,
-            include = true,
-            key = '';
-
-        if (input && typeof input === 'object' && input.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
-            return input.keys(search_value, argStrict);
-        }
-
-        for (key in input) {
-            if (input.hasOwnProperty(key)) {
-                include = true;
-                if (search) {
-                    if (strict && input[key] !== search_value) {
-                        include = false;
-                    } else if (input[key] != search_value) {
-                        include = false;
-                    }
-                }
-
-                if (include) {
-                    tmp_arr[tmp_arr.length] = key;
-                }
-            }
-        }
-
-        return tmp_arr;
-    }, array_map: function (callback) {
-        //  discuss at: http://phpjs.org/functions/array_map/
-        // original by: Andrea Giammarchi (http://webreflection.blogspot.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //    input by: thekid
-        //        note: If the callback is a string (or object, if an array is supplied), it can only work if the function name is in the global context
-        //   example 1: array_map( function (a){return (a * a * a)}, [1, 2, 3, 4, 5] );
-        //   returns 1: [ 1, 8, 27, 64, 125 ]
-
-        var argc = arguments.length,
-            argv = arguments,
-            glbl = this.window,
-            obj = null,
-            cb = callback,
-            j = argv[1].length,
-            i = 0,
-            k = 1,
-            m = 0,
-            tmp = [],
-            tmp_ar = [];
-
-        while (i < j) {
-            while (k < argc) {
-                tmp[m++] = argv[k++][i];
-            }
-
-            m = 0;
-            k = 1;
-
-            if (callback) {
-                if (typeof callback === 'string') {
-                    cb = glbl[callback];
-                } else if (typeof callback === 'object' && callback.length) {
-                    obj = typeof callback[0] === 'string' ? glbl[callback[0]] : callback[0];
-                    if (typeof obj === 'undefined') {
-                        throw 'Object not found: ' + callback[0];
-                    }
-                    cb = typeof callback[1] === 'string' ? obj[callback[1]] : callback[1];
-                }
-                tmp_ar[i++] = cb.apply(obj, tmp);
-            } else {
-                tmp_ar[i++] = tmp;
-            }
-
-            tmp = [];
-        }
-
-        return tmp_ar;
-    }, array_merge: function () {
-        //  discuss at: http://phpjs.org/functions/array_merge/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Nate
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //    input by: josh
-        //   example 1: arr1 = {"color": "red", 0: 2, 1: 4}
-        //   example 1: arr2 = {0: "a", 1: "b", "color": "green", "shape": "trapezoid", 2: 4}
-        //   example 1: array_merge(arr1, arr2)
-        //   returns 1: {"color": "green", 0: 2, 1: 4, 2: "a", 3: "b", "shape": "trapezoid", 4: 4}
-        //   example 2: arr1 = []
-        //   example 2: arr2 = {1: "data"}
-        //   example 2: array_merge(arr1, arr2)
-        //   returns 2: {0: "data"}
-
-        var args = Array.prototype.slice.call(arguments),
-            argl = args.length,
-            arg,
-            retObj = {},
-            k = '',
-            argil = 0,
-            j = 0,
-            i = 0,
-            ct = 0,
-            toStr = Object.prototype.toString,
-            retArr = true;
-
-        for (i = 0; i < argl; i++) {
-            if (toStr.call(args[i]) !== '[object Array]') {
-                retArr = false;
-                break;
-            }
-        }
-
-        if (retArr) {
-            retArr = [];
-            for (i = 0; i < argl; i++) {
-                retArr = retArr.concat(args[i]);
-            }
-            return retArr;
-        }
-
-        for (i = 0, ct = 0; i < argl; i++) {
-            arg = args[i];
-            if (toStr.call(arg) === '[object Array]') {
-                for (j = 0, argil = arg.length; j < argil; j++) {
-                    retObj[ct++] = arg[j];
-                }
-            } else {
-                for (k in arg) {
-                    if (arg.hasOwnProperty(k)) {
-                        if (parseInt(k, 10) + '' === k) {
-                            retObj[ct++] = arg[k];
-                        } else {
-                            retObj[k] = arg[k];
-                        }
-                    }
-                }
-            }
-        }
-        return retObj;
-    }, array_merge_recursive: function (arr1, arr2) {
-        //  discuss at: http://phpjs.org/functions/array_merge_recursive/
-        // original by: Subhasis Deb
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //  depends on: array_merge
-        //   example 1: arr1 = {'color': {'favourite': 'read'}, 0: 5}
-        //   example 1: arr2 = {0: 10, 'color': {'favorite': 'green', 0: 'blue'}}
-        //   example 1: array_merge_recursive(arr1, arr2)
-        //   returns 1: {'color': {'favorite': {0: 'red', 1: 'green'}, 0: 'blue'}, 1: 5, 1: 10}
-
-        var idx = '';
-
-        if (arr1 && Object.prototype.toString.call(arr1) === '[object Array]' &&
-            arr2 && Object.prototype.toString.call(arr2) === '[object Array]') {
-            for (idx in arr2) {
-                arr1.push(arr2[idx]);
-            }
-        } else if ((arr1 && (arr1 instanceof Object)) && (arr2 && (arr2 instanceof Object))) {
-            for (idx in arr2) {
-                if (idx in arr1) {
-                    if (typeof arr1[idx] === 'object' && typeof arr2 === 'object') {
-                        arr1[idx] = this.array_merge(arr1[idx], arr2[idx]);
-                    } else {
-                        arr1[idx] = arr2[idx];
-                    }
-                } else {
-                    arr1[idx] = arr2[idx];
-                }
-            }
-        }
-
-        return arr1;
-    }, array_multisort: function (arr) {
-        //  discuss at: http://phpjs.org/functions/array_multisort/
-        // original by: Theriault
-        //   example 1: array_multisort([1, 2, 1, 2, 1, 2], [1, 2, 3, 4, 5, 6]);
-        //   returns 1: true
-        //   example 2: characters = {A: 'Edward', B: 'Locke', C: 'Sabin', D: 'Terra', E: 'Edward'};
-        //   example 2: jobs = {A: 'Warrior', B: 'Thief', C: 'Monk', D: 'Mage', E: 'Knight'};
-        //   example 2: array_multisort(characters, 'SORT_DESC', 'SORT_STRING', jobs, 'SORT_ASC', 'SORT_STRING');
-        //   returns 2: true
-        //   example 3: lastnames = [ 'Carter','Adams','Monroe','Tyler','Madison','Kennedy','Adams'];
-        //   example 3: firstnames = ['James', 'John' ,'James', 'John', 'James',  'John',   'John'];
-        //   example 3: president = [ 39,      6,      5,       10,     4,       35,        2    ];
-        //   example 3: array_multisort(firstnames, 'SORT_DESC', 'SORT_STRING', lastnames, 'SORT_ASC', 'SORT_STRING', president, 'SORT_NUMERIC');
-        //   returns 3: true
-        //       flags: Translation table for sort arguments. Each argument turns on certain bits in the flag byte through addition.
-        //        bits: HGFE DCBA
-        //        args: Holds pointer to arguments for reassignment
-
-        var g, i, j, k, l, sal, vkey, elIndex, lastSorts, tmpArray, zlast;
-
-        var sortFlag = [0];
-        var thingsToSort = [];
-        var nLastSort = [];
-        var lastSort = [];
-        var args = arguments; // possibly redundant
-
-        var flags = {
-            'SORT_REGULAR': 16,
-            'SORT_NUMERIC': 17,
-            'SORT_STRING': 18,
-            'SORT_ASC': 32,
-            'SORT_DESC': 40
-        };
-
-        var sortDuplicator = function (a, b) {
-            return nLastSort.shift();
-        };
-
-        var sortFunctions = [
-            [
-                function (a, b) {
-                    lastSort.push(a > b ? 1 : (a < b ? -1 : 0));
-                    return a > b ? 1 : (a < b ? -1 : 0);
-                },
-                function (a, b) {
-                    lastSort.push(b > a ? 1 : (b < a ? -1 : 0));
-                    return b > a ? 1 : (b < a ? -1 : 0);
-                }
-            ],
-            [
-                function (a, b) {
-                    lastSort.push(a - b);
-                    return a - b;
-                },
-                function (a, b) {
-                    lastSort.push(b - a);
-                    return b - a;
-                }
-            ],
-            [
-                function (a, b) {
-                    lastSort.push((a + '') > (b + '') ? 1 : ((a + '') < (b + '') ? -1 : 0));
-                    return (a + '') > (b + '') ? 1 : ((a + '') < (b + '') ? -1 : 0);
-                },
-                function (a, b) {
-                    lastSort.push((b + '') > (a + '') ? 1 : ((b + '') < (a + '') ? -1 : 0));
-                    return (b + '') > (a + '') ? 1 : ((b + '') < (a + '') ? -1 : 0);
-                }
-            ]
-        ];
-
-        var sortArrs = [
-            []
-        ];
-
-        var sortKeys = [
-            []
-        ];
-
-        // Store first argument into sortArrs and sortKeys if an Object.
-        // First Argument should be either a Javascript Array or an Object, otherwise function would return FALSE like in PHP
-        if (Object.prototype.toString.call(arr) === '[object Array]') {
-            sortArrs[0] = arr;
-        } else if (arr && typeof arr === 'object') {
-            for (i in arr) {
-                if (arr.hasOwnProperty(i)) {
-                    sortKeys[0].push(i);
-                    sortArrs[0].push(arr[i]);
-                }
-            }
-        } else {
-            return false;
-        }
-
-        // arrMainLength: Holds the length of the first array. All other arrays must be of equal length, otherwise function would return FALSE like in PHP
-        //
-        // sortComponents: Holds 2 indexes per every section of the array that can be sorted. As this is the start, the whole array can be sorted.
-        var arrMainLength = sortArrs[0].length;
-        var sortComponents = [0, arrMainLength];
-
-        // Loop through all other arguments, checking lengths and sort flags of arrays and adding them to the above variables.
-        var argl = arguments.length;
-        for (j = 1; j < argl; j++) {
-            if (Object.prototype.toString.call(arguments[j]) === '[object Array]') {
-                sortArrs[j] = arguments[j];
-                sortFlag[j] = 0;
-                if (arguments[j].length !== arrMainLength) {
-                    return false;
-                }
-            } else if (arguments[j] && typeof arguments[j] === 'object') {
-                sortKeys[j] = [];
-                sortArrs[j] = [];
-                sortFlag[j] = 0;
-                for (i in arguments[j]) {
-                    if (arguments[j].hasOwnProperty(i)) {
-                        sortKeys[j].push(i);
-                        sortArrs[j].push(arguments[j][i]);
-                    }
-                }
-                if (sortArrs[j].length !== arrMainLength) {
-                    return false;
-                }
-            } else if (typeof arguments[j] === 'string') {
-                var lFlag = sortFlag.pop();
-                // Keep extra parentheses around latter flags check to avoid minimization leading to CDATA closer
-                if (typeof flags[arguments[j]] === 'undefined' || ((((flags[arguments[j]]) >>> 4) & (lFlag >>> 4)) > 0)) {
-                    return false;
-                }
-                sortFlag.push(lFlag + flags[arguments[j]]);
-            } else {
-                return false;
-            }
-        }
-
-        for (i = 0; i !== arrMainLength; i++) {
-            thingsToSort.push(true);
-        }
-
-        // Sort all the arrays....
-        for (i in sortArrs) {
-            if (sortArrs.hasOwnProperty(i)) {
-                lastSorts = [];
-                tmpArray = [];
-                elIndex = 0;
-                nLastSort = [];
-                lastSort = [];
-
-                // If there are no sortComponents, then no more sorting is neeeded. Copy the array back to the argument.
-                if (sortComponents.length === 0) {
-                    if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
-                        args[i] = sortArrs[i];
-                    } else {
-                        for (k in arguments[i]) {
-                            if (arguments[i].hasOwnProperty(k)) {
-                                delete arguments[i][k];
-                            }
-                        }
-                        sal = sortArrs[i].length;
-                        for (j = 0, vkey = 0; j < sal; j++) {
-                            vkey = sortKeys[i][j];
-                            args[i][vkey] = sortArrs[i][j];
-                        }
-                    }
-                    delete sortArrs[i];
-                    delete sortKeys[i];
-                    continue;
-                }
-
-                // Sort function for sorting. Either sorts asc or desc, regular/string or numeric.
-                var sFunction = sortFunctions[(sortFlag[i] & 3)][((sortFlag[i] & 8) > 0) ? 1 : 0];
-
-                // Sort current array.
-                for (l = 0; l !== sortComponents.length; l += 2) {
-                    tmpArray = sortArrs[i].slice(sortComponents[l], sortComponents[l + 1] + 1);
-                    tmpArray.sort(sFunction);
-                    lastSorts[l] = [].concat(lastSort); // Is there a better way to copy an array in Javascript?
-                    elIndex = sortComponents[l];
-                    for (g in tmpArray) {
-                        if (tmpArray.hasOwnProperty(g)) {
-                            sortArrs[i][elIndex] = tmpArray[g];
-                            elIndex++;
-                        }
-                    }
-                }
-
-                // Duplicate the sorting of the current array on future arrays.
-                sFunction = sortDuplicator;
-                for (j in sortArrs) {
-                    if (sortArrs.hasOwnProperty(j)) {
-                        if (sortArrs[j] === sortArrs[i]) {
-                            continue;
-                        }
-                        for (l = 0; l !== sortComponents.length; l += 2) {
-                            tmpArray = sortArrs[j].slice(sortComponents[l], sortComponents[l + 1] + 1);
-                            nLastSort = [].concat(lastSorts[l]); // alert(l + ':' + nLastSort);
-                            tmpArray.sort(sFunction);
-                            elIndex = sortComponents[l];
-                            for (g in tmpArray) {
-                                if (tmpArray.hasOwnProperty(g)) {
-                                    sortArrs[j][elIndex] = tmpArray[g];
-                                    elIndex++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Duplicate the sorting of the current array on array keys
-                for (j in sortKeys) {
-                    if (sortKeys.hasOwnProperty(j)) {
-                        for (l = 0; l !== sortComponents.length; l += 2) {
-                            tmpArray = sortKeys[j].slice(sortComponents[l], sortComponents[l + 1] + 1);
-                            nLastSort = [].concat(lastSorts[l]);
-                            tmpArray.sort(sFunction);
-                            elIndex = sortComponents[l];
-                            for (g in tmpArray) {
-                                if (tmpArray.hasOwnProperty(g)) {
-                                    sortKeys[j][elIndex] = tmpArray[g];
-                                    elIndex++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Generate the next sortComponents
-                zlast = null;
-                sortComponents = [];
-                for (j in sortArrs[i]) {
-                    if (sortArrs[i].hasOwnProperty(j)) {
-                        if (!thingsToSort[j]) {
-                            if ((sortComponents.length & 1)) {
-                                sortComponents.push(j - 1);
-                            }
-                            zlast = null;
-                            continue;
-                        }
-                        if (!(sortComponents.length & 1)) {
-                            if (zlast !== null) {
-                                if (sortArrs[i][j] === zlast) {
-                                    sortComponents.push(j - 1);
-                                } else {
-                                    thingsToSort[j] = false;
-                                }
-                            }
-                            zlast = sortArrs[i][j];
-                        } else {
-                            if (sortArrs[i][j] !== zlast) {
-                                sortComponents.push(j - 1);
-                                zlast = sortArrs[i][j];
-                            }
-                        }
-                    }
-                }
-
-                if (sortComponents.length & 1) {
-                    sortComponents.push(j);
-                }
-                if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
-                    args[i] = sortArrs[i];
-                } else {
-                    for (j in arguments[i]) {
-                        if (arguments[i].hasOwnProperty(j)) {
-                            delete arguments[i][j];
-                        }
-                    }
-
-                    sal = sortArrs[i].length;
-                    for (j = 0, vkey = 0; j < sal; j++) {
-                        vkey = sortKeys[i][j];
-                        args[i][vkey] = sortArrs[i][j];
-                    }
-
-                }
-                delete sortArrs[i];
-                delete sortKeys[i];
-            }
-        }
-        return true;
-    }, array_pad: function (input, pad_size, pad_value) {
-        //  discuss at: http://phpjs.org/functions/array_pad/
-        // original by: Waldo Malqui Silva
-        //   example 1: array_pad([ 7, 8, 9 ], 2, 'a');
-        //   returns 1: [ 7, 8, 9]
-        //   example 2: array_pad([ 7, 8, 9 ], 5, 'a');
-        //   returns 2: [ 7, 8, 9, 'a', 'a']
-        //   example 3: array_pad([ 7, 8, 9 ], 5, 2);
-        //   returns 3: [ 7, 8, 9, 2, 2]
-        //   example 4: array_pad([ 7, 8, 9 ], -5, 'a');
-        //   returns 4: [ 'a', 'a', 7, 8, 9 ]
-
-        var pad = [],
-            newArray = [],
-            newLength,
-            diff = 0,
-            i = 0;
-
-        if (Object.prototype.toString.call(input) === '[object Array]' && !isNaN(pad_size)) {
-            newLength = ((pad_size < 0) ? (pad_size * -1) : pad_size);
-            diff = newLength - input.length;
-
-            if (diff > 0) {
-                for (i = 0; i < diff; i++) {
-                    newArray[i] = pad_value;
-                }
-                pad = ((pad_size < 0) ? newArray.concat(input) : input.concat(newArray));
-            } else {
-                pad = input;
-            }
-        }
-
-        return pad;
-    }, array_pop: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/array_pop/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Theriault
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //        note: While IE (and other browsers) support iterating an object's
-        //        note: own properties in order, if one attempts to add back properties
-        //        note: in IE, they may end up in their former position due to their position
-        //        note: being retained. So use of this function with "associative arrays"
-        //        note: (objects) may lead to unexpected behavior in an IE environment if
-        //        note: you add back properties with the same keys that you removed
-        //   example 1: array_pop([0,1,2]);
-        //   returns 1: 2
-        //   example 2: data = {firstName: 'Kevin', surName: 'van Zonneveld'};
-        //   example 2: lastElem = array_pop(data);
-        //   example 2: $result = data
-        //   returns 2: {firstName: 'Kevin'}
-
-        var key = '',
-            lastKey = '';
-
-        if (inputArr.hasOwnProperty('length')) {
-            // Indexed
-            if (!inputArr.length) {
-                // Done popping, are we?
-                return null;
-            }
-            return inputArr.pop();
-        } else {
-            // Associative
-            for (key in inputArr) {
-                if (inputArr.hasOwnProperty(key)) {
-                    lastKey = key;
-                }
-            }
-            if (lastKey) {
-                var tmp = inputArr[lastKey];
-                delete(inputArr[lastKey]);
-                return tmp;
-            } else {
-                return null;
-            }
-        }
-    }, array_product: function (input) {
-        //  discuss at: http://phpjs.org/functions/array_product/
-        // original by: Waldo Malqui Silva
-        //   example 1: array_product([ 2, 4, 6, 8 ]);
-        //   returns 1: 384
-
-        var idx = 0,
-            product = 1,
-            il = 0;
-
-        if (Object.prototype.toString.call(input) !== '[object Array]') {
-            return null;
-        }
-
-        il = input.length;
-        while (idx < il) {
-            product *= (!isNaN(input[idx]) ? input[idx] : 0);
-            idx++;
-        }
-        return product;
-    }, array_push: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/array_push/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: Note also that IE retains information about property position even
-        //        note: after being supposedly deleted, so if you delete properties and then
-        //        note: add back properties with the same keys (including numeric) that had
-        //        note: been deleted, the order will be as before; thus, this function is not
-        //        note: really recommended with associative arrays (objects) in IE environments
-        //   example 1: array_push(['kevin','van'], 'zonneveld');
-        //   returns 1: 3
-
-        var i = 0,
-            pr = '',
-            argv = arguments,
-            argc = argv.length,
-            allDigits = /^\d$/,
-            size = 0,
-            highestIdx = 0,
-            len = 0;
-        if (inputArr.hasOwnProperty('length')) {
-            for (i = 1; i < argc; i++) {
-                inputArr[inputArr.length] = argv[i];
-            }
-            return inputArr.length;
-        }
-
-        // Associative (object)
-        for (pr in inputArr) {
-            if (inputArr.hasOwnProperty(pr)) {
-                ++len;
-                if (pr.search(allDigits) !== -1) {
-                    size = parseInt(pr, 10);
-                    highestIdx = size > highestIdx ? size : highestIdx;
-                }
-            }
-        }
-        for (i = 1; i < argc; i++) {
-            inputArr[++highestIdx] = argv[i];
-        }
-        return len + i - 1;
-    }, array_rand: function (input, num_req) {
-        //  discuss at: http://phpjs.org/functions/array_rand/
-        // original by: Waldo Malqui Silva
-        //   example 1: array_rand( ['Kevin'], 1 );
-        //   returns 1: 0
-
-        var indexes = [];
-        var ticks = num_req || 1;
-        var checkDuplicate = function (input, value) {
-            var exist = false,
-                index = 0,
-                il = input.length;
-            while (index < il) {
-                if (input[index] === value) {
-                    exist = true;
-                    break;
-                }
-                index++;
-            }
-            return exist;
-        };
-
-        if (Object.prototype.toString.call(input) === '[object Array]' && ticks <= input.length) {
-            while (true) {
-                var rand = Math.floor((Math.random() * input.length));
-                if (indexes.length === ticks) {
-                    break;
-                }
-                if (!checkDuplicate(indexes, rand)) {
-                    indexes.push(rand);
-                }
-            }
-        } else {
-            indexes = null;
-        }
-
-        return ((ticks == 1) ? indexes.join() : indexes);
-    }, array_reduce: function (a_input, callback) {
-        //  discuss at: http://phpjs.org/functions/array_reduce/
-        // original by: Alfonso Jimenez (http://www.alfonsojimenez.com)
-        //        note: Takes a function as an argument, not a function's name
-        //   example 1: array_reduce([1, 2, 3, 4, 5], function (v, w){v += w;return v;});
-        //   returns 1: 15
-
-        var lon = a_input.length;
-        var res = 0,
-            i = 0;
-        var tmp = [];
-
-        for (i = 0; i < lon; i += 2) {
-            tmp[0] = a_input[i];
-            if (a_input[(i + 1)]) {
-                tmp[1] = a_input[(i + 1)];
-            } else {
-                tmp[1] = 0;
-            }
-            res += callback.apply(null, tmp);
-            tmp = [];
-        }
-
-        return res;
-    }, array_replace: function (arr) {
-        //  discuss at: http://phpjs.org/functions/array_replace/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_replace(["orange", "banana", "apple", "raspberry"], {0 : "pineapple", 4 : "cherry"}, {0:"grape"});
-        //   returns 1: {0: 'grape', 1: 'banana', 2: 'apple', 3: 'raspberry', 4: 'cherry'}
-
-        var retObj = {},
-            i = 0,
-            p = '',
-            argl = arguments.length;
-
-        if (argl < 2) {
-            throw new Error('There should be at least 2 arguments passed to array_replace()');
-        }
-
-        // Although docs state that the arguments are passed in by reference, it seems they are not altered, but rather the copy that is returned (just guessing), so we make a copy here, instead of acting on arr itself
-        for (p in arr) {
-            retObj[p] = arr[p];
-        }
-
-        for (i = 1; i < argl; i++) {
-            for (p in arguments[i]) {
-                retObj[p] = arguments[i][p];
-            }
-        }
-        return retObj;
-    }, array_replace_recursive: function (arr) {
-        //  discuss at: http://phpjs.org/functions/array_replace_recursive/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_replace_recursive({'citrus' : ["orange"], 'berries' : ["blackberry", "raspberry"]}, {'citrus' : ['pineapple'], 'berries' : ['blueberry']});
-        //   returns 1: {citrus : ['pineapple'], berries : ['blueberry', 'raspberry']}
-
-        var retObj = {},
-            i = 0,
-            p = '',
-            argl = arguments.length;
-
-        if (argl < 2) {
-            throw new Error('There should be at least 2 arguments passed to array_replace_recursive()');
-        }
-
-        // Although docs state that the arguments are passed in by reference, it seems they are not altered, but rather the copy that is returned (just guessing), so we make a copy here, instead of acting on arr itself
-        for (p in arr) {
-            retObj[p] = arr[p];
-        }
-
-        for (i = 1; i < argl; i++) {
-            for (p in arguments[i]) {
-                if (retObj[p] && typeof retObj[p] === 'object') {
-                    retObj[p] = this.array_replace_recursive(retObj[p], arguments[i][p]);
-                } else {
-                    retObj[p] = arguments[i][p];
-                }
-            }
-        }
-        return retObj;
-    }, array_reverse: function (array, preserve_keys) {
-        //  discuss at: http://phpjs.org/functions/array_reverse/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Karol Kowalski
-        //   example 1: array_reverse( [ 'php', '4.0', ['green', 'red'] ], true);
-        //   returns 1: { 2: ['green', 'red'], 1: 4, 0: 'php'}
-
-        var isArray = Object.prototype.toString.call(array) === '[object Array]',
-            tmp_arr = preserve_keys ? {} : [],
-            key;
-
-        if (isArray && !preserve_keys) {
-            return array.slice(0)
-                .reverse();
-        }
-
-        if (preserve_keys) {
-            var keys = [];
-            for (key in array) {
-                // if (array.hasOwnProperty(key)) {
-                keys.push(key);
-                // }
-            }
-
-            var i = keys.length;
-            while (i--) {
-                key = keys[i];
-                // FIXME: don't rely on browsers keeping keys in insertion order
-                // it's implementation specific
-                // eg. the result will differ from expected in Google Chrome
-                tmp_arr[key] = array[key];
-            }
-        } else {
-            for (key in array) {
-                // if (array.hasOwnProperty(key)) {
-                tmp_arr.unshift(array[key]);
-                // }
-            }
-        }
-
-        return tmp_arr;
-    }, array_search: function (needle, haystack, argStrict) {
-        //  discuss at: http://phpjs.org/functions/array_search/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //  depends on: array
-        //        test: skip
-        //   example 1: array_search('zonneveld', {firstname: 'kevin', middle: 'van', surname: 'zonneveld'});
-        //   returns 1: 'surname'
-        //   example 2: ini_set('phpjs.return_phpjs_arrays', 'on');
-        //   example 2: var ordered_arr = array({3:'value'}, {2:'value'}, {'a':'value'}, {'b':'value'});
-        //   example 2: var key = array_search(/val/g, ordered_arr); // or var key = ordered_arr.search(/val/g);
-        //   returns 2: '3'
-
-        var strict = !!argStrict,
-            key = '';
-
-        if (haystack && typeof haystack === 'object' && haystack.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
-            return haystack.search(needle, argStrict);
-        }
-        if (typeof needle === 'object' && needle.exec) { // Duck-type for RegExp
-            if (!strict) { // Let's consider case sensitive searches as strict
-                var flags = 'i' + (needle.global ? 'g' : '') +
-                    (needle.multiline ? 'm' : '') +
-                    (needle.sticky ? 'y' : ''); // sticky is FF only
-                needle = new RegExp(needle.source, flags);
-            }
-            for (key in haystack) {
-                if (needle.test(haystack[key])) {
-                    return key;
-                }
-            }
-            return false;
-        }
-
-        for (key in haystack) {
-            if ((strict && haystack[key] === needle) || (!strict && haystack[key] == needle)) {
-                return key;
-            }
-        }
-
-        return false;
-    }, array_shift: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/array_shift/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Martijn Wieringa
-        //        note: Currently does not handle objects
-        //   example 1: array_shift(['Kevin', 'van', 'Zonneveld']);
-        //   returns 1: 'Kevin'
-
-        var props = false,
-            shift = undefined,
-            pr = '',
-            allDigits = /^\d$/,
-            int_ct = -1,
-            _checkToUpIndices = function (arr, ct, key) {
-                // Deal with situation, e.g., if encounter index 4 and try to set it to 0, but 0 exists later in loop (need to
-                // increment all subsequent (skipping current key, since we need its value below) until find unused)
-                if (arr[ct] !== undefined) {
-                    var tmp = ct;
-                    ct += 1;
-                    if (ct === key) {
-                        ct += 1;
-                    }
-                    ct = _checkToUpIndices(arr, ct, key);
-                    arr[ct] = arr[tmp];
-                    delete arr[tmp];
-                }
-                return ct;
-            };
-
-        if (inputArr.length === 0) {
-            return null;
-        }
-        if (inputArr.length > 0) {
-            return inputArr.shift();
-        }
-
-        /*
-         UNFINISHED FOR HANDLING OBJECTS
-         for (pr in inputArr) {
-         if (inputArr.hasOwnProperty(pr)) {
-         props = true;
-         shift = inputArr[pr];
-         delete inputArr[pr];
-         break;
-         }
-         }
-         for (pr in inputArr) {
-         if (inputArr.hasOwnProperty(pr)) {
-         if (pr.search(allDigits) !== -1) {
-         int_ct += 1;
-         if (parseInt(pr, 10) === int_ct) { // Key is already numbered ok, so don't need to change key for value
-         continue;
-         }
-         _checkToUpIndices(inputArr, int_ct, pr);
-         arr[int_ct] = arr[pr];
-         delete arr[pr];
-         }
-         }
-         }
-         if (!props) {
-         return null;
-         }
-         return shift;
-         */
-    }, array_slice: function (arr, offst, lgth, preserve_keys) {
-        //  discuss at: http://phpjs.org/functions/array_slice/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: is_int
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //        note: Relies on is_int because !isNaN accepts floats
-        //   example 1: array_slice(["a", "b", "c", "d", "e"], 2, -1);
-        //   returns 1: {0: 'c', 1: 'd'}
-        //   example 2: array_slice(["a", "b", "c", "d", "e"], 2, -1, true);
-        //   returns 2: {2: 'c', 3: 'd'}
-
-        /*
-         if ('callee' in arr && 'length' in arr) {
-         arr = Array.prototype.slice.call(arr);
-         }
-         */
-
-        var key = '';
-
-        if (Object.prototype.toString.call(arr) !== '[object Array]' ||
-            (preserve_keys && offst !== 0)) { // Assoc. array as input or if required as output
-            var lgt = 0,
-                newAssoc = {};
-            for (key in arr) {
-                //if (key !== 'length') {
-                lgt += 1;
-                newAssoc[key] = arr[key];
-                //}
-            }
-            arr = newAssoc;
-
-            offst = (offst < 0) ? lgt + offst : offst;
-            lgth = lgth === undefined ? lgt : (lgth < 0) ? lgt + lgth - offst : lgth;
-
-            var assoc = {};
-            var start = false,
-                it = -1,
-                arrlgth = 0,
-                no_pk_idx = 0;
-            for (key in arr) {
-                ++it;
-                if (arrlgth >= lgth) {
-                    break;
-                }
-                if (it == offst) {
-                    start = true;
-                }
-                if (!start) {
-                    continue;
-                }
-                ++arrlgth;
-                if (this.is_int(key) && !preserve_keys) {
-                    assoc[no_pk_idx++] = arr[key];
-                } else {
-                    assoc[key] = arr[key];
-                }
-            }
-            //assoc.length = arrlgth; // Make as array-like object (though length will not be dynamic)
-            return assoc;
-        }
-
-        if (lgth === undefined) {
-            return arr.slice(offst);
-        } else if (lgth >= 0) {
-            return arr.slice(offst, offst + lgth);
-        } else {
-            return arr.slice(offst, lgth);
-        }
-    }, array_splice: function (arr, offst, lgth, replacement) {
-        //  discuss at: http://phpjs.org/functions/array_splice/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Theriault
-        //        note: Order does get shifted in associative array input with numeric indices,
-        //        note: since PHP behavior doesn't preserve keys, but I understand order is
-        //        note: not reliable anyways
-        //        note: Note also that IE retains information about property position even
-        //        note: after being supposedly deleted, so use of this function may produce
-        //        note: unexpected results in IE if you later attempt to add back properties
-        //        note: with the same keys that had been deleted
-        //  depends on: is_int
-        //   example 1: input = {4: "red", 'abc': "green", 2: "blue", 'dud': "yellow"};
-        //   example 1: array_splice(input, 2);
-        //   returns 1: {0: "blue", 'dud': "yellow"}
-        //   example 2: input = ["red", "green", "blue", "yellow"];
-        //   example 2: array_splice(input, 3, 0, "purple");
-        //   returns 2: []
-        //   example 3: input = ["red", "green", "blue", "yellow"]
-        //   example 3: array_splice(input, -1, 1, ["black", "maroon"]);
-        //   returns 3: ["yellow"]
-
-        var _checkToUpIndices = function (arr, ct, key) {
-            // Deal with situation, e.g., if encounter index 4 and try to set it to 0, but 0 exists later in loop (need to
-            // increment all subsequent (skipping current key, since we need its value below) until find unused)
-            if (arr[ct] !== undefined) {
-                var tmp = ct;
-                ct += 1;
-                if (ct === key) {
-                    ct += 1;
-                }
-                ct = _checkToUpIndices(arr, ct, key);
-                arr[ct] = arr[tmp];
-                delete arr[tmp];
-            }
-            return ct;
-        };
-
-        if (replacement && typeof replacement !== 'object') {
-            replacement = [replacement];
-        }
-        if (lgth === undefined) {
-            lgth = offst >= 0 ? arr.length - offst : -offst;
-        } else if (lgth < 0) {
-            lgth = (offst >= 0 ? arr.length - offst : -offst) + lgth;
-        }
-
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            /*if (arr.length !== undefined) { // Deal with array-like objects as input
-             delete arr.length;
-             }*/
-            var lgt = 0,
-                ct = -1,
-                rmvd = [],
-                rmvdObj = {},
-                repl_ct = -1,
-                int_ct = -1;
-            var returnArr = true,
-                rmvd_ct = 0,
-                rmvd_lgth = 0,
-                key = '';
-            // rmvdObj.length = 0;
-            for (key in arr) { // Can do arr.__count__ in some browsers
-                lgt += 1;
-            }
-            offst = (offst >= 0) ? offst : lgt + offst;
-            for (key in arr) {
-                ct += 1;
-                if (ct < offst) {
-                    if (this.is_int(key)) {
-                        int_ct += 1;
-                        if (parseInt(key, 10) === int_ct) { // Key is already numbered ok, so don't need to change key for value
-                            continue;
-                        }
-                        _checkToUpIndices(arr, int_ct, key); // Deal with situation, e.g.,
-                        // if encounter index 4 and try to set it to 0, but 0 exists later in loop
-                        arr[int_ct] = arr[key];
-                        delete arr[key];
-                    }
-                    continue;
-                }
-                if (returnArr && this.is_int(key)) {
-                    rmvd.push(arr[key]);
-                    rmvdObj[rmvd_ct++] = arr[key]; // PHP starts over here too
-                } else {
-                    rmvdObj[key] = arr[key];
-                    returnArr = false;
-                }
-                rmvd_lgth += 1;
-                // rmvdObj.length += 1;
-                if (replacement && replacement[++repl_ct]) {
-                    arr[key] = replacement[repl_ct];
-                } else {
-                    delete arr[key];
-                }
-            }
-            // arr.length = lgt - rmvd_lgth + (replacement ? replacement.length : 0); // Make (back) into an array-like object
-            return returnArr ? rmvd : rmvdObj;
-        }
-
-        if (replacement) {
-            replacement.unshift(offst, lgth);
-            return Array.prototype.splice.apply(arr, replacement);
-        }
-        return arr.splice(offst, lgth);
-    }, array_sum: function (array) {
-        //  discuss at: http://phpjs.org/functions/array_sum/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Nate
-        // bugfixed by: Gilbert
-        // improved by: David Pilia (http://www.beteck.it/)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_sum([4, 9, 182.6]);
-        //   returns 1: 195.6
-        //   example 2: total = []; index = 0.1; for (y=0; y < 12; y++){total[y] = y + index;}
-        //   example 2: array_sum(total);
-        //   returns 2: 67.2
-
-        var key, sum = 0;
-
-        if (array && typeof array === 'object' && array.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
-            return array.sum.apply(array, Array.prototype.slice.call(arguments, 0));
-        }
-
-        // input sanitation
-        if (typeof array !== 'object') {
-            return null;
-        }
-
-        for (key in array) {
-            if (!isNaN(parseFloat(array[key]))) {
-                sum += parseFloat(array[key]);
-            }
-        }
-
-        return sum;
-    }, array_udiff: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_udiff/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_udiff($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {c: 'blue'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            cb = arguments[arglm1],
-            arr = '',
-            i = 1,
-            k1 = '',
-            k = '';
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb(arr[k], arr1[k1]) === 0) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_udiff_assoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_udiff_assoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_udiff_assoc({0: 'kevin', 1: 'van', 2: 'Zonneveld'}, {0: 'Kevin', 4: 'van', 5: 'Zonneveld'}, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {1: 'van', 2: 'Zonneveld'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            cb = arguments[arglm1],
-            arr = {},
-            i = 1,
-            k1 = '',
-            k = '';
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb(arr[k], arr1[k1]) === 0 && k === k1) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_udiff_uassoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_udiff_uassoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_udiff_uassoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;}, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {0: 'red', c: 'blue'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            arglm2 = arglm1 - 1,
-            cb = arguments[arglm1],
-            cb0 = arguments[arglm2],
-            k1 = '',
-            i = 1,
-            k = '',
-            arr = {};
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-        cb0 = (typeof cb0 === 'string') ? this.window[cb0] : (Object.prototype.toString.call(cb0) === '[object Array]') ?
-            this.window[cb0[0]][cb0[1]] : cb0;
-
-        arr1keys: for (k1 in arr1) {
-            for (i = 1; i < arglm2; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb0(arr[k], arr1[k1]) === 0 && cb(k, k1) === 0) {
-                        // If it reaches here, it was found in at least one array, so try next value
-                        continue arr1keys;
-                    }
-                }
-                retArr[k1] = arr1[k1];
-            }
-        }
-
-        return retArr;
-    }, array_uintersect: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_uintersect/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Demosthenes Koptsis
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_uintersect($array1, $array2, function( f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {a: 'green', b: 'brown', 0: 'red'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            arglm2 = arglm1 - 1,
-            cb = arguments[arglm1],
-            k1 = '',
-            i = 1,
-            arr = {},
-            k = '';
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb(arr[k], arr1[k1]) === 0) {
-                        if (i === arglm2) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_uintersect_assoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_uintersect_assoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_uintersect_assoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {a: 'green', b: 'brown'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            arglm2 = arglm1 - 2,
-            cb = arguments[arglm1],
-            k1 = '',
-            i = 1,
-            arr = {},
-            k = '';
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < arglm1; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (k === k1 && cb(arr[k], arr1[k1]) === 0) {
-                        if (i === arglm2) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                        continue arrs;
-                    }
-                }
-                // If it reaches here, it wasn't found in at least one array, so try next value
-                continue arr1keys;
-            }
-        }
-
-        return retArr;
-    }, array_uintersect_uassoc: function (arr1) {
-        //  discuss at: http://phpjs.org/functions/array_uintersect_uassoc/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
-        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
-        //   example 1: array_uintersect_uassoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;}, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
-        //   returns 1: {a: 'green', b: 'brown'}
-
-        var retArr = {},
-            arglm1 = arguments.length - 1,
-            arglm2 = arglm1 - 1,
-            cb = arguments[arglm1],
-            cb0 = arguments[arglm2],
-            k1 = '',
-            i = 1,
-            k = '',
-            arr = {};
-
-        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
-            cb[0]][cb[1]] : cb;
-        cb0 = (typeof cb0 === 'string') ? this.window[cb0] : (Object.prototype.toString.call(cb0) === '[object Array]') ?
-            this.window[cb0[0]][cb0[1]] : cb0;
-
-        arr1keys: for (k1 in arr1) {
-            arrs: for (i = 1; i < arglm2; i++) {
-                arr = arguments[i];
-                for (k in arr) {
-                    if (cb0(arr[k], arr1[k1]) === 0 && cb(k, k1) === 0) {
-                        if (i === arguments.length - 3) {
-                            retArr[k1] = arr1[k1];
-                        }
-                        continue arrs; // If the innermost loop always leads at least once to an equal value, continue the loop until done
-                    }
-                }
-                continue arr1keys; // If it reaches here, it wasn't found in at least one array, so try next value
-            }
-        }
-
-        return retArr;
-    }, array_unique: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/array_unique/
-        // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
-        //    input by: duncan
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Nate
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Michael Grier
-        //        note: The second argument, sort_flags is not implemented;
-        //        note: also should be sorted (asort?) first according to docs
-        //   example 1: array_unique(['Kevin','Kevin','van','Zonneveld','Kevin']);
-        //   returns 1: {0: 'Kevin', 2: 'van', 3: 'Zonneveld'}
-        //   example 2: array_unique({'a': 'green', 0: 'red', 'b': 'green', 1: 'blue', 2: 'red'});
-        //   returns 2: {a: 'green', 0: 'red', 1: 'blue'}
-
-        var key = '',
-            tmp_arr2 = {},
-            val = '';
-
-        var __array_search = function (needle, haystack) {
-            var fkey = '';
-            for (fkey in haystack) {
-                if (haystack.hasOwnProperty(fkey)) {
-                    if ((haystack[fkey] + '') === (needle + '')) {
-                        return fkey;
-                    }
-                }
-            }
-            return false;
-        };
-
-        for (key in inputArr) {
-            if (inputArr.hasOwnProperty(key)) {
-                val = inputArr[key];
-                if (false === __array_search(val, tmp_arr2)) {
-                    tmp_arr2[key] = val;
-                }
-            }
-        }
-
-        return tmp_arr2;
-    }, array_unshift: function (array) {
-        //  discuss at: http://phpjs.org/functions/array_unshift/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Martijn Wieringa
-        // improved by: jmweb
-        //        note: Currently does not handle objects
-        //   example 1: array_unshift(['van', 'Zonneveld'], 'Kevin');
-        //   returns 1: 3
-
-        var i = arguments.length;
-
-        while (--i !== 0) {
-            arguments[0].unshift(arguments[i]);
-        }
-
-        return arguments[0].length;
-    }, array_values: function (input) {
-        //  discuss at: http://phpjs.org/functions/array_values/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: array_values( {firstname: 'Kevin', surname: 'van Zonneveld'} );
-        //   returns 1: {0: 'Kevin', 1: 'van Zonneveld'}
-
-        var tmp_arr = [],
-            key = '';
-
-        if (input && typeof input === 'object' && input.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
-            return input.values();
-        }
-
-        for (key in input) {
-            tmp_arr[tmp_arr.length] = input[key];
-        }
-
-        return tmp_arr;
-    }, array_walk: function (array, funcname, userdata) {
-        //  discuss at: http://phpjs.org/functions/array_walk/
-        // original by: Johnny Mast (http://www.phpvrouwen.nl)
-        // bugfixed by: David
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: array
-        //        note: Using ini_set('phpjs.no-eval', true) will only work with
-        //        note: user-defined string functions, not built-in functions like void()
-        //        test: skip
-        //   example 1: array_walk ({'a':'b'}, 'void', 'userdata');
-        //   returns 1: true
-        //   example 2: array_walk ('a', 'void', 'userdata');
-        //   returns 2: false
-        //   example 3: array_walk ([3, 4], function () {}, 'userdata');
-        //   returns 3: true
-        //   example 4: array_walk ({40: 'My age', 50: 'My IQ'}, [window, 'prompt']);
-        //   returns 4: true
-        //   example 5: ini_set('phpjs.return_phpjs_arrays', 'on');
-        //   example 5: var arr = array({40: 'My age'}, {50: 'My IQ'});
-        //   example 5: array_walk(arr, [window, 'prompt']);
-        //   returns 5: '[object Object]'
-
-        var key, value, ini;
-
-        if (!array || typeof array !== 'object') {
-            return false;
-        }
-        if (typeof array === 'object' && array.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
-            if (arguments.length > 2) {
-                return array.walk(funcname, userdata);
-            } else {
-                return array.walk(funcname);
-            }
-        }
-
-        try {
-            if (typeof funcname === 'function') {
-                for (key in array) {
-                    if (arguments.length > 2) {
-                        funcname(array[key], key, userdata);
-                    } else {
-                        funcname(array[key], key);
-                    }
-                }
-            } else if (typeof funcname === 'string') {
-                this.php_js = this.php_js || {};
-                this.php_js.ini = this.php_js.ini || {};
-                ini = this.php_js.ini['phpjs.no-eval'];
-                if (ini && (
-                        parseInt(ini.local_value, 10) !== 0 && (!ini.local_value.toLowerCase || ini.local_value.toLowerCase() !==
-                        'off')
-                    )) {
-                    if (arguments.length > 2) {
-                        for (key in array) {
-                            this.window[funcname](array[key], key, userdata);
-                        }
-                    } else {
-                        for (key in array) {
-                            this.window[funcname](array[key], key);
-                        }
-                    }
-                } else {
-                    if (arguments.length > 2) {
-                        for (key in array) {
-                            eval(funcname + '(array[key], key, userdata)');
-                        }
-                    } else {
-                        for (key in array) {
-                            eval(funcname + '(array[key], key)');
-                        }
-                    }
-                }
-            } else if (funcname && typeof funcname === 'object' && funcname.length === 2) {
-                var obj = funcname[0],
-                    func = funcname[1];
-                if (arguments.length > 2) {
-                    for (key in array) {
-                        obj[func](array[key], key, userdata);
-                    }
-                } else {
-                    for (key in array) {
-                        obj[func](array[key], key);
-                    }
-                }
-            } else {
-                return false;
-            }
-        } catch (e) {
-            return false;
-        }
-
-        return true;
-    }, array_walk_recursive: function (array, funcname, userdata) {
-        //  discuss at: http://phpjs.org/functions/array_walk_recursive/
-        // original by: Johnny Mast (http://www.phpvrouwen.nl)
-        //   example 1: array_walk_recursive ({'a': 'b', 'c': {'d': 'e'}}, 'void', 'userdata');
-        //   returns 1: true
-        //   example 2: array_walk_recursive ('a', 'void', 'userdata');
-        //   returns 2: false
-
-        var key;
-
-        if (typeof array !== 'object') {
-            return false;
-        }
-
-        for (key in array) {
-            if (typeof array[key] === 'object') {
-                return this.array_walk_recursive(array[key], funcname, userdata);
-            }
-
-            if (typeof userdata !== 'undefined') {
-                eval(funcname + '( array [key] , key , userdata  )');
-            } else {
-                eval(funcname + '(  userdata ) ');
-            }
-        }
-
-        return true;
-    }, arsort: function (inputArr, sort_flags) {
-        //  discuss at: http://phpjs.org/functions/arsort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
-        //        note: integrated into all of these functions by adapting the code at
-        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
-        //        note: The examples are correct, this is a new way
-        //        note: Credits to: http://javascript.internet.com/math-related/bubble-sort.html
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: Since JS objects' keys are always strings, and (the
-        //        note: default) SORT_REGULAR flag distinguishes by key type,
-        //        note: if the content is a numeric string, we treat the
-        //        note: "original type" as numeric.
-        //  depends on: i18n_loc_get_default
-        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 1: data = arsort(data);
-        //   returns 1: data == {a: 'orange', d: 'lemon', b: 'banana', c: 'apple'}
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 2: arsort(data);
-        //   example 2: $result = data;
-        //   returns 2: {a: 'orange', d: 'lemon', b: 'banana', c: 'apple'}
-
-        var valArr = [],
-            valArrLen = 0,
-            k, i, ret, sorter, that = this,
-            strictForIn = false,
-            populateArr = {};
-
-        switch (sort_flags) {
-            case 'SORT_STRING':
-                // compare items as strings
-                sorter = function (a, b) {
-                    return that.strnatcmp(b, a);
-                };
-                break;
-            case 'SORT_LOCALE_STRING':
-                // compare items as strings, original by the current locale (set with i18n_loc_set_default() as of PHP6)
-                var loc = this.i18n_loc_get_default();
-                sorter = this.php_js.i18nLocales[loc].sorting;
-                break;
-            case 'SORT_NUMERIC':
-                // compare items numerically
-                sorter = function (a, b) {
-                    return (a - b);
-                };
-                break;
-            case 'SORT_REGULAR':
-            // compare items normally (don't change types)
-            default:
-                sorter = function (b, a) {
-                    var aFloat = parseFloat(a),
-                        bFloat = parseFloat(b),
-                        aNumeric = aFloat + '' === a,
-                        bNumeric = bFloat + '' === b;
-                    if (aNumeric && bNumeric) {
-                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
-                    } else if (aNumeric && !bNumeric) {
-                        return 1;
-                    } else if (!aNumeric && bNumeric) {
-                        return -1;
-                    }
-                    return a > b ? 1 : a < b ? -1 : 0;
-                };
-                break;
-        }
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Get key and value arrays
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push([k, inputArr[k]]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-        valArr.sort(function (a, b) {
-            return sorter(a[1], b[1]);
-        });
-
-        // Repopulate the old array
-        for (i = 0, valArrLen = valArr.length; i < valArrLen; i++) {
-            populateArr[valArr[i][0]] = valArr[i][1];
-        }
-
-        return strictForIn || populateArr;
-    }, asort: function (inputArr, sort_flags) {
-        //  discuss at: http://phpjs.org/functions/asort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        //    input by: paulo kuong
-        // bugfixed by: Adam Wallner (http://web2.bitbaro.hu/)
-        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
-        //        note: integrated into all of these functions by adapting the code at
-        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
-        //        note: The examples are correct, this is a new way
-        //        note: Credits to: http://javascript.internet.com/math-related/bubble-sort.html
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: Since JS objects' keys are always strings, and (the
-        //        note: default) SORT_REGULAR flag distinguishes by key type,
-        //        note: if the content is a numeric string, we treat the
-        //        note: "original type" as numeric.
-        //  depends on: strnatcmp
-        //  depends on: i18n_loc_get_default
-        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 1: data = asort(data);
-        //   example 1: $result = data
-        //   returns 1: {c: 'apple', b: 'banana', d: 'lemon', a: 'orange'}
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 2: asort(data);
-        //   example 2: $result = data
-        //   returns 2: {c: 'apple', b: 'banana', d: 'lemon', a: 'orange'}
-
-        var valArr = [],
-            valArrLen = 0,
-            k, i, ret, sorter, that = this,
-            strictForIn = false,
-            populateArr = {};
-
-        switch (sort_flags) {
-            case 'SORT_STRING':
-                // compare items as strings
-                sorter = function (a, b) {
-                    return that.strnatcmp(a, b);
-                };
-                break;
-            case 'SORT_LOCALE_STRING':
-                // compare items as strings, original by the current locale (set with i18n_loc_set_default() as of PHP6)
-                var loc = this.i18n_loc_get_default();
-                sorter = this.php_js.i18nLocales[loc].sorting;
-                break;
-            case 'SORT_NUMERIC':
-                // compare items numerically
-                sorter = function (a, b) {
-                    return (a - b);
-                };
-                break;
-            case 'SORT_REGULAR':
-            // compare items normally (don't change types)
-            default:
-                sorter = function (a, b) {
-                    var aFloat = parseFloat(a),
-                        bFloat = parseFloat(b),
-                        aNumeric = aFloat + '' === a,
-                        bNumeric = bFloat + '' === b;
-                    if (aNumeric && bNumeric) {
-                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
-                    } else if (aNumeric && !bNumeric) {
-                        return 1;
-                    } else if (!aNumeric && bNumeric) {
-                        return -1;
-                    }
-                    return a > b ? 1 : a < b ? -1 : 0;
-                };
-                break;
-        }
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Get key and value arrays
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push([k, inputArr[k]]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-
-        valArr.sort(function (a, b) {
-            return sorter(a[1], b[1]);
-        });
-
-        // Repopulate the old array
-        for (i = 0, valArrLen = valArr.length; i < valArrLen; i++) {
-            populateArr[valArr[i][0]] = valArr[i][1];
-        }
-
-        return strictForIn || populateArr;
-    }, compact: function () {
-        //  discuss at: http://phpjs.org/functions/compact/
-        // original by: Waldo Malqui Silva
-        // improved by: Jack
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //   example 1: var1 = 'Kevin'; var2 = 'van'; var3 = 'Zonneveld';
-        //   example 1: compact('var1', 'var2', 'var3');
-        //   returns 1: {'var1': 'Kevin', 'var2': 'van', 'var3': 'Zonneveld'}
-
-        var matrix = {},
-            that = this;
-
-        var process = function (value) {
-            var i = 0,
-                l = value.length,
-                key_value = '';
-            for (i = 0; i < l; i++) {
-                key_value = value[i];
-                if (Object.prototype.toString.call(key_value) === '[object Array]') {
-                    process(key_value);
-                } else {
-                    if (typeof that.window[key_value] !== 'undefined') {
-                        matrix[key_value] = that.window[key_value];
-                    }
-                }
-            }
-            return true;
-        };
-
-        process(arguments);
-        return matrix;
-    }, count: function (mixed_var, mode) {
-        //  discuss at: http://phpjs.org/functions/count/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: Waldo Malqui Silva
-        //    input by: merabi
-        // bugfixed by: Soren Hansen
-        // bugfixed by: Olivier Louvignes (http://mg-crea.com/)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: count([[0,0],[0,-4]], 'COUNT_RECURSIVE');
-        //   returns 1: 6
-        //   example 2: count({'one' : [1,2,3,4,5]}, 'COUNT_RECURSIVE');
-        //   returns 2: 6
-
-        var key, cnt = 0;
-
-        if (mixed_var === null || typeof mixed_var === 'undefined') {
-            return 0;
-        } else if (mixed_var.constructor !== Array && mixed_var.constructor !== Object) {
-            return 1;
-        }
-
-        if (mode === 'COUNT_RECURSIVE') {
-            mode = 1;
-        }
-        if (mode != 1) {
-            mode = 0;
-        }
-
-        for (key in mixed_var) {
-            if (mixed_var.hasOwnProperty(key)) {
-                cnt++;
-                if (mode == 1 && mixed_var[key] && (mixed_var[key].constructor === Array || mixed_var[key].constructor ===
-                    Object)) {
-                    cnt += this.count(mixed_var[key], 1);
-                }
-            }
-        }
-
-        return cnt;
-    }, current: function (arr) {
-        //  discuss at: http://phpjs.org/functions/current/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
-        //   example 1: current(transport);
-        //   returns 1: 'foot'
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-        if (pointers.indexOf(arr) === -1) {
-            pointers.push(arr, 0);
-        }
-        var arrpos = pointers.indexOf(arr);
-        var cursor = pointers[arrpos + 1];
-        if (Object.prototype.toString.call(arr) === '[object Array]') {
-            return arr[cursor] || false;
-        }
-        var ct = 0;
-        for (var k in arr) {
-            if (ct === cursor) {
-                return arr[k];
-            }
-            ct++;
-        }
-        return false; // Empty
-    }, each: function (arr) {
-        //  discuss at: http://phpjs.org/functions/each/
-        // original by: Ates Goral (http://magnetiq.com)
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: each({a: "apple", b: "balloon"});
-        //   returns 1: {0: "a", 1: "apple", key: "a", value: "apple"}
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-        if (pointers.indexOf(arr) === -1) {
-            pointers.push(arr, 0);
-        }
-        var arrpos = pointers.indexOf(arr);
-        var cursor = pointers[arrpos + 1];
-        var pos = 0;
-
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            var ct = 0;
-            for (var k in arr) {
-                if (ct === cursor) {
-                    pointers[arrpos + 1] += 1;
-                    if (each.returnArrayOnly) {
-                        return [k, arr[k]];
-                    } else {
-                        return {
-                            1: arr[k],
-                            value: arr[k],
-                            0: k,
-                            key: k
-                        };
-                    }
-                }
-                ct++;
-            }
-            return false; // Empty
-        }
-        if (arr.length === 0 || cursor === arr.length) {
-            return false;
-        }
-        pos = cursor;
-        pointers[arrpos + 1] += 1;
-        if (each.returnArrayOnly) {
-            return [pos, arr[pos]];
-        } else {
-            return {
-                1: arr[pos],
-                value: arr[pos],
-                0: pos,
-                key: pos
-            };
-        }
-    }, end: function (arr) {
-        //  discuss at: http://phpjs.org/functions/end/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Legaev Andrey
-        //  revised by: J A R
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: end({0: 'Kevin', 1: 'van', 2: 'Zonneveld'});
-        //   returns 1: 'Zonneveld'
-        //   example 2: end(['Kevin', 'van', 'Zonneveld']);
-        //   returns 2: 'Zonneveld'
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-        if (pointers.indexOf(arr) === -1) {
-            pointers.push(arr, 0);
-        }
-        var arrpos = pointers.indexOf(arr);
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            var ct = 0;
-            var val;
-            for (var k in arr) {
-                ct++;
-                val = arr[k];
-            }
-            if (ct === 0) {
-                return false; // Empty
-            }
-            pointers[arrpos + 1] = ct - 1;
-            return val;
-        }
-        if (arr.length === 0) {
-            return false;
-        }
-        pointers[arrpos + 1] = arr.length - 1;
-        return arr[pointers[arrpos + 1]];
-    }, in_array: function (needle, haystack, argStrict) {
-        //  discuss at: http://phpjs.org/functions/in_array/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: vlado houba
-        // improved by: Jonas Sciangula Street (Joni2Back)
-        //    input by: Billy
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: in_array('van', ['Kevin', 'van', 'Zonneveld']);
-        //   returns 1: true
-        //   example 2: in_array('vlado', {0: 'Kevin', vlado: 'van', 1: 'Zonneveld'});
-        //   returns 2: false
-        //   example 3: in_array(1, ['1', '2', '3']);
-        //   example 3: in_array(1, ['1', '2', '3'], false);
-        //   returns 3: true
-        //   returns 3: true
-        //   example 4: in_array(1, ['1', '2', '3'], true);
-        //   returns 4: false
-
-        var key = '',
-            strict = !!argStrict;
-
-        //we prevent the double check (strict && arr[key] === ndl) || (!strict && arr[key] == ndl)
-        //in just one for, in order to improve the performance
-        //deciding wich type of comparation will do before walk array
-        if (strict) {
-            for (key in haystack) {
-                if (haystack[key] === needle) {
-                    return true;
-                }
-            }
-        } else {
-            for (key in haystack) {
-                if (haystack[key] == needle) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-    , key: function (arr) {
-        //  discuss at: http://phpjs.org/functions/key/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Riddler (http://www.frontierwebdev.com/)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: array = {fruit1: 'apple', 'fruit2': 'orange'}
-        //   example 1: key(array);
-        //   returns 1: 'fruit1'
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-
-        if (pointers.indexOf(arr) === -1) {
-            pointers.push(arr, 0);
-        }
-        var cursor = pointers[pointers.indexOf(arr) + 1];
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            var ct = 0;
-            for (var k in arr) {
-                if (ct === cursor) {
-                    return k;
-                }
-                ct++;
-            }
-            return false; // Empty
-        }
-        if (arr.length === 0) {
-            return false;
-        }
-        return cursor;
-    }, krsort: function (inputArr, sort_flags) {
-        //  discuss at: http://phpjs.org/functions/krsort/
-        // original by: GeekFG (http://geekfg.blogspot.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: The examples are correct, this is a new way
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: Since JS objects' keys are always strings, and (the
-        //        note: default) SORT_REGULAR flag distinguishes by key type,
-        //        note: if the content is a numeric string, we treat the
-        //        note: "original type" as numeric.
-        //  depends on: i18n_loc_get_default
-        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 1: data = krsort(data);
-        //   example 1: $result = data
-        //   returns 1: {d: 'lemon', c: 'apple', b: 'banana', a: 'orange'}
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: data = {2: 'van', 3: 'Zonneveld', 1: 'Kevin'};
-        //   example 2: krsort(data);
-        //   example 2: $result = data
-        //   returns 2: {3: 'Kevin', 2: 'van', 1: 'Zonneveld'}
-
-        var tmp_arr = {},
-            keys = [],
-            sorter, i, k, that = this,
-            strictForIn = false,
-            populateArr = {};
-
-        switch (sort_flags) {
-            case 'SORT_STRING':
-                // compare items as strings
-                sorter = function (a, b) {
-                    return that.strnatcmp(b, a);
-                };
-                break;
-            case 'SORT_LOCALE_STRING':
-                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
-                var loc = this.i18n_loc_get_default();
-                sorter = this.php_js.i18nLocales[loc].sorting;
-                break;
-            case 'SORT_NUMERIC':
-                // compare items numerically
-                sorter = function (a, b) {
-                    return (b - a);
-                };
-                break;
-            case 'SORT_REGULAR':
-            // compare items normally (don't change types)
-            default:
-                sorter = function (b, a) {
-                    var aFloat = parseFloat(a),
-                        bFloat = parseFloat(b),
-                        aNumeric = aFloat + '' === a,
-                        bNumeric = bFloat + '' === b;
-                    if (aNumeric && bNumeric) {
-                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
-                    } else if (aNumeric && !bNumeric) {
-                        return 1;
-                    } else if (!aNumeric && bNumeric) {
-                        return -1;
-                    }
-                    return a > b ? 1 : a < b ? -1 : 0;
-                };
-                break;
-        }
-
-        // Make a list of key names
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                keys.push(k);
-            }
-        }
-        keys.sort(sorter);
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Rebuild array with sorted key names
-        for (i = 0; i < keys.length; i++) {
-            k = keys[i];
-            tmp_arr[k] = inputArr[k];
-            if (strictForIn) {
-                delete inputArr[k];
-            }
-        }
-        for (i in tmp_arr) {
-            if (tmp_arr.hasOwnProperty(i)) {
-                populateArr[i] = tmp_arr[i];
-            }
-        }
-
-        return strictForIn || populateArr;
-    }, ksort: function (inputArr, sort_flags) {
-        //  discuss at: http://phpjs.org/functions/ksort/
-        // original by: GeekFG (http://geekfg.blogspot.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: The examples are correct, this is a new way
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: Since JS objects' keys are always strings, and (the
-        //        note: default) SORT_REGULAR flag distinguishes by key type,
-        //        note: if the content is a numeric string, we treat the
-        //        note: "original type" as numeric.
-        //  depends on: i18n_loc_get_default
-        //  depends on: strnatcmp
-        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 1: data = ksort(data);
-        //   example 1: $result = data
-        //   returns 1: {a: 'orange', b: 'banana', c: 'apple', d: 'lemon'}
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: data = {2: 'van', 3: 'Zonneveld', 1: 'Kevin'};
-        //   example 2: ksort(data);
-        //   example 2: $result = data
-        //   returns 2: {1: 'Kevin', 2: 'van', 3: 'Zonneveld'}
-
-        var tmp_arr = {},
-            keys = [],
-            sorter, i, k, that = this,
-            strictForIn = false,
-            populateArr = {};
-
-        switch (sort_flags) {
-            case 'SORT_STRING':
-                // compare items as strings
-                sorter = function (a, b) {
-                    return that.strnatcmp(a, b);
-                };
-                break;
-            case 'SORT_LOCALE_STRING':
-                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
-                var loc = this.i18n_loc_get_default();
-                sorter = this.php_js.i18nLocales[loc].sorting;
-                break;
-            case 'SORT_NUMERIC':
-                // compare items numerically
-                sorter = function (a, b) {
-                    return ((a + 0) - (b + 0));
-                };
-                break;
-            // case 'SORT_REGULAR': // compare items normally (don't change types)
-            default:
-                sorter = function (a, b) {
-                    var aFloat = parseFloat(a),
-                        bFloat = parseFloat(b),
-                        aNumeric = aFloat + '' === a,
-                        bNumeric = bFloat + '' === b;
-                    if (aNumeric && bNumeric) {
-                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
-                    } else if (aNumeric && !bNumeric) {
-                        return 1;
-                    } else if (!aNumeric && bNumeric) {
-                        return -1;
-                    }
-                    return a > b ? 1 : a < b ? -1 : 0;
-                };
-                break;
-        }
-
-        // Make a list of key names
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                keys.push(k);
-            }
-        }
-        keys.sort(sorter);
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Rebuild array with sorted key names
-        for (i = 0; i < keys.length; i++) {
-            k = keys[i];
-            tmp_arr[k] = inputArr[k];
-            if (strictForIn) {
-                delete inputArr[k];
-            }
-        }
-        for (i in tmp_arr) {
-            if (tmp_arr.hasOwnProperty(i)) {
-                populateArr[i] = tmp_arr[i];
-            }
-        }
-
-        return strictForIn || populateArr;
-    }, natcasesort: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/natcasesort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: We cannot use numbers as keys and have them be reordered since they
-        //        note: adhere to numerical order in some implementations
-        //  depends on: strnatcasecmp
-        //   example 1: $array1 = {a:'IMG0.png', b:'img12.png', c:'img10.png', d:'img2.png', e:'img1.png', f:'IMG3.png'};
-        //   example 1: $array1 = natcasesort($array1);
-        //   returns 1: {a: 'IMG0.png', e: 'img1.png', d: 'img2.png', f: 'IMG3.png', c: 'img10.png', b: 'img12.png'}
-
-        var valArr = [],
-            k, i, ret, that = this,
-            strictForIn = false,
-            populateArr = {};
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Get key and value arrays
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push([k, inputArr[k]]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-        valArr.sort(function (a, b) {
-            return that.strnatcasecmp(a[1], b[1]);
-        });
-
-        // Repopulate the old array
-        for (i = 0; i < valArr.length; i++) {
-            populateArr[valArr[i][0]] = valArr[i][1];
-        }
-
-        return strictForIn || populateArr;
-    }, natsort: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/natsort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //  depends on: strnatcmp
-        //   example 1: $array1 = {a:"img12.png", b:"img10.png", c:"img2.png", d:"img1.png"};
-        //   example 1: $array1 = natsort($array1);
-        //   returns 1: {d: 'img1.png', c: 'img2.png', b: 'img10.png', a: 'img12.png'}
-
-        var valArr = [],
-            k, i, ret, that = this,
-            strictForIn = false,
-            populateArr = {};
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Get key and value arrays
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push([k, inputArr[k]]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-        valArr.sort(function (a, b) {
-            return that.strnatcmp(a[1], b[1]);
-        });
-
-        // Repopulate the old array
-        for (i = 0; i < valArr.length; i++) {
-            populateArr[valArr[i][0]] = valArr[i][1];
-        }
-
-        return strictForIn || populateArr;
-    }, next: function (arr) {
-        //  discuss at: http://phpjs.org/functions/next/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
-        //   example 1: next(transport);
-        //   example 1: next(transport);
-        //   returns 1: 'car'
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-        if (pointers.indexOf(arr) === -1) {
-            pointers.push(arr, 0);
-        }
-        var arrpos = pointers.indexOf(arr);
-        var cursor = pointers[arrpos + 1];
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            var ct = 0;
-            for (var k in arr) {
-                if (ct === cursor + 1) {
-                    pointers[arrpos + 1] += 1;
-                    return arr[k];
-                }
-                ct++;
-            }
-            return false; // End
-        }
-        if (arr.length === 0 || cursor === (arr.length - 1)) {
-            return false;
-        }
-        pointers[arrpos + 1] += 1;
-        return arr[pointers[arrpos + 1]];
-    }, pos: function (arr) {
-        //  discuss at: http://phpjs.org/functions/pos/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //  depends on: current
-        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
-        //   example 1: pos(transport);
-        //   returns 1: 'foot'
-
-        return this.current(arr);
-    }, prev: function (arr) {
-        //  discuss at: http://phpjs.org/functions/prev/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
-        //   example 1: prev(transport);
-        //   returns 1: false
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-        var arrpos = pointers.indexOf(arr);
-        var cursor = pointers[arrpos + 1];
-        if (pointers.indexOf(arr) === -1 || cursor === 0) {
-            return false;
-        }
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            var ct = 0;
-            for (var k in arr) {
-                if (ct === cursor - 1) {
-                    pointers[arrpos + 1] -= 1;
-                    return arr[k];
-                }
-                ct++;
-            }
-            // Shouldn't reach here
-        }
-        if (arr.length === 0) {
-            return false;
-        }
-        pointers[arrpos + 1] -= 1;
-        return arr[pointers[arrpos + 1]];
-    }, range: function (low, high, step) {
-        //  discuss at: http://phpjs.org/functions/range/
-        // original by: Waldo Malqui Silva
-        //   example 1: range ( 0, 12 );
-        //   returns 1: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        //   example 2: range( 0, 100, 10 );
-        //   returns 2: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-        //   example 3: range( 'a', 'i' );
-        //   returns 3: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
-        //   example 4: range( 'c', 'a' );
-        //   returns 4: ['c', 'b', 'a']
-
-        var matrix = [];
-        var inival, endval, plus;
-        var walker = step || 1;
-        var chars = false;
-
-        if (!isNaN(low) && !isNaN(high)) {
-            inival = low;
-            endval = high;
-        } else if (isNaN(low) && isNaN(high)) {
-            chars = true;
-            inival = low.charCodeAt(0);
-            endval = high.charCodeAt(0);
-        } else {
-            inival = (isNaN(low) ? 0 : low);
-            endval = (isNaN(high) ? 0 : high);
-        }
-
-        plus = ((inival > endval) ? false : true);
-        if (plus) {
-            while (inival <= endval) {
-                matrix.push(((chars) ? String.fromCharCode(inival) : inival));
-                inival += walker;
-            }
-        } else {
-            while (inival >= endval) {
-                matrix.push(((chars) ? String.fromCharCode(inival) : inival));
-                inival -= walker;
-            }
-        }
-
-        return matrix;
-    }, reset: function (arr) {
-        //  discuss at: http://phpjs.org/functions/reset/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Legaev Andrey
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        //        note: Uses global: php_js to store the array pointer
-        //   example 1: reset({0: 'Kevin', 1: 'van', 2: 'Zonneveld'});
-        //   returns 1: 'Kevin'
-
-        this.php_js = this.php_js || {};
-        this.php_js.pointers = this.php_js.pointers || [];
-        var indexOf = function (value) {
-            for (var i = 0, length = this.length; i < length; i++) {
-                if (this[i] === value) {
-                    return i;
-                }
-            }
-            return -1;
-        };
-        // END REDUNDANT
-        var pointers = this.php_js.pointers;
-        if (!pointers.indexOf) {
-            pointers.indexOf = indexOf;
-        }
-        if (pointers.indexOf(arr) === -1) {
-            pointers.push(arr, 0);
-        }
-        var arrpos = pointers.indexOf(arr);
-        if (Object.prototype.toString.call(arr) !== '[object Array]') {
-            for (var k in arr) {
-                if (pointers.indexOf(arr) === -1) {
-                    pointers.push(arr, 0);
-                } else {
-                    pointers[arrpos + 1] = 0;
-                }
-                return arr[k];
-            }
-            return false; // Empty
-        }
-        if (arr.length === 0) {
-            return false;
-        }
-        pointers[arrpos + 1] = 0;
-        return arr[pointers[arrpos + 1]];
-    }, rsort: function (inputArr, sort_flags) {
-        //  discuss at: http://phpjs.org/functions/rsort/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
-        //        note: integrated into all of these functions by adapting the code at
-        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: Since JS objects' keys are always strings, and (the
-        //        note: default) SORT_REGULAR flag distinguishes by key type,
-        //        note: if the content is a numeric string, we treat the
-        //        note: "original type" as numeric.
-        //  depends on: i18n_loc_get_default
-        //   example 1: $arr = ['Kevin', 'van', 'Zonneveld'];
-        //   example 1: rsort($arr);
-        //   example 1: $results = $arr;
-        //   returns 1: ['van', 'Zonneveld', 'Kevin']
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: fruits = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 2: rsort(fruits);
-        //   example 2: $result = fruits;
-        //   returns 2: {0: 'orange', 1: 'lemon', 2: 'banana', 3: 'apple'}
-
-        var valArr = [],
-            k = '',
-            i = 0,
-            sorter = false,
-            that = this,
-            strictForIn = false,
-            populateArr = [];
-
-        switch (sort_flags) {
-            case 'SORT_STRING':
-                // compare items as strings
-                sorter = function (a, b) {
-                    return that.strnatcmp(b, a);
-                };
-                break;
-            case 'SORT_LOCALE_STRING':
-                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
-                var loc = this.i18n_loc_get_default();
-                sorter = this.php_js.i18nLocales[loc].sorting;
-                break;
-            case 'SORT_NUMERIC':
-                // compare items numerically
-                sorter = function (a, b) {
-                    return (b - a);
-                };
-                break;
-            case 'SORT_REGULAR':
-            // compare items normally (don't change types)
-            default:
-                sorter = function (b, a) {
-                    var aFloat = parseFloat(a),
-                        bFloat = parseFloat(b),
-                        aNumeric = aFloat + '' === a,
-                        bNumeric = bFloat + '' === b;
-                    if (aNumeric && bNumeric) {
-                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
-                    } else if (aNumeric && !bNumeric) {
-                        return 1;
-                    } else if (!aNumeric && bNumeric) {
-                        return -1;
-                    }
-                    return a > b ? 1 : a < b ? -1 : 0;
-                };
-                break;
-        }
-
-        // BEGIN REDUNDANT
-        try {
-            this.php_js = this.php_js || {};
-        } catch (e) {
-            this.php_js = {};
-        }
-
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        for (k in inputArr) { // Get key and value arrays
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push(inputArr[k]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-
-        valArr.sort(sorter);
-
-        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
-            populateArr[i] = valArr[i];
-        }
-        return strictForIn || populateArr;
-    }
-    , shuffle: function (inputArr) {
-        //  discuss at: http://phpjs.org/functions/shuffle/
-        // original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-        //  revised by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        test: skip
-        //   example 1: ini_set('phpjs.strictForIn', true);
-        //   example 1: shuffle(data);
-        //   example 1: $result = data;
-        //   returns 1: {5:'a', 4:5, 'q':5, 3:'c', 2:'3'}
-        //   example 2: var data = {5:'a', 2:'3', 3:'c', 4:5, 'q':5};
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: var data = {5:'a', 2:'3', 3:'c', 4:5, 'q':5};
-        //   example 2: shuffle(data);
-        //   example 2: $result = data;
-        //   returns 2: {5:'a', 'q':5, 3:'c', 2:'3', 4:5}
-
-        var valArr = [],
-            k = '',
-            i = 0,
-            strictForIn = false,
-            populateArr = [];
-
-        for (k in inputArr) { // Get key and value arrays
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push(inputArr[k]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-        valArr.sort(function () {
-            return 0.5 - Math.random();
-        });
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
-            populateArr[i] = valArr[i];
-        }
-
-        return strictForIn || populateArr;
-    }, sizeof: function (mixed_var, mode) {
-        //  discuss at: http://phpjs.org/functions/sizeof/
-        // original by: Philip Peterson
-        //  depends on: count
-        //   example 1: sizeof([[0,0],[0,-4]], 'COUNT_RECURSIVE');
-        //   returns 1: 6
-        //   example 2: sizeof({'one' : [1,2,3,4,5]}, 'COUNT_RECURSIVE');
-        //   returns 2: 6
-
-        return this.count(mixed_var, mode);
-    }, sort: function (inputArr, sort_flags) {
-        //  discuss at: http://phpjs.org/functions/sort/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //  revised by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
-        //        note: integrated into all of these functions by adapting the code at
-        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //        note: Since JS objects' keys are always strings, and (the
-        //        note: default) SORT_REGULAR flag distinguishes by key type,
-        //        note: if the content is a numeric string, we treat the
-        //        note: "original type" as numeric.
-        //  depends on: i18n_loc_get_default
-        //   example 1: var arr = ['Kevin', 'van', 'Zonneveld']
-        //   example 1: sort(arr);
-        //   example 1: $result = arr;
-        //   returns 1: ['Kevin', 'Zonneveld', 'van']
-        //   example 2: ini_set('phpjs.strictForIn', true);
-        //   example 2: fruits = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 2: sort(fruits);
-        //   example 2: $result = fruits;
-        //   returns 2: {0: 'apple', 1: 'banana', 2: 'lemon', 3: 'orange'}
-
-        var valArr = [],
-            keyArr = [],
-            k = '',
-            i = 0,
-            sorter = false,
-            that = this,
-            strictForIn = false,
-            populateArr = [];
-
-        switch (sort_flags) {
-            case 'SORT_STRING':
-                // compare items as strings
-                sorter = function (a, b) {
-                    return that.strnatcmp(a, b);
-                };
-                break;
-            case 'SORT_LOCALE_STRING':
-                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
-                var loc = this.i18n_loc_get_default();
-                sorter = this.php_js.i18nLocales[loc].sorting;
-                break;
-            case 'SORT_NUMERIC':
-                // compare items numerically
-                sorter = function (a, b) {
-                    return (a - b);
-                };
-                break;
-            case 'SORT_REGULAR':
-            // compare items normally (don't change types)
-            default:
-                sorter = function (a, b) {
-                    var aFloat = parseFloat(a),
-                        bFloat = parseFloat(b),
-                        aNumeric = aFloat + '' === a,
-                        bNumeric = bFloat + '' === b;
-                    if (aNumeric && bNumeric) {
-                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
-                    } else if (aNumeric && !bNumeric) {
-                        return 1;
-                    } else if (!aNumeric && bNumeric) {
-                        return -1;
-                    }
-                    return a > b ? 1 : a < b ? -1 : 0;
-                };
-                break;
-        }
-
-        // BEGIN REDUNDANT
-        try {
-            this.php_js = this.php_js || {};
-        } catch (e) {
-            this.php_js = {};
-        }
-
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        for (k in inputArr) { // Get key and value arrays
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push(inputArr[k]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-
-        valArr.sort(sorter);
-
-        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
-            populateArr[i] = valArr[i];
-        }
-        return strictForIn || populateArr;
-    }, uasort: function (inputArr, sorter) {
-        //  discuss at: http://phpjs.org/functions/uasort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //   example 1: fruits = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 1: fruits = uasort(fruits, function (a, b) { if (a > b) {return 1;}if (a < b) {return -1;} return 0;});
-        //   example 1: $result = fruits;
-        //   returns 1: {c: 'apple', b: 'banana', d: 'lemon', a: 'orange'}
-
-        var valArr = [],
-            tempKeyVal, tempValue, ret, k = '',
-            i = 0,
-            strictForIn = false,
-            populateArr = {};
-
-        if (typeof sorter === 'string') {
-            sorter = this[sorter];
-        } else if (Object.prototype.toString.call(sorter) === '[object Array]') {
-            sorter = this[sorter[0]][sorter[1]];
-        }
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        for (k in inputArr) { // Get key and value arrays
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push([k, inputArr[k]]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-        valArr.sort(function (a, b) {
-            return sorter(a[1], b[1]);
-        });
-
-        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
-            populateArr[valArr[i][0]] = valArr[i][1];
-        }
-
-        return strictForIn || populateArr;
-    }, uksort: function (inputArr, sorter) {
-        //  discuss at: http://phpjs.org/functions/uksort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: The examples are correct, this is a new way
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
-        //   example 1: data = uksort(data, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
-        //   example 1: $result = data
-        //   returns 1: {a: 'orange', b: 'banana', c: 'apple', d: 'lemon'}
-
-        var tmp_arr = {},
-            keys = [],
-            i = 0,
-            k = '',
-            strictForIn = false,
-            populateArr = {};
-
-        if (typeof sorter === 'string') {
-            sorter = this.window[sorter];
-        }
-
-        // Make a list of key names
-        for (k in inputArr) {
-            if (inputArr.hasOwnProperty(k)) {
-                keys.push(k);
-            }
-        }
-
-        // Sort key names
-        try {
-            if (sorter) {
-                keys.sort(sorter);
-            } else {
-                keys.sort();
-            }
-        } catch (e) {
-            return false;
-        }
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        // Rebuild array with sorted key names
-        for (i = 0; i < keys.length; i++) {
-            k = keys[i];
-            tmp_arr[k] = inputArr[k];
-            if (strictForIn) {
-                delete inputArr[k];
-            }
-        }
-        for (i in tmp_arr) {
-            if (tmp_arr.hasOwnProperty(i)) {
-                populateArr[i] = tmp_arr[i];
-            }
-        }
-        return strictForIn || populateArr;
-    }, usort: function (inputArr, sorter) {
-        //  discuss at: http://phpjs.org/functions/usort/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: This function deviates from PHP in returning a copy of the array instead
-        //        note: of acting by reference and returning true; this was necessary because
-        //        note: IE does not allow deleting and re-adding of properties without caching
-        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
-        //        note: get the PHP behavior, but use this only if you are in an environment
-        //        note: such as Firefox extensions where for-in iteration order is fixed and true
-        //        note: property deletion is supported. Note that we intend to implement the PHP
-        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
-        //        note: is by reference in PHP anyways
-        //   example 1: stuff = {d: '3', a: '1', b: '11', c: '4'};
-        //   example 1: stuff = usort(stuff, function (a, b) {return(a-b);});
-        //   example 1: $result = stuff;
-        //   returns 1: {0: '1', 1: '3', 2: '4', 3: '11'};
-
-        var valArr = [],
-            k = '',
-            i = 0,
-            strictForIn = false,
-            populateArr = {};
-
-        if (typeof sorter === 'string') {
-            sorter = this[sorter];
-        } else if (Object.prototype.toString.call(sorter) === '[object Array]') {
-            sorter = this[sorter[0]][sorter[1]];
-        }
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
-                .ini['phpjs.strictForIn'].local_value !== 'off';
-        populateArr = strictForIn ? inputArr : populateArr;
-
-        for (k in inputArr) { // Get key and value arrays
-            if (inputArr.hasOwnProperty(k)) {
-                valArr.push(inputArr[k]);
-                if (strictForIn) {
-                    delete inputArr[k];
-                }
-            }
-        }
-        try {
-            valArr.sort(sorter);
-        } catch (e) {
-            return false;
-        }
-        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
-            populateArr[i] = valArr[i];
-        }
-
-        return strictForIn || populateArr;
-    }, bcadd: function (left_operand, right_operand, scale) {
-        //  discuss at: http://phpjs.org/functions/bcadd/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bcadd(1, 2);
-        //   returns 1: 3
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        var first, second, result;
-
-        if (typeof scale === 'undefined') {
-            scale = libbcmath.scale;
-        }
-        scale = ((scale < 0) ? 0 : scale);
-
-        // create objects
-        first = libbcmath.bc_init_num();
-        second = libbcmath.bc_init_num();
-        result = libbcmath.bc_init_num();
-
-        first = libbcmath.php_str2num(left_operand.toString());
-        second = libbcmath.php_str2num(right_operand.toString());
-
-        result = libbcmath.bc_add(first, second, scale);
-
-        if (result.n_scale > scale) {
-            result.n_scale = scale;
-        }
-
-        return result.toString();
-    }, bccomp: function (left_operand, right_operand, scale) {
-        //  discuss at: http://phpjs.org/functions/bccomp/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bccomp(1, 2);
-        //   returns 1: 3
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        var first, second; //bc_num
-        if (typeof scale === 'undefined') {
-            scale = libbcmath.scale;
-        }
-        scale = ((scale < 0) ? 0 : scale);
-
-        first = libbcmath.bc_init_num();
-        second = libbcmath.bc_init_num();
-
-        first = libbcmath.bc_str2num(left_operand.toString(), scale); // note bc_ not php_str2num
-        second = libbcmath.bc_str2num(right_operand.toString(), scale); // note bc_ not php_str2num
-        return libbcmath.bc_compare(first, second, scale);
-    }, bcdiv: function (left_operand, right_operand, scale) {
-        //  discuss at: http://phpjs.org/functions/bcdiv/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bcdiv(1, 2);
-        //   returns 1: 3
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        var first, second, result;
-
-        if (typeof scale === 'undefined') {
-            scale = libbcmath.scale;
-        }
-        scale = ((scale < 0) ? 0 : scale);
-
-        // create objects
-        first = libbcmath.bc_init_num();
-        second = libbcmath.bc_init_num();
-        result = libbcmath.bc_init_num();
-
-        first = libbcmath.php_str2num(left_operand.toString());
-        second = libbcmath.php_str2num(right_operand.toString());
-
-        result = libbcmath.bc_divide(first, second, scale);
-        if (result === -1) {
-            // error
-            throw new Error(11, '(BC) Division by zero');
-        }
-        if (result.n_scale > scale) {
-            result.n_scale = scale;
-        }
-        return result.toString();
-    }, bcmul: function (left_operand, right_operand, scale) {
-        //  discuss at: http://phpjs.org/functions/bcmul/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bcmul(1, 2);
-        //   returns 1: 3
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        var first, second, result;
-
-        if (typeof scale === 'undefined') {
-            scale = libbcmath.scale;
-        }
-        scale = ((scale < 0) ? 0 : scale);
-
-        // create objects
-        first = libbcmath.bc_init_num();
-        second = libbcmath.bc_init_num();
-        result = libbcmath.bc_init_num();
-
-        first = libbcmath.php_str2num(left_operand.toString());
-        second = libbcmath.php_str2num(right_operand.toString());
-
-        result = libbcmath.bc_multiply(first, second, scale);
-
-        if (result.n_scale > scale) {
-            result.n_scale = scale;
-        }
-        return result.toString();
-    }, bcround: function (val, precision) {
-        //  discuss at: http://phpjs.org/functions/bcround/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bcround(1, 2);
-        //   returns 1: 3
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        var temp, result, digit;
-        var right_operand;
-
-        // create number
-        temp = libbcmath.bc_init_num();
-        temp = libbcmath.php_str2num(val.toString());
-
-        // check if any rounding needs
-        if (precision >= temp.n_scale) {
-            // nothing to round, just add the zeros.
-            while (temp.n_scale < precision) {
-                temp.n_value[temp.n_len + temp.n_scale] = 0;
-                temp.n_scale++;
-            }
-            return temp.toString();
-        }
-
-        // get the digit we are checking (1 after the precision)
-        // loop through digits after the precision marker
-        digit = temp.n_value[temp.n_len + precision];
-
-        right_operand = libbcmath.bc_init_num();
-        right_operand = libbcmath.bc_new_num(1, precision);
-
-        if (digit >= 5) {
-            //round away from zero by adding 1 (or -1) at the "precision".. ie 1.44999 @ 3dp = (1.44999 + 0.001).toString().substr(0,5)
-            right_operand.n_value[right_operand.n_len + right_operand.n_scale - 1] = 1;
-            if (temp.n_sign == libbcmath.MINUS) {
-                // round down
-                right_operand.n_sign = libbcmath.MINUS;
-            }
-            result = libbcmath.bc_add(temp, right_operand, precision);
-        } else {
-            // leave-as-is.. just truncate it.
-            result = temp;
-        }
-
-        if (result.n_scale > precision) {
-            result.n_scale = precision;
-        }
-        return result.toString();
-    }, bcscale: function (scale) {
-        //  discuss at: http://phpjs.org/functions/bcscale/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)this.
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bcscale(1);
-        //   returns 1: 3
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        scale = parseInt(scale, 10);
-        if (isNaN(scale)) {
-            return false;
-        }
-        if (scale < 0) {
-            return false;
-        }
-        libbcmath.scale = scale;
-        return true;
-    }, bcsub: function (left_operand, right_operand, scale) {
-        //  discuss at: http://phpjs.org/functions/bcsub/
-        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
-        //  depends on: _phpjs_shared_bc
-        //   example 1: bcsub(1, 2);
-        //   returns 1: -1
-        //        todo: implement these testcases
-
-        var libbcmath = this._phpjs_shared_bc();
-
-        var first, second, result;
-
-        if (typeof scale === 'undefined') {
-            scale = libbcmath.scale;
-        }
-        scale = ((scale < 0) ? 0 : scale);
-
-        // create objects
-        first = libbcmath.bc_init_num();
-        second = libbcmath.bc_init_num();
-        result = libbcmath.bc_init_num();
-
-        first = libbcmath.php_str2num(left_operand.toString());
-        second = libbcmath.php_str2num(right_operand.toString());
-
-        result = libbcmath.bc_sub(first, second, scale);
-
-        if (result.n_scale > scale) {
-            result.n_scale = scale;
-        }
-
-        return result.toString();
-    }, ctype_alnum: function (text) {
+var php = {
+    ctype_alnum: function (text) {
         //  discuss at: http://phpjs.org/functions/ctype_alnum/
         // original by: Brett Zamir (http://brett-zamir.me)
         //  depends on: setlocale
@@ -4304,3470 +155,6 @@ php = {
         this.setlocale('LC_ALL', 0); // ensure setup of localization variables takes place
         // END REDUNDANT
         return text.search(this.php_js.locales[this.php_js.localeCategories.LC_CTYPE].LC_CTYPE.xd) !== -1;
-    }, checkdate: function (m, d, y) {
-        //  discuss at: http://phpjs.org/functions/checkdate/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Pyerre
-        // improved by: Theriault
-        //   example 1: checkdate(12, 31, 2000);
-        //   returns 1: true
-        //   example 2: checkdate(2, 29, 2001);
-        //   returns 2: false
-        //   example 3: checkdate(3, 31, 2008);
-        //   returns 3: true
-        //   example 4: checkdate(1, 390, 2000);
-        //   returns 4: false
-
-        return m > 0 && m < 13 && y > 0 && y < 32768 && d > 0 && d <= (new Date(y, m, 0))
-                .getDate();
-    }, date: function (format, timestamp) {
-        //  discuss at: http://phpjs.org/functions/date/
-        // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
-        // original by: gettimeofday
-        //    parts by: Peter-Paul Koch (http://www.quirksmode.org/js/beat.html)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: MeEtc (http://yass.meetcweb.com)
-        // improved by: Brad Touesnard
-        // improved by: Tim Wiel
-        // improved by: Bryan Elliott
-        // improved by: David Randall
-        // improved by: Theriault
-        // improved by: Theriault
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        // improved by: Thomas Beaucourt (http://www.webapp.fr)
-        // improved by: JT
-        // improved by: Theriault
-        // improved by: Rafał Kukawski (http://blog.kukawski.pl)
-        // improved by: Theriault
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        //    input by: majak
-        //    input by: Alex
-        //    input by: Martin
-        //    input by: Alex Wilson
-        //    input by: Haravikk
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: majak
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: omid (http://phpjs.org/functions/380:380#comment_137122)
-        // bugfixed by: Chris (http://www.devotis.nl/)
-        //        note: Uses global: php_js to store the default timezone
-        //        note: Although the function potentially allows timezone info (see notes), it currently does not set
-        //        note: per a timezone specified by date_default_timezone_set(). Implementers might use
-        //        note: this.php_js.currentTimezoneOffset and this.php_js.currentTimezoneDST set by that function
-        //        note: in order to adjust the dates in this function (or our other date functions!) accordingly
-        //   example 1: date('H:m:s \\m \\i\\s \\m\\o\\n\\t\\h', 1062402400);
-        //   returns 1: '09:09:40 m is month'
-        //   example 2: date('F j, Y, g:i a', 1062462400);
-        //   returns 2: 'September 2, 2003, 2:26 am'
-        //   example 3: date('Y W o', 1062462400);
-        //   returns 3: '2003 36 2003'
-        //   example 4: x = date('Y m d', (new Date()).getTime()/1000);
-        //   example 4: (x+'').length == 10 // 2009 01 09
-        //   returns 4: true
-        //   example 5: date('W', 1104534000);
-        //   returns 5: '53'
-        //   example 6: date('B t', 1104534000);
-        //   returns 6: '999 31'
-        //   example 7: date('W U', 1293750000.82); // 2010-12-31
-        //   returns 7: '52 1293750000'
-        //   example 8: date('W', 1293836400); // 2011-01-01
-        //   returns 8: '52'
-        //   example 9: date('W Y-m-d', 1293974054); // 2011-01-02
-        //   returns 9: '52 2011-01-02'
-
-        var that = this;
-        var jsdate, f;
-        // Keep this here (works, but for code commented-out below for file size reasons)
-        // var tal= [];
-        var txt_words = [
-            'Sun', 'Mon', 'Tues', 'Wednes', 'Thurs', 'Fri', 'Satur',
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-        ];
-        // trailing backslash -> (dropped)
-        // a backslash followed by any character (including backslash) -> the character
-        // empty string -> empty string
-        var formatChr = /\\?(.?)/gi;
-        var formatChrCb = function (t, s) {
-            return f[t] ? f[t]() : s;
-        };
-        var _pad = function (n, c) {
-            n = String(n);
-            while (n.length < c) {
-                n = '0' + n;
-            }
-            return n;
-        };
-        f = {
-            // Day
-            d: function () { // Day of month w/leading 0; 01..31
-                return _pad(f.j(), 2);
-            },
-            D: function () { // Shorthand day name; Mon...Sun
-                return f.l()
-                    .slice(0, 3);
-            },
-            j: function () { // Day of month; 1..31
-                return jsdate.getDate();
-            },
-            l: function () { // Full day name; Monday...Sunday
-                return txt_words[f.w()] + 'day';
-            },
-            N: function () { // ISO-8601 day of week; 1[Mon]..7[Sun]
-                return f.w() || 7;
-            },
-            S: function () { // Ordinal suffix for day of month; st, nd, rd, th
-                var j = f.j();
-                var i = j % 10;
-                if (i <= 3 && parseInt((j % 100) / 10, 10) == 1) {
-                    i = 0;
-                }
-                return ['st', 'nd', 'rd'][i - 1] || 'th';
-            },
-            w: function () { // Day of week; 0[Sun]..6[Sat]
-                return jsdate.getDay();
-            },
-            z: function () { // Day of year; 0..365
-                var a = new Date(f.Y(), f.n() - 1, f.j());
-                var b = new Date(f.Y(), 0, 1);
-                return Math.round((a - b) / 864e5);
-            },
-
-            // Week
-            W: function () { // ISO-8601 week number
-                var a = new Date(f.Y(), f.n() - 1, f.j() - f.N() + 3);
-                var b = new Date(a.getFullYear(), 0, 4);
-                return _pad(1 + Math.round((a - b) / 864e5 / 7), 2);
-            },
-
-            // Month
-            F: function () { // Full month name; January...December
-                return txt_words[6 + f.n()];
-            },
-            m: function () { // Month w/leading 0; 01...12
-                return _pad(f.n(), 2);
-            },
-            M: function () { // Shorthand month name; Jan...Dec
-                return f.F()
-                    .slice(0, 3);
-            },
-            n: function () { // Month; 1...12
-                return jsdate.getMonth() + 1;
-            },
-            t: function () { // Days in month; 28...31
-                return (new Date(f.Y(), f.n(), 0))
-                    .getDate();
-            },
-
-            // Year
-            L: function () { // Is leap year?; 0 or 1
-                var j = f.Y();
-                return j % 4 === 0 & j % 100 !== 0 | j % 400 === 0;
-            },
-            o: function () { // ISO-8601 year
-                var n = f.n();
-                var W = f.W();
-                var Y = f.Y();
-                return Y + (n === 12 && W < 9 ? 1 : n === 1 && W > 9 ? -1 : 0);
-            },
-            Y: function () { // Full year; e.g. 1980...2010
-                return jsdate.getFullYear();
-            },
-            y: function () { // Last two digits of year; 00...99
-                return f.Y()
-                    .toString()
-                    .slice(-2);
-            },
-
-            // Time
-            a: function () { // am or pm
-                return jsdate.getHours() > 11 ? 'pm' : 'am';
-            },
-            A: function () { // AM or PM
-                return f.a()
-                    .toUpperCase();
-            },
-            B: function () { // Swatch Internet time; 000..999
-                var H = jsdate.getUTCHours() * 36e2;
-                // Hours
-                var i = jsdate.getUTCMinutes() * 60;
-                // Minutes
-                var s = jsdate.getUTCSeconds(); // Seconds
-                return _pad(Math.floor((H + i + s + 36e2) / 86.4) % 1e3, 3);
-            },
-            g: function () { // 12-Hours; 1..12
-                return f.G() % 12 || 12;
-            },
-            G: function () { // 24-Hours; 0..23
-                return jsdate.getHours();
-            },
-            h: function () { // 12-Hours w/leading 0; 01..12
-                return _pad(f.g(), 2);
-            },
-            H: function () { // 24-Hours w/leading 0; 00..23
-                return _pad(f.G(), 2);
-            },
-            i: function () { // Minutes w/leading 0; 00..59
-                return _pad(jsdate.getMinutes(), 2);
-            },
-            s: function () { // Seconds w/leading 0; 00..59
-                return _pad(jsdate.getSeconds(), 2);
-            },
-            u: function () { // Microseconds; 000000-999000
-                return _pad(jsdate.getMilliseconds() * 1000, 6);
-            },
-
-            // Timezone
-            e: function () { // Timezone identifier; e.g. Atlantic/Azores, ...
-                // The following works, but requires inclusion of the very large
-                // timezone_abbreviations_list() function.
-                /*              return that.date_default_timezone_get();
-                 */
-                throw 'Not supported (see source code of date() for timezone on how to add support)';
-            },
-            I: function () { // DST observed?; 0 or 1
-                // Compares Jan 1 minus Jan 1 UTC to Jul 1 minus Jul 1 UTC.
-                // If they are not equal, then DST is observed.
-                var a = new Date(f.Y(), 0);
-                // Jan 1
-                var c = Date.UTC(f.Y(), 0);
-                // Jan 1 UTC
-                var b = new Date(f.Y(), 6);
-                // Jul 1
-                var d = Date.UTC(f.Y(), 6); // Jul 1 UTC
-                return ((a - c) !== (b - d)) ? 1 : 0;
-            },
-            O: function () { // Difference to GMT in hour format; e.g. +0200
-                var tzo = jsdate.getTimezoneOffset();
-                var a = Math.abs(tzo);
-                return (tzo > 0 ? '-' : '+') + _pad(Math.floor(a / 60) * 100 + a % 60, 4);
-            },
-            P: function () { // Difference to GMT w/colon; e.g. +02:00
-                var O = f.O();
-                return (O.substr(0, 3) + ':' + O.substr(3, 2));
-            },
-            T: function () { // Timezone abbreviation; e.g. EST, MDT, ...
-                // The following works, but requires inclusion of the very
-                // large timezone_abbreviations_list() function.
-                /*              var abbr, i, os, _default;
-                 if (!tal.length) {
-                 tal = that.timezone_abbreviations_list();
-                 }
-                 if (that.php_js && that.php_js.default_timezone) {
-                 _default = that.php_js.default_timezone;
-                 for (abbr in tal) {
-                 for (i = 0; i < tal[abbr].length; i++) {
-                 if (tal[abbr][i].timezone_id === _default) {
-                 return abbr.toUpperCase();
-                 }
-                 }
-                 }
-                 }
-                 for (abbr in tal) {
-                 for (i = 0; i < tal[abbr].length; i++) {
-                 os = -jsdate.getTimezoneOffset() * 60;
-                 if (tal[abbr][i].offset === os) {
-                 return abbr.toUpperCase();
-                 }
-                 }
-                 }
-                 */
-                return 'UTC';
-            },
-            Z: function () { // Timezone offset in seconds (-43200...50400)
-                return -jsdate.getTimezoneOffset() * 60;
-            },
-
-            // Full Date/Time
-            c: function () { // ISO-8601 date.
-                return 'Y-m-d\\TH:i:sP'.replace(formatChr, formatChrCb);
-            },
-            r: function () { // RFC 2822
-                return 'D, d M Y H:i:s O'.replace(formatChr, formatChrCb);
-            },
-            U: function () { // Seconds since UNIX epoch
-                return jsdate / 1000 | 0;
-            }
-        };
-        this.date = function (format, timestamp) {
-            that = this;
-            jsdate = (timestamp === undefined ? new Date() : // Not provided
-                    (timestamp instanceof Date) ? new Date(timestamp) : // JS Date()
-                        new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
-            );
-            return format.replace(formatChr, formatChrCb);
-        };
-        return this.date(format, timestamp);
-    }, date_parse: function (date) {
-        //  discuss at: http://phpjs.org/functions/date_parse/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: strtotime
-        //   example 1: date_parse('2006-12-12 10:00:00.5');
-        //   returns 1: {year : 2006, month: 12, day: 12, hour: 10, minute: 0, second: 0, fraction: 0.5, warning_count: 0, warnings: [], error_count: 0, errors: [], is_localtime: false}
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        // END REDUNDANT
-
-        var ts,
-            warningsOffset = this.php_js.warnings ? this.php_js.warnings.length : null,
-            errorsOffset = this.php_js.errors ? this.php_js.errors.length : null;
-
-        try {
-            this.php_js.date_parse_state = true; // Allow strtotime to return a decimal (which it normally does not)
-            ts = this.strtotime(date);
-            this.php_js.date_parse_state = false;
-        } finally {
-            if (!ts) {
-                return false;
-            }
-        }
-
-        var dt = new Date(ts * 1000);
-
-        var retObj = { // Grab any new warnings or errors added (not implemented yet in strtotime()); throwing warnings, notices, or errors could also be easily monitored by using 'watch' on this.php_js.latestWarning, etc. and/or calling any defined error handlers
-            warning_count: warningsOffset !== null ? this.php_js.warnings.slice(warningsOffset)
-                .length : 0,
-            warnings: warningsOffset !== null ? this.php_js.warnings.slice(warningsOffset) : [],
-            error_count: errorsOffset !== null ? this.php_js.errors.slice(errorsOffset)
-                .length : 0,
-            errors: errorsOffset !== null ? this.php_js.errors.slice(errorsOffset) : []
-        };
-        retObj.year = dt.getFullYear();
-        retObj.month = dt.getMonth() + 1;
-        retObj.day = dt.getDate();
-        retObj.hour = dt.getHours();
-        retObj.minute = dt.getMinutes();
-        retObj.second = dt.getSeconds();
-        retObj.fraction = parseFloat('0.' + dt.getMilliseconds());
-        retObj.is_localtime = dt.getTimezoneOffset() !== 0;
-
-        return retObj;
-    }, getdate: function (timestamp) {
-        //  discuss at: http://phpjs.org/functions/getdate/
-        // original by: Paulo Freitas
-        //    input by: Alex
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: getdate(1055901520);
-        //   returns 1: {'seconds': 40, 'minutes': 58, 'hours': 21, 'mday': 17, 'wday': 2, 'mon': 6, 'year': 2003, 'yday': 167, 'weekday': 'Tuesday', 'month': 'June', '0': 1055901520}
-
-        var _w = ['Sun', 'Mon', 'Tues', 'Wednes', 'Thurs', 'Fri', 'Satur'];
-        var _m = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-            'November', 'December'
-        ];
-        var d = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
-                (typeof timestamp === 'object') ? new Date(timestamp) : // Javascript Date()
-                    new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
-        );
-        var w = d.getDay();
-        var m = d.getMonth();
-        var y = d.getFullYear();
-        var r = {};
-
-        r.seconds = d.getSeconds();
-        r.minutes = d.getMinutes();
-        r.hours = d.getHours();
-        r.mday = d.getDate();
-        r.wday = w;
-        r.mon = m + 1;
-        r.year = y;
-        r.yday = Math.floor((d - (new Date(y, 0, 1))) / 86400000);
-        r.weekday = _w[w] + 'day';
-        r.month = _m[m];
-        r['0'] = parseInt(d.getTime() / 1000, 10);
-
-        return r;
-    }, gettimeofday: function (return_float) {
-        //  discuss at: http://phpjs.org/functions/gettimeofday/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // original by: Josh Fraser (http://onlineaspect.com/2007/06/08/auto-detect-a-time-zone-with-javascript/)
-        //    parts by: Breaking Par Consulting Inc (http://www.breakingpar.com/bkp/home.nsf/0/87256B280015193F87256CFB006C45F7)
-        //  revised by: Theriault
-        //   example 1: gettimeofday();
-        //   returns 1: {sec: 12, usec: 153000, minuteswest: -480, dsttime: 0}
-        //   example 2: gettimeofday(true);
-        //   returns 2: 1238748978.49
-
-        var t = new Date(),
-            y = 0;
-
-        if (return_float) {
-            return t.getTime() / 1000;
-        }
-
-        y = t.getFullYear(); // Store current year.
-        return {
-            sec: t.getUTCSeconds(),
-            usec: t.getUTCMilliseconds() * 1000,
-            minuteswest: t.getTimezoneOffset(),
-            // Compare Jan 1 minus Jan 1 UTC to Jul 1 minus Jul 1 UTC to see if DST is observed.
-            dsttime: 0 + (((new Date(y, 0)) - Date.UTC(y, 0)) !== ((new Date(y, 6)) - Date.UTC(y, 6)))
-        };
-    }, gmdate: function (format, timestamp) {
-        //  discuss at: http://phpjs.org/functions/gmdate/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Alex
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: date
-        //   example 1: gmdate('H:m:s \\m \\i\\s \\m\\o\\n\\t\\h', 1062402400); // Return will depend on your timezone
-        //   returns 1: '07:09:40 m is month'
-
-        var dt = typeof timestamp === 'undefined' ? new Date() : // Not provided
-            typeof timestamp === 'object' ? new Date(timestamp) : // Javascript Date()
-                new Date(timestamp * 1000); // UNIX timestamp (auto-convert to int)
-        timestamp = Date.parse(dt.toUTCString()
-                .slice(0, -4)) / 1000;
-        return this.date(format, timestamp);
-    }, gmmktime: function () {
-        //  discuss at: http://phpjs.org/functions/gmmktime/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // original by: mktime
-        //   example 1: gmmktime(14, 10, 2, 2, 1, 2008);
-        //   returns 1: 1201875002
-        //   example 2: gmmktime(0, 0, -1, 1, 1, 1970);
-        //   returns 2: -1
-
-        var d = new Date(),
-            r = arguments,
-            i = 0,
-            e = ['Hours', 'Minutes', 'Seconds', 'Month', 'Date', 'FullYear'];
-
-        for (i = 0; i < e.length; i++) {
-            if (typeof r[i] === 'undefined') {
-                r[i] = d['getUTC' + e[i]]();
-                r[i] += (i === 3); // +1 to fix JS months.
-            } else {
-                r[i] = parseInt(r[i], 10);
-                if (isNaN(r[i])) {
-                    return false;
-                }
-            }
-        }
-
-        // Map years 0-69 to 2000-2069 and years 70-100 to 1970-2000.
-        r[5] += (r[5] >= 0 ? (r[5] <= 69 ? 2e3 : (r[5] <= 100 ? 1900 : 0)) : 0);
-
-        // Set year, month (-1 to fix JS months), and date.
-        // !This must come before the call to setHours!
-        d.setUTCFullYear(r[5], r[3] - 1, r[4]);
-
-        // Set hours, minutes, and seconds.
-        d.setUTCHours(r[0], r[1], r[2]);
-
-        // Divide milliseconds by 1000 to return seconds and drop decimal.
-        // Add 1 second if negative or it'll be off from PHP by 1 second.
-        return (d.getTime() / 1e3 >> 0) - (d.getTime() < 0);
-    }, gmstrftime: function (format, timestamp) {
-        //  discuss at: http://phpjs.org/functions/gmstrftime/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Alex
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: strftime
-        //   example 1: gmstrftime("%A", 1062462400);
-        //   returns 1: 'Tuesday'
-
-        var dt = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
-                (typeof timestamp === 'object') ? new Date(timestamp) : // Javascript Date()
-                    new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
-        );
-        timestamp = Date.parse(dt.toUTCString()
-                .slice(0, -4)) / 1000;
-        return this.strftime(format, timestamp);
-    }, idate: function (format, timestamp) {
-        //  discuss at: http://phpjs.org/functions/idate/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // original by: date
-        // original by: gettimeofday
-        //    input by: Alex
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Theriault
-        //   example 1: idate('y', 1255633200);
-        //   returns 1: 9
-
-        if (format === undefined) {
-            throw 'idate() expects at least 1 parameter, 0 given';
-        }
-        if (!format.length || format.length > 1) {
-            throw 'idate format is one char';
-        }
-
-        // Fix: Need to allow date_default_timezone_set() (check for this.php_js.default_timezone and use)
-        var date = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
-                    (timestamp instanceof Date) ? new Date(timestamp) : // Javascript Date()
-                        new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
-            ),
-            a;
-
-        switch (format) {
-            case 'B':
-                return Math.floor(((date.getUTCHours() * 36e2) + (date.getUTCMinutes() * 60) + date.getUTCSeconds() + 36e2) /
-                        86.4) % 1e3;
-            case 'd':
-                return date.getDate();
-            case 'h':
-                return date.getHours() % 12 || 12;
-            case 'H':
-                return date.getHours();
-            case 'i':
-                return date.getMinutes();
-            case 'I':
-                // capital 'i'
-                // Logic original by getimeofday().
-                // Compares Jan 1 minus Jan 1 UTC to Jul 1 minus Jul 1 UTC.
-                // If they are not equal, then DST is observed.
-                a = date.getFullYear();
-                return 0 + (((new Date(a, 0)) - Date.UTC(a, 0)) !== ((new Date(a, 6)) - Date.UTC(a, 6)));
-            case 'L':
-                a = date.getFullYear();
-                return (!(a & 3) && (a % 1e2 || !(a % 4e2))) ? 1 : 0;
-            case 'm':
-                return date.getMonth() + 1;
-            case 's':
-                return date.getSeconds();
-            case 't':
-                return (new Date(date.getFullYear(), date.getMonth() + 1, 0))
-                    .getDate();
-            case 'U':
-                return Math.round(date.getTime() / 1000);
-            case 'w':
-                return date.getDay();
-            case 'W':
-                a = new Date(date.getFullYear(), date.getMonth(), date.getDate() - (date.getDay() || 7) + 3);
-                return 1 + Math.round((a - (new Date(a.getFullYear(), 0, 4))) / 864e5 / 7);
-            case 'y':
-                return parseInt((date.getFullYear() + '')
-                    .slice(2), 10); // This function returns an integer, unlike date()
-            case 'Y':
-                return date.getFullYear();
-            case 'z':
-                return Math.floor((date - new Date(date.getFullYear(), 0, 1)) / 864e5);
-            case 'Z':
-                return -date.getTimezoneOffset() * 60;
-            default:
-                throw 'Unrecognized date format token';
-        }
-    }, microtime: function (get_as_float) {
-        //  discuss at: http://phpjs.org/functions/microtime/
-        // original by: Paulo Freitas
-        //   example 1: timeStamp = microtime(true);
-        //   example 1: timeStamp > 1000000000 && timeStamp < 2000000000
-        //   returns 1: true
-
-        var now = new Date()
-                .getTime() / 1000;
-        var s = parseInt(now, 10);
-
-        return (get_as_float) ? now : (Math.round((now - s) * 1000) / 1000) + ' ' + s;
-    }, mktime: function () {
-        //  discuss at: http://phpjs.org/functions/mktime/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: baris ozdil
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: FGFEmperor
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //    input by: gabriel paderni
-        //    input by: Yannoo
-        //    input by: jakes
-        //    input by: 3D-GRAF
-        //    input by: Chris
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // bugfixed by: Marc Palau
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //  revised by: Theriault
-        //        note: The return values of the following examples are
-        //        note: received only if your system's timezone is UTC.
-        //   example 1: mktime(14, 10, 2, 2, 1, 2008);
-        //   returns 1: 1201875002
-        //   example 2: mktime(0, 0, 0, 0, 1, 2008);
-        //   returns 2: 1196467200
-        //   example 3: make = mktime();
-        //   example 3: td = new Date();
-        //   example 3: real = Math.floor(td.getTime() / 1000);
-        //   example 3: diff = (real - make);
-        //   example 3: diff < 5
-        //   returns 3: true
-        //   example 4: mktime(0, 0, 0, 13, 1, 1997)
-        //   returns 4: 883612800
-        //   example 5: mktime(0, 0, 0, 1, 1, 1998)
-        //   returns 5: 883612800
-        //   example 6: mktime(0, 0, 0, 1, 1, 98)
-        //   returns 6: 883612800
-        //   example 7: mktime(23, 59, 59, 13, 0, 2010)
-        //   returns 7: 1293839999
-        //   example 8: mktime(0, 0, -1, 1, 1, 1970)
-        //   returns 8: -1
-
-        var d = new Date(),
-            r = arguments,
-            i = 0,
-            e = ['Hours', 'Minutes', 'Seconds', 'Month', 'Date', 'FullYear'];
-
-        for (i = 0; i < e.length; i++) {
-            if (typeof r[i] === 'undefined') {
-                r[i] = d['get' + e[i]]();
-                r[i] += (i === 3); // +1 to fix JS months.
-            } else {
-                r[i] = parseInt(r[i], 10);
-                if (isNaN(r[i])) {
-                    return false;
-                }
-            }
-        }
-
-        // Map years 0-69 to 2000-2069 and years 70-100 to 1970-2000.
-        r[5] += (r[5] >= 0 ? (r[5] <= 69 ? 2e3 : (r[5] <= 100 ? 1900 : 0)) : 0);
-
-        // Set year, month (-1 to fix JS months), and date.
-        // !This must come before the call to setHours!
-        d.setFullYear(r[5], r[3] - 1, r[4]);
-
-        // Set hours, minutes, and seconds.
-        d.setHours(r[0], r[1], r[2]);
-
-        // Divide milliseconds by 1000 to return seconds and drop decimal.
-        // Add 1 second if negative or it'll be off from PHP by 1 second.
-        return (d.getTime() / 1e3 >> 0) - (d.getTime() < 0);
-    }, strftime: function (fmt, timestamp) {
-        //       discuss at: http://phpjs.org/functions/strftime/
-        //      original by: Blues (http://tech.bluesmoon.info/)
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //         input by: Alex
-        //      bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //       depends on: setlocale
-        //             note: Uses global: php_js to store locale info
-        //        example 1: strftime("%A", 1062462400); // Return value will depend on date and locale
-        //        returns 1: 'Tuesday'
-
-        this.php_js = this.php_js || {};
-        this.setlocale('LC_ALL', 0); // ensure setup of localization variables takes place
-        // END REDUNDANT
-        var phpjs = this.php_js;
-
-        // BEGIN STATIC
-        var _xPad = function (x, pad, r) {
-            if (typeof r === 'undefined') {
-                r = 10;
-            }
-            for (; parseInt(x, 10) < r && r > 1; r /= 10) {
-                x = pad.toString() + x;
-            }
-            return x.toString();
-        };
-
-        var locale = phpjs.localeCategories.LC_TIME;
-        var locales = phpjs.locales;
-        var lc_time = locales[locale].LC_TIME;
-
-        var _formats = {
-            a: function (d) {
-                return lc_time.a[d.getDay()];
-            },
-            A: function (d) {
-                return lc_time.A[d.getDay()];
-            },
-            b: function (d) {
-                return lc_time.b[d.getMonth()];
-            },
-            B: function (d) {
-                return lc_time.B[d.getMonth()];
-            },
-            C: function (d) {
-                return _xPad(parseInt(d.getFullYear() / 100, 10), 0);
-            },
-            d: ['getDate', '0'],
-            e: ['getDate', ' '],
-            g: function (d) {
-                return _xPad(parseInt(this.G(d) / 100, 10), 0);
-            },
-            G: function (d) {
-                var y = d.getFullYear();
-                var V = parseInt(_formats.V(d), 10);
-                var W = parseInt(_formats.W(d), 10);
-
-                if (W > V) {
-                    y++;
-                } else if (W === 0 && V >= 52) {
-                    y--;
-                }
-
-                return y;
-            },
-            H: ['getHours', '0'],
-            I: function (d) {
-                var I = d.getHours() % 12;
-                return _xPad(I === 0 ? 12 : I, 0);
-            },
-            j: function (d) {
-                var ms = d - new Date('' + d.getFullYear() + '/1/1 GMT');
-                ms += d.getTimezoneOffset() * 60000; // Line differs from Yahoo implementation which would be equivalent to replacing it here with:
-                // ms = new Date('' + d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate() + ' GMT') - ms;
-                var doy = parseInt(ms / 60000 / 60 / 24, 10) + 1;
-                return _xPad(doy, 0, 100);
-            },
-            k: ['getHours', '0'],
-            // not in PHP, but implemented here (as in Yahoo)
-            l: function (d) {
-                var l = d.getHours() % 12;
-                return _xPad(l === 0 ? 12 : l, ' ');
-            },
-            m: function (d) {
-                return _xPad(d.getMonth() + 1, 0);
-            },
-            M: ['getMinutes', '0'],
-            p: function (d) {
-                return lc_time.p[d.getHours() >= 12 ? 1 : 0];
-            },
-            P: function (d) {
-                return lc_time.P[d.getHours() >= 12 ? 1 : 0];
-            },
-            s: function (d) { // Yahoo uses return parseInt(d.getTime()/1000, 10);
-                return Date.parse(d) / 1000;
-            },
-            S: ['getSeconds', '0'],
-            u: function (d) {
-                var dow = d.getDay();
-                return ((dow === 0) ? 7 : dow);
-            },
-            U: function (d) {
-                var doy = parseInt(_formats.j(d), 10);
-                var rdow = 6 - d.getDay();
-                var woy = parseInt((doy + rdow) / 7, 10);
-                return _xPad(woy, 0);
-            },
-            V: function (d) {
-                var woy = parseInt(_formats.W(d), 10);
-                var dow1_1 = (new Date('' + d.getFullYear() + '/1/1'))
-                    .getDay();
-                // First week is 01 and not 00 as in the case of %U and %W,
-                // so we add 1 to the final result except if day 1 of the year
-                // is a Monday (then %W returns 01).
-                // We also need to subtract 1 if the day 1 of the year is
-                // Friday-Sunday, so the resulting equation becomes:
-                var idow = woy + (dow1_1 > 4 || dow1_1 <= 1 ? 0 : 1);
-                if (idow === 53 && (new Date('' + d.getFullYear() + '/12/31'))
-                        .getDay() < 4) {
-                    idow = 1;
-                } else if (idow === 0) {
-                    idow = _formats.V(new Date('' + (d.getFullYear() - 1) + '/12/31'));
-                }
-                return _xPad(idow, 0);
-            },
-            w: 'getDay',
-            W: function (d) {
-                var doy = parseInt(_formats.j(d), 10);
-                var rdow = 7 - _formats.u(d);
-                var woy = parseInt((doy + rdow) / 7, 10);
-                return _xPad(woy, 0, 10);
-            },
-            y: function (d) {
-                return _xPad(d.getFullYear() % 100, 0);
-            },
-            Y: 'getFullYear',
-            z: function (d) {
-                var o = d.getTimezoneOffset();
-                var H = _xPad(parseInt(Math.abs(o / 60), 10), 0);
-                var M = _xPad(o % 60, 0);
-                return (o > 0 ? '-' : '+') + H + M;
-            },
-            Z: function (d) {
-                return d.toString()
-                    .replace(/^.*\(([^)]+)\)$/, '$1');
-                /*
-                 // Yahoo's: Better?
-                 var tz = d.toString().replace(/^.*:\d\d( GMT[+-]\d+)? \(?([A-Za-z ]+)\)?\d*$/, '$2').replace(/[a-z ]/g, '');
-                 if(tz.length > 4) {
-                 tz = Dt.formats.z(d);
-                 }
-                 return tz;
-                 */
-            },
-            '%': function (d) {
-                return '%';
-            }
-        };
-        // END STATIC
-        /* Fix: Locale alternatives are supported though not documented in PHP; see http://linux.die.net/man/3/strptime
-         Ec
-         EC
-         Ex
-         EX
-         Ey
-         EY
-         Od or Oe
-         OH
-         OI
-         Om
-         OM
-         OS
-         OU
-         Ow
-         OW
-         Oy
-         */
-
-        var _date = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
-                (typeof timestamp === 'object') ? new Date(timestamp) : // Javascript Date()
-                    new Date(timestamp * 1000) // PHP API expects UNIX timestamp (auto-convert to int)
-        );
-
-        var _aggregates = {
-            c: 'locale',
-            D: '%m/%d/%y',
-            F: '%y-%m-%d',
-            h: '%b',
-            n: '\n',
-            r: 'locale',
-            R: '%H:%M',
-            t: '\t',
-            T: '%H:%M:%S',
-            x: 'locale',
-            X: 'locale'
-        };
-
-        // First replace aggregates (run in a loop because an agg may be made up of other aggs)
-        while (fmt.match(/%[cDFhnrRtTxX]/)) {
-            fmt = fmt.replace(/%([cDFhnrRtTxX])/g, function (m0, m1) {
-                var f = _aggregates[m1];
-                return (f === 'locale' ? lc_time[m1] : f);
-            });
-        }
-
-        // Now replace formats - we need a closure so that the date object gets passed through
-        var str = fmt.replace(/%([aAbBCdegGHIjklmMpPsSuUVwWyYzZ%])/g, function (m0, m1) {
-            var f = _formats[m1];
-            if (typeof f === 'string') {
-                return _date[f]();
-            } else if (typeof f === 'function') {
-                return f(_date);
-            } else if (typeof f === 'object' && typeof f[0] === 'string') {
-                return _xPad(_date[f[0]](), f[1]);
-            } else { // Shouldn't reach here
-                return m1;
-            }
-        });
-        return str;
-    }, strptime: function (dateStr, format) {
-        //  discuss at: http://phpjs.org/functions/strptime/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // original by: strftime
-        //  depends on: setlocale
-        //  depends on: array_map
-        //        test: skip
-        //   example 1: strptime('20091112222135', '%Y%m%d%H%M%S'); // Return value will depend on date and locale
-        //   example 1: strptime('2009extra', '%Y');
-        //   returns 1: {tm_sec: 35, tm_min: 21, tm_hour: 22, tm_mday: 12, tm_mon: 10, tm_year: 109, tm_wday: 4, tm_yday: 315, unparsed: ''}
-        //   returns 1: {tm_sec:0, tm_min:0, tm_hour:0, tm_mday:0, tm_mon:0, tm_year:109, tm_wday:3, tm_yday: -1, unparsed: 'extra'}
-
-        // tm_isdst is in other docs; why not PHP?
-
-        // Needs more thorough testing and examples
-
-        var retObj = {
-                tm_sec: 0,
-                tm_min: 0,
-                tm_hour: 0,
-                tm_mday: 0,
-                tm_mon: 0,
-                tm_year: 0,
-                tm_wday: 0,
-                tm_yday: 0,
-                unparsed: ''
-            },
-            i = 0,
-            that = this,
-            amPmOffset = 0,
-            prevHour = false,
-            _reset = function (dateObj, realMday) {
-                // realMday is to allow for a value of 0 in return results (but without
-                // messing up the Date() object)
-                var jan1,
-                    o = retObj,
-                    d = dateObj;
-                o.tm_sec = d.getUTCSeconds();
-                o.tm_min = d.getUTCMinutes();
-                o.tm_hour = d.getUTCHours();
-                o.tm_mday = realMday === 0 ? realMday : d.getUTCDate();
-                o.tm_mon = d.getUTCMonth();
-                o.tm_year = d.getUTCFullYear() - 1900;
-                o.tm_wday = realMday === 0 ? (d.getUTCDay() > 0 ? d.getUTCDay() - 1 : 6) : d.getUTCDay();
-                jan1 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-                o.tm_yday = Math.ceil((d - jan1) / (1000 * 60 * 60 * 24));
-            },
-            _date = function () {
-                var o = retObj;
-                // We set date to at least 1 to ensure year or month doesn't go backwards
-                return _reset(new Date(Date.UTC(o.tm_year + 1900, o.tm_mon, o.tm_mday || 1, o.tm_hour, o.tm_min, o.tm_sec)),
-                    o.tm_mday);
-            };
-
-        // BEGIN STATIC
-        var _NWS = /\S/,
-            _WS = /\s/;
-
-        var _aggregates = {
-            c: 'locale',
-            D: '%m/%d/%y',
-            F: '%y-%m-%d',
-            r: 'locale',
-            R: '%H:%M',
-            T: '%H:%M:%S',
-            x: 'locale',
-            X: 'locale'
-        };
-
-        /* Fix: Locale alternatives are supported though not documented in PHP; see http://linux.die.net/man/3/strptime
-         Ec
-         EC
-         Ex
-         EX
-         Ey
-         EY
-         Od or Oe
-         OH
-         OI
-         Om
-         OM
-         OS
-         OU
-         Ow
-         OW
-         Oy
-         */
-        var _preg_quote = function (str) {
-            return (str + '')
-                .replace(/([\\\.\+\*\?\[\^\]\$\(\)\{\}\=\!<>\|\:])/g, '\\$1');
-        };
-        // END STATIC
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.setlocale('LC_ALL', 0); // ensure setup of localization variables takes place
-        // END REDUNDANT
-
-        var phpjs = this.php_js;
-        var locale = phpjs.localeCategories.LC_TIME;
-        var locales = phpjs.locales;
-        var lc_time = locales[locale].LC_TIME;
-
-        // First replace aggregates (run in a loop because an agg may be made up of other aggs)
-        while (format.match(/%[cDFhnrRtTxX]/)) {
-            format = format.replace(/%([cDFhnrRtTxX])/g, function (m0, m1) {
-                var f = _aggregates[m1];
-                return (f === 'locale' ? lc_time[m1] : f);
-            });
-        }
-
-        var _addNext = function (j, regex, cb) {
-            if (typeof regex === 'string') {
-                regex = new RegExp('^' + regex, 'i');
-            }
-            var check = dateStr.slice(j);
-            var match = regex.exec(check);
-            // Even if the callback returns null after assigning to the return object, the object won't be saved anyways
-            var testNull = match ? cb.apply(null, match) : null;
-            if (testNull === null) {
-                throw 'No match in string';
-            }
-            return j + match[0].length;
-        };
-
-        var _addLocalized = function (j, formatChar, category) {
-            return _addNext(j, that.array_map(
-                _preg_quote, lc_time[formatChar])
-                    .join('|'), // Could make each parenthesized instead and pass index to callback
-
-                function (m) {
-                    var match = lc_time[formatChar].search(new RegExp('^' + _preg_quote(m) + '$', 'i'));
-                    if (match) {
-                        retObj[category] = match[0];
-                    }
-                });
-        };
-
-        // BEGIN PROCESSING CHARACTERS
-        for (i = 0, j = 0; i < format.length; i++) {
-            if (format.charAt(i) === '%') {
-                var literalPos = ['%', 'n', 't'].indexOf(format.charAt(i + 1));
-                if (literalPos !== -1) {
-                    if (['%', '\n', '\t'].indexOf(dateStr.charAt(j)) === literalPos) { // a matched literal
-                        ++i;
-                        ++j; // skip beyond
-                        continue;
-                    }
-                    // Format indicated a percent literal, but not actually present
-                    return false;
-                }
-                var formatChar = format.charAt(i + 1);
-                try {
-                    switch (formatChar) {
-                        case 'a':
-                        // Fall-through // Sun-Sat
-                        case 'A':
-                            // Sunday-Saturday
-                            j = _addLocalized(j, formatChar, 'tm_wday'); // Changes nothing else
-                            break;
-                        case 'h':
-                        // Fall-through (alias of 'b');
-                        case 'b':
-                            // Jan-Dec
-                            j = _addLocalized(j, 'b', 'tm_mon');
-                            _date(); // Also changes wday, yday
-                            break;
-                        case 'B':
-                            // January-December
-                            j = _addLocalized(j, formatChar, 'tm_mon');
-                            _date(); // Also changes wday, yday
-                            break;
-                        case 'C':
-                            // 0+; century (19 for 20th)
-                            j = _addNext(j, /^\d?\d/, // PHP docs say two-digit, but accepts one-digit (two-digit max)
-
-                                function (d) {
-                                    var year = (parseInt(d, 10) - 19) * 100;
-                                    retObj.tm_year = year;
-                                    _date();
-                                    if (!retObj.tm_yday) {
-                                        retObj.tm_yday = -1;
-                                    }
-                                    // Also changes wday; and sets yday to -1 (always?)
-                                });
-                            break;
-                        case 'd':
-                        // Fall-through  01-31 day
-                        case 'e':
-                            // 1-31 day
-                            j = _addNext(j, formatChar === 'd' ? /^(0[1-9]|[1-2]\d|3[0-1])/ : /^([1-2]\d|3[0-1]|[1-9])/,
-                                function (d) {
-                                    var dayMonth = parseInt(d, 10);
-                                    retObj.tm_mday = dayMonth;
-                                    _date(); // Also changes w_day, y_day
-                                });
-                            break;
-                        case 'g':
-                            // No apparent effect; 2-digit year (see 'V')
-                            break;
-                        case 'G':
-                            // No apparent effect; 4-digit year (see 'V')'
-                            break;
-                        case 'H':
-                            // 00-23 hours
-                            j = _addNext(j, /^([0-1]\d|2[0-3])/, function (d) {
-                                var hour = parseInt(d, 10);
-                                retObj.tm_hour = hour;
-                                // Changes nothing else
-                            });
-                            break;
-                        case 'l':
-                        // Fall-through of lower-case 'L'; 1-12 hours
-                        case 'I':
-                            // 01-12 hours
-                            j = _addNext(j, formatChar === 'l' ? /^([1-9]|1[0-2])/ : /^(0[1-9]|1[0-2])/, function (d) {
-                                var hour = parseInt(d, 10) - 1 + amPmOffset;
-                                retObj.tm_hour = hour;
-                                prevHour = true; // Used for coordinating with am-pm
-                                // Changes nothing else, but affected by prior 'p/P'
-                            });
-                            break;
-                        case 'j':
-                            // 001-366 day of year
-                            j = _addNext(j, /^(00[1-9]|0[1-9]\d|[1-2]\d\d|3[0-6][0-6])/, function (d) {
-                                var dayYear = parseInt(d, 10) - 1;
-                                retObj.tm_yday = dayYear;
-                                // Changes nothing else (oddly, since if original by a given year, could calculate other fields)
-                            });
-                            break;
-                        case 'm':
-                            // 01-12 month
-                            j = _addNext(j, /^(0[1-9]|1[0-2])/, function (d) {
-                                var month = parseInt(d, 10) - 1;
-                                retObj.tm_mon = month;
-                                _date(); // Also sets wday and yday
-                            });
-                            break;
-                        case 'M':
-                            // 00-59 minutes
-                            j = _addNext(j, /^[0-5]\d/, function (d) {
-                                var minute = parseInt(d, 10);
-                                retObj.tm_min = minute;
-                                // Changes nothing else
-                            });
-                            break;
-                        case 'P':
-                            // Seems not to work; AM-PM
-                            return false; // Could make fall-through instead since supposed to be a synonym despite PHP docs
-                        case 'p':
-                            // am-pm
-                            j = _addNext(j, /^(am|pm)/i, function (d) {
-                                // No effect on 'H' since already 24 hours but
-                                //   works before or after setting of l/I hour
-                                amPmOffset = (/a/)
-                                    .test(d) ? 0 : 12;
-                                if (prevHour) {
-                                    retObj.tm_hour += amPmOffset;
-                                }
-                            });
-                            break;
-                        case 's':
-                            // Unix timestamp (in seconds)
-                            j = _addNext(j, /^\d+/, function (d) {
-                                var timestamp = parseInt(d, 10);
-                                var date = new Date(Date.UTC(timestamp * 1000));
-                                _reset(date);
-                                // Affects all fields, but can't be negative (and initial + not allowed)
-                            });
-                            break;
-                        case 'S':
-                            // 00-59 seconds
-                            j = _addNext(j, /^[0-5]\d/, // strptime also accepts 60-61 for some reason
-
-                                function (d) {
-                                    var second = parseInt(d, 10);
-                                    retObj.tm_sec = second;
-                                    // Changes nothing else
-                                });
-                            break;
-                        case 'u':
-                        // Fall-through; 1 (Monday)-7(Sunday)
-                        case 'w':
-                            // 0 (Sunday)-6(Saturday)
-                            j = _addNext(j, /^\d/, function (d) {
-                                retObj.tm_wday = d - (formatChar === 'u');
-                                // Changes nothing else apparently
-                            });
-                            break;
-                        case 'U':
-                        // Fall-through (week of year, from 1st Sunday)
-                        case 'V':
-                        // Fall-through (ISO-8601:1988 week number; from first 4-weekday week, starting with Monday)
-                        case 'W':
-                            // Apparently ignored (week of year, from 1st Monday)
-                            break;
-                        case 'y':
-                            // 69 (or higher) for 1969+, 68 (or lower) for 2068-
-                            j = _addNext(j, /^\d?\d/, // PHP docs say two-digit, but accepts one-digit (two-digit max)
-
-                                function (d) {
-                                    d = parseInt(d, 10);
-                                    var year = d >= 69 ? d : d + 100;
-                                    retObj.tm_year = year;
-                                    _date();
-                                    if (!retObj.tm_yday) {
-                                        retObj.tm_yday = -1;
-                                    }
-                                    // Also changes wday; and sets yday to -1 (always?)
-                                });
-                            break;
-                        case 'Y':
-                            // 2010 (4-digit year)
-                            j = _addNext(j, /^\d{1,4}/, // PHP docs say four-digit, but accepts one-digit (four-digit max)
-
-                                function (d) {
-                                    var year = (parseInt(d, 10)) - 1900;
-                                    retObj.tm_year = year;
-                                    _date();
-                                    if (!retObj.tm_yday) {
-                                        retObj.tm_yday = -1;
-                                    }
-                                    // Also changes wday; and sets yday to -1 (always?)
-                                });
-                            break;
-                        case 'z':
-                            // Timezone; on my system, strftime gives -0800, but strptime seems not to alter hour setting
-                            break;
-                        case 'Z':
-                            // Timezone; on my system, strftime gives PST, but strptime treats text as unparsed
-                            break;
-                        default:
-                            throw 'Unrecognized formatting character in strptime()';
-                    }
-                } catch (e) {
-                    if (e === 'No match in string') { // Allow us to exit
-                        return false; // There was supposed to be a matching format but there wasn't
-                    }
-                }
-                ++i; // Calculate skipping beyond initial percent too
-            } else if (format.charAt(i) !== dateStr.charAt(j)) {
-                // If extra whitespace at beginning or end of either, or between formats, no problem
-                // (just a problem when between % and format specifier)
-
-                // If the string has white-space, it is ok to ignore
-                if (dateStr.charAt(j)
-                        .search(_WS) !== -1) {
-                    j++;
-                    i--; // Let the next iteration try again with the same format character
-                } else if (format.charAt(i)
-                        .search(_NWS) !== -1) { // Any extra formatting characters besides white-space causes
-                    // problems (do check after WS though, as may just be WS in string before next character)
-                    return false;
-                }
-                // Extra WS in format
-                // Adjust strings when encounter non-matching whitespace, so they align in future checks above
-                // Will check on next iteration (against same (non-WS) string character)
-            } else {
-                j++;
-            }
-        }
-
-        // POST-PROCESSING
-        retObj.unparsed = dateStr.slice(j); // Will also get extra whitespace; empty string if none
-        return retObj;
-    }
-    , strtotime: function (text, now) {
-        //  discuss at: http://phpjs.org/functions/strtotime/
-        //     version: 1109.2016
-        // original by: Caio Ariede (http://caioariede.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Caio Ariede (http://caioariede.com)
-        // improved by: A. Matías Quezada (http://amatiasq.com)
-        // improved by: preuter
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Mirko Faber
-        //    input by: David
-        // bugfixed by: Wagner B. Soares
-        // bugfixed by: Artur Tchernychev
-        //        note: Examples all have a fixed timestamp to prevent tests to fail because of variable time(zones)
-        //   example 1: strtotime('+1 day', 1129633200);
-        //   returns 1: 1129719600
-        //   example 2: strtotime('+1 week 2 days 4 hours 2 seconds', 1129633200);
-        //   returns 2: 1130425202
-        //   example 3: strtotime('last month', 1129633200);
-        //   returns 3: 1127041200
-        //   example 4: strtotime('2009-05-04 08:30:00 GMT');
-        //   returns 4: 1241425800
-
-        var parsed, match, today, year, date, days, ranges, len, times, regex, i, fail = false;
-
-        if (!text) {
-            return fail;
-        }
-
-        // Unecessary spaces
-        text = text.replace(/^\s+|\s+$/g, '')
-            .replace(/\s{2,}/g, ' ')
-            .replace(/[\t\r\n]/g, '')
-            .toLowerCase();
-
-        // in contrast to php, js Date.parse function interprets:
-        // dates given as yyyy-mm-dd as in timezone: UTC,
-        // dates with "." or "-" as MDY instead of DMY
-        // dates with two-digit years differently
-        // etc...etc...
-        // ...therefore we manually parse lots of common date formats
-        match = text.match(
-            /^(\d{1,4})([\-\.\/\:])(\d{1,2})([\-\.\/\:])(\d{1,4})(?:\s(\d{1,2}):(\d{2})?:?(\d{2})?)?(?:\s([A-Z]+)?)?$/);
-
-        if (match && match[2] === match[4]) {
-            if (match[1] > 1901) {
-                switch (match[2]) {
-                    case '-': { // YYYY-M-D
-                        if (match[3] > 12 || match[5] > 31) {
-                            return fail;
-                        }
-
-                        return new Date(match[1], parseInt(match[3], 10) - 1, match[5],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                    case '.': { // YYYY.M.D is not parsed by strtotime()
-                        return fail;
-                    }
-                    case '/': { // YYYY/M/D
-                        if (match[3] > 12 || match[5] > 31) {
-                            return fail;
-                        }
-
-                        return new Date(match[1], parseInt(match[3], 10) - 1, match[5],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                }
-            } else if (match[5] > 1901) {
-                switch (match[2]) {
-                    case '-': { // D-M-YYYY
-                        if (match[3] > 12 || match[1] > 31) {
-                            return fail;
-                        }
-
-                        return new Date(match[5], parseInt(match[3], 10) - 1, match[1],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                    case '.': { // D.M.YYYY
-                        if (match[3] > 12 || match[1] > 31) {
-                            return fail;
-                        }
-
-                        return new Date(match[5], parseInt(match[3], 10) - 1, match[1],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                    case '/': { // M/D/YYYY
-                        if (match[1] > 12 || match[3] > 31) {
-                            return fail;
-                        }
-
-                        return new Date(match[5], parseInt(match[1], 10) - 1, match[3],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                }
-            } else {
-                switch (match[2]) {
-                    case '-': { // YY-M-D
-                        if (match[3] > 12 || match[5] > 31 || (match[1] < 70 && match[1] > 38)) {
-                            return fail;
-                        }
-
-                        year = match[1] >= 0 && match[1] <= 38 ? +match[1] + 2000 : match[1];
-                        return new Date(year, parseInt(match[3], 10) - 1, match[5],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                    case '.': { // D.M.YY or H.MM.SS
-                        if (match[5] >= 70) { // D.M.YY
-                            if (match[3] > 12 || match[1] > 31) {
-                                return fail;
-                            }
-
-                            return new Date(match[5], parseInt(match[3], 10) - 1, match[1],
-                                    match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                        }
-                        if (match[5] < 60 && !match[6]) { // H.MM.SS
-                            if (match[1] > 23 || match[3] > 59) {
-                                return fail;
-                            }
-
-                            today = new Date();
-                            return new Date(today.getFullYear(), today.getMonth(), today.getDate(),
-                                    match[1] || 0, match[3] || 0, match[5] || 0, match[9] || 0) / 1000;
-                        }
-
-                        return fail; // invalid format, cannot be parsed
-                    }
-                    case '/': { // M/D/YY
-                        if (match[1] > 12 || match[3] > 31 || (match[5] < 70 && match[5] > 38)) {
-                            return fail;
-                        }
-
-                        year = match[5] >= 0 && match[5] <= 38 ? +match[5] + 2000 : match[5];
-                        return new Date(year, parseInt(match[1], 10) - 1, match[3],
-                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
-                    }
-                    case ':': { // HH:MM:SS
-                        if (match[1] > 23 || match[3] > 59 || match[5] > 59) {
-                            return fail;
-                        }
-
-                        today = new Date();
-                        return new Date(today.getFullYear(), today.getMonth(), today.getDate(),
-                                match[1] || 0, match[3] || 0, match[5] || 0) / 1000;
-                    }
-                }
-            }
-        }
-
-        // other formats and "now" should be parsed by Date.parse()
-        if (text === 'now') {
-            return now === null || isNaN(now) ? new Date()
-                    .getTime() / 1000 | 0 : now | 0;
-        }
-        if (!isNaN(parsed = Date.parse(text))) {
-            return parsed / 1000 | 0;
-        }
-
-        date = now ? new Date(now * 1000) : new Date();
-        days = {
-            'sun': 0,
-            'mon': 1,
-            'tue': 2,
-            'wed': 3,
-            'thu': 4,
-            'fri': 5,
-            'sat': 6
-        };
-        ranges = {
-            'yea': 'FullYear',
-            'mon': 'Month',
-            'day': 'Date',
-            'hou': 'Hours',
-            'min': 'Minutes',
-            'sec': 'Seconds'
-        };
-
-        function lastNext(type, range, modifier) {
-            var diff, day = days[range];
-
-            if (typeof day !== 'undefined') {
-                diff = day - date.getDay();
-
-                if (diff === 0) {
-                    diff = 7 * modifier;
-                } else if (diff > 0 && type === 'last') {
-                    diff -= 7;
-                } else if (diff < 0 && type === 'next') {
-                    diff += 7;
-                }
-
-                date.setDate(date.getDate() + diff);
-            }
-        }
-
-        function process(val) {
-            var splt = val.split(' '), // Todo: Reconcile this with regex using \s, taking into account browser issues with split and regexes
-                type = splt[0],
-                range = splt[1].substring(0, 3),
-                typeIsNumber = /\d+/.test(type),
-                ago = splt[2] === 'ago',
-                num = (type === 'last' ? -1 : 1) * (ago ? -1 : 1);
-
-            if (typeIsNumber) {
-                num *= parseInt(type, 10);
-            }
-
-            if (ranges.hasOwnProperty(range) && !splt[1].match(/^mon(day|\.)?$/i)) {
-                return date['set' + ranges[range]](date['get' + ranges[range]]() + num);
-            }
-
-            if (range === 'wee') {
-                return date.setDate(date.getDate() + (num * 7));
-            }
-
-            if (type === 'next' || type === 'last') {
-                lastNext(type, range, num);
-            } else if (!typeIsNumber) {
-                return false;
-            }
-
-            return true;
-        }
-
-        times = '(years?|months?|weeks?|days?|hours?|minutes?|min|seconds?|sec' +
-            '|sunday|sun\\.?|monday|mon\\.?|tuesday|tue\\.?|wednesday|wed\\.?' +
-            '|thursday|thu\\.?|friday|fri\\.?|saturday|sat\\.?)';
-        regex = '([+-]?\\d+\\s' + times + '|' + '(last|next)\\s' + times + ')(\\sago)?';
-
-        match = text.match(new RegExp(regex, 'gi'));
-        if (!match) {
-            return fail;
-        }
-
-        for (i = 0, len = match.length; i < len; i++) {
-            if (!process(match[i])) {
-                return fail;
-            }
-        }
-
-        // ECMAScript 5 only
-        // if (!match.every(process))
-        //    return false;
-
-        return (date.getTime() / 1000);
-    }, time: function () {
-        //  discuss at: http://phpjs.org/functions/time/
-        // original by: GeekFG (http://geekfg.blogspot.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: metjay
-        // improved by: HKM
-        //   example 1: timeStamp = time();
-        //   example 1: timeStamp > 1000000000 && timeStamp < 2000000000
-        //   returns 1: true
-
-        return Math.floor(new Date()
-                .getTime() / 1000);
-    }, escapeshellarg: function (arg) {
-        //  discuss at: http://phpjs.org/functions/escapeshellarg/
-        // original by: Felix Geisendoerfer (http://www.debuggable.com/felix)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: escapeshellarg("kevin's birthday");
-        //   returns 1: "'kevin\\'s birthday'"
-
-        var ret = '';
-
-        ret = arg.replace(/[^\\]'/g, function (m, i, s) {
-            return m.slice(0, 1) + '\\\'';
-        });
-
-        return "'" + ret + "'";
-    }, basename: function (path, suffix) {
-        //  discuss at: http://phpjs.org/functions/basename/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Ash Searle (http://hexmen.com/blog/)
-        // improved by: Lincoln Ramsay
-        // improved by: djmix
-        // improved by: Dmitry Gorelenkov
-        //   example 1: basename('/www/site/home.htm', '.htm');
-        //   returns 1: 'home'
-        //   example 2: basename('ecra.php?p=1');
-        //   returns 2: 'ecra.php?p=1'
-        //   example 3: basename('/some/path/');
-        //   returns 3: 'path'
-        //   example 4: basename('/some/path_ext.ext/','.ext');
-        //   returns 4: 'path_ext'
-
-        var b = path;
-        var lastChar = b.charAt(b.length - 1);
-
-        if (lastChar === '/' || lastChar === '\\') {
-            b = b.slice(0, -1);
-        }
-
-        b = b.replace(/^.*[\/\\]/g, '');
-
-        if (typeof suffix === 'string' && b.substr(b.length - suffix.length) == suffix) {
-            b = b.substr(0, b.length - suffix.length);
-        }
-
-        return b;
-    }, dirname: function (path) {
-        //  discuss at: http://phpjs.org/functions/dirname/
-        //        http: //kevin.vanzonneveld.net
-        // original by: Ozh
-        // improved by: XoraX (http://www.xorax.info)
-        //   example 1: dirname('/etc/passwd');
-        //   returns 1: '/etc'
-        //   example 2: dirname('c:/Temp/x');
-        //   returns 2: 'c:/Temp'
-        //   example 3: dirname('/dir/test/');
-        //   returns 3: '/dir'
-
-        return path.replace(/\\/g, '/')
-            .replace(/\/[^\/]*\/?$/, '');
-    }, file_get_contents: function (url, flags, context, offset, maxLen) {
-        //  discuss at: http://phpjs.org/functions/file_get_contents/
-        // original by: Legaev Andrey
-        //    input by: Jani Hartikainen
-        //    input by: Raphael (Ao) RUDLER
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //        note: This function uses XmlHttpRequest and cannot retrieve resource from different domain without modifications.
-        //        note: Synchronous by default (as in PHP) so may lock up browser. Can
-        //        note: get async by setting a custom "phpjs.async" property to true and "notification" for an
-        //        note: optional callback (both as context params, with responseText, and other JS-specific
-        //        note: request properties available via 'this'). Note that file_get_contents() will not return the text
-        //        note: in such a case (use this.responseText within the callback). Or, consider using
-        //        note: jQuery's: $('#divId').load('http://url') instead.
-        //        note: The context argument is only implemented for http, and only partially (see below for
-        //        note: "Presently unimplemented HTTP context options"); also the arguments passed to
-        //        note: notification are incomplete
-        //        test: skip
-        //   example 1: var buf file_get_contents('http://google.com');
-        //   example 1: buf.indexOf('Google') !== -1
-        //   returns 1: true
-
-        var tmp, headers = [],
-            newTmp = [],
-            k = 0,
-            i = 0,
-            href = '',
-            pathPos = -1,
-            flagNames = 0,
-            content = null,
-            http_stream = false;
-        var func = function (value) {
-            return value.substring(1) !== '';
-        };
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        // END REDUNDANT
-        var ini = this.php_js.ini;
-        context = context || this.php_js.default_streams_context || null;
-
-        if (!flags) {
-            flags = 0;
-        }
-        var OPTS = {
-            FILE_USE_INCLUDE_PATH: 1,
-            FILE_TEXT: 32,
-            FILE_BINARY: 64
-        };
-        if (typeof flags === 'number') { // Allow for a single string or an array of string flags
-            flagNames = flags;
-        } else {
-            flags = [].concat(flags);
-            for (i = 0; i < flags.length; i++) {
-                if (OPTS[flags[i]]) {
-                    flagNames = flagNames | OPTS[flags[i]];
-                }
-            }
-        }
-
-        if (flagNames & OPTS.FILE_BINARY && (flagNames & OPTS.FILE_TEXT)) { // These flags shouldn't be together
-            throw 'You cannot pass both FILE_BINARY and FILE_TEXT to file_get_contents()';
-        }
-
-        if ((flagNames & OPTS.FILE_USE_INCLUDE_PATH) && ini.include_path && ini.include_path.local_value) {
-            var slash = ini.include_path.local_value.indexOf('/') !== -1 ? '/' : '\\';
-            url = ini.include_path.local_value + slash + url;
-        } else if (!/^(https?|file):/.test(url)) { // Allow references within or below the same directory (should fix to allow other relative references or root reference; could make dependent on parse_url())
-            href = this.window.location.href;
-            pathPos = url.indexOf('/') === 0 ? href.indexOf('/', 8) - 1 : href.lastIndexOf('/');
-            url = href.slice(0, pathPos + 1) + url;
-        }
-
-        var http_options;
-        if (context) {
-            http_options = context.stream_options && context.stream_options.http;
-            http_stream = !!http_options;
-        }
-
-        if (!context || http_stream) {
-            var req = this.window.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest();
-            if (!req) {
-                throw new Error('XMLHttpRequest not supported');
-            }
-
-            var method = http_stream ? http_options.method : 'GET';
-            var async = !!(context && context.stream_params && context.stream_params['phpjs.async']);
-
-            if (ini['phpjs.ajaxBypassCache'] && ini['phpjs.ajaxBypassCache'].local_value) {
-                url += (url.match(/\?/) == null ? '?' : '&') + (new Date())
-                        .getTime(); // Give optional means of forcing bypass of cache
-            }
-
-            req.open(method, url, async);
-            if (async) {
-                var notification = context.stream_params.notification;
-                if (typeof notification === 'function') {
-                    // Fix: make work with req.addEventListener if available: https://developer.mozilla.org/En/Using_XMLHttpRequest
-                    if (0 && req.addEventListener) { // Unimplemented so don't allow to get here
-                        /*
-                         req.addEventListener('progress', updateProgress, false);
-                         req.addEventListener('load', transferComplete, false);
-                         req.addEventListener('error', transferFailed, false);
-                         req.addEventListener('abort', transferCanceled, false);
-                         */
-                    } else {
-                        req.onreadystatechange = function (aEvt) { // aEvt has stopPropagation(), preventDefault(); see https://developer.mozilla.org/en/NsIDOMEvent
-                            // Other XMLHttpRequest properties: multipart, responseXML, status, statusText, upload, withCredentials
-                            /*
-                             PHP Constants:
-                             STREAM_NOTIFY_RESOLVE   1       A remote address required for this stream has been resolved, or the resolution failed. See severity  for an indication of which happened.
-                             STREAM_NOTIFY_CONNECT   2     A connection with an external resource has been established.
-                             STREAM_NOTIFY_AUTH_REQUIRED 3     Additional authorization is required to access the specified resource. Typical issued with severity level of STREAM_NOTIFY_SEVERITY_ERR.
-                             STREAM_NOTIFY_MIME_TYPE_IS  4     The mime-type of resource has been identified, refer to message for a description of the discovered type.
-                             STREAM_NOTIFY_FILE_SIZE_IS  5     The size of the resource has been discovered.
-                             STREAM_NOTIFY_REDIRECTED    6     The external resource has redirected the stream to an alternate location. Refer to message .
-                             STREAM_NOTIFY_PROGRESS  7     Indicates current progress of the stream transfer in bytes_transferred and possibly bytes_max as well.
-                             STREAM_NOTIFY_COMPLETED 8     There is no more data available on the stream.
-                             STREAM_NOTIFY_FAILURE   9     A generic error occurred on the stream, consult message and message_code for details.
-                             STREAM_NOTIFY_AUTH_RESULT   10     Authorization has been completed (with or without success).
-
-                             STREAM_NOTIFY_SEVERITY_INFO 0     Normal, non-error related, notification.
-                             STREAM_NOTIFY_SEVERITY_WARN 1     Non critical error condition. Processing may continue.
-                             STREAM_NOTIFY_SEVERITY_ERR  2     A critical error occurred. Processing cannot continue.
-                             */
-                            var objContext = {
-                                responseText: req.responseText,
-                                responseXML: req.responseXML,
-                                status: req.status,
-                                statusText: req.statusText,
-                                readyState: req.readyState,
-                                evt: aEvt
-                            }; // properties are not available in PHP, but offered on notification via 'this' for convenience
-                            // notification args: notification_code, severity, message, message_code, bytes_transferred, bytes_max (all int's except string 'message')
-                            // Need to add message, etc.
-                            var bytes_transferred;
-                            switch (req.readyState) {
-                                case 0:
-                                    //     UNINITIALIZED     open() has not been called yet.
-                                    notification.call(objContext, 0, 0, '', 0, 0, 0);
-                                    break;
-                                case 1:
-                                    //     LOADING     send() has not been called yet.
-                                    notification.call(objContext, 0, 0, '', 0, 0, 0);
-                                    break;
-                                case 2:
-                                    //     LOADED     send() has been called, and headers and status are available.
-                                    notification.call(objContext, 0, 0, '', 0, 0, 0);
-                                    break;
-                                case 3:
-                                    //     INTERACTIVE     Downloading; responseText holds partial data.
-                                    bytes_transferred = req.responseText.length * 2; // One character is two bytes
-                                    notification.call(objContext, 7, 0, '', 0, bytes_transferred, 0);
-                                    break;
-                                case 4:
-                                    //     COMPLETED     The operation is complete.
-                                    if (req.status >= 200 && req.status < 400) {
-                                        bytes_transferred = req.responseText.length * 2; // One character is two bytes
-                                        notification.call(objContext, 8, 0, '', req.status, bytes_transferred, 0);
-                                    } else if (req.status === 403) { // Fix: These two are finished except for message
-                                        notification.call(objContext, 10, 2, '', req.status, 0, 0);
-                                    } else { // Errors
-                                        notification.call(objContext, 9, 2, '', req.status, 0, 0);
-                                    }
-                                    break;
-                                default:
-                                    throw 'Unrecognized ready state for file_get_contents()';
-                            }
-                        };
-                    }
-                }
-            }
-
-            if (http_stream) {
-                var sendHeaders = http_options.header && http_options.header.split(/\r?\n/);
-                var userAgentSent = false;
-                for (i = 0; i < sendHeaders.length; i++) {
-                    var sendHeader = sendHeaders[i];
-                    var breakPos = sendHeader.search(/:\s*/);
-                    var sendHeaderName = sendHeader.substring(0, breakPos);
-                    req.setRequestHeader(sendHeaderName, sendHeader.substring(breakPos + 1));
-                    if (sendHeaderName === 'User-Agent') {
-                        userAgentSent = true;
-                    }
-                }
-                if (!userAgentSent) {
-                    var user_agent = http_options.user_agent || (ini.user_agent && ini.user_agent.local_value);
-                    if (user_agent) {
-                        req.setRequestHeader('User-Agent', user_agent);
-                    }
-                }
-                content = http_options.content || null;
-                /*
-                 // Presently unimplemented HTTP context options
-                 var request_fulluri = http_options.request_fulluri || false; // When set to TRUE, the entire URI will be used when constructing the request. (i.e. GET http://www.example.com/path/to/file.html HTTP/1.0). While this is a non-standard request format, some proxy servers require it.
-                 var max_redirects = http_options.max_redirects || 20; // The max number of redirects to follow. Value 1 or less means that no redirects are followed.
-                 var protocol_version = http_options.protocol_version || 1.0; // HTTP protocol version
-                 var timeout = http_options.timeout || (ini.default_socket_timeout && ini.default_socket_timeout.local_value); // Read timeout in seconds, specified by a float
-                 var ignore_errors = http_options.ignore_errors || false; // Fetch the content even on failure status codes.
-                 */
-            }
-
-            if (flagNames & OPTS.FILE_TEXT) { // Overrides how encoding is treated (regardless of what is returned from the server)
-                var content_type = 'text/html';
-                if (http_options && http_options['phpjs.override']) { // Fix: Could allow for non-HTTP as well
-                    content_type = http_options['phpjs.override']; // We use this, e.g., in gettext-related functions if character set
-                    //   overridden earlier by bind_textdomain_codeset()
-                } else {
-                    var encoding = (ini['unicode.stream_encoding'] && ini['unicode.stream_encoding'].local_value) ||
-                        'UTF-8';
-                    if (http_options && http_options.header && (/^content-type:/im)
-                            .test(http_options.header)) { // We'll assume a content-type expects its own specified encoding if present
-                        content_type = http_options.header.match(/^content-type:\s*(.*)$/im)[1]; // We let any header encoding stand
-                    }
-                    if (!(/;\s*charset=/)
-                            .test(content_type)) { // If no encoding
-                        content_type += '; charset=' + encoding;
-                    }
-                }
-                req.overrideMimeType(content_type);
-            }
-            // Default is FILE_BINARY, but for binary, we apparently deviate from PHP in requiring the flag, since many if not
-            //     most people will also want a way to have it be auto-converted into native JavaScript text instead
-            else if (flagNames & OPTS.FILE_BINARY) { // Trick at https://developer.mozilla.org/En/Using_XMLHttpRequest to get binary
-                req.overrideMimeType('text/plain; charset=x-user-defined');
-                // Getting an individual byte then requires:
-                // responseText.charCodeAt(x) & 0xFF; // throw away high-order byte (f7) where x is 0 to responseText.length-1 (see notes in our substr())
-            }
-
-            try {
-                if (http_options && http_options['phpjs.sendAsBinary']) { // For content sent in a POST or PUT request (use with file_put_contents()?)
-                    req.sendAsBinary(content); // In Firefox, only available FF3+
-                } else {
-                    req.send(content);
-                }
-            } catch (e) {
-                // catches exception reported in issue #66
-                return false;
-            }
-
-            tmp = req.getAllResponseHeaders();
-            if (tmp) {
-                tmp = tmp.split('\n');
-                for (k = 0; k < tmp.length; k++) {
-                    if (func(tmp[k])) {
-                        newTmp.push(tmp[k]);
-                    }
-                }
-                tmp = newTmp;
-                for (i = 0; i < tmp.length; i++) {
-                    headers[i] = tmp[i];
-                }
-                this.$http_response_header = headers; // see http://php.net/manual/en/reserved.variables.httpresponseheader.php
-            }
-
-            if (offset || maxLen) {
-                if (maxLen) {
-                    return req.responseText.substr(offset || 0, maxLen);
-                }
-                return req.responseText.substr(offset);
-            }
-            return req.responseText;
-        }
-        return false;
-    }, pathinfo: function (path, options) {
-        //  discuss at: http://phpjs.org/functions/pathinfo/
-        // original by: Nate
-        //  revised by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Timo
-        //        note: Inspired by actual PHP source: php5-5.2.6/ext/standard/string.c line #1559
-        //        note: The way the bitwise arguments are handled allows for greater flexibility
-        //        note: & compatability. We might even standardize this code and use a similar approach for
-        //        note: other bitwise PHP functions
-        //        note: php.js tries very hard to stay away from a core.js file with global dependencies, because we like
-        //        note: that you can just take a couple of functions and be on your way.
-        //        note: But by way we implemented this function, if you want you can still declare the PATHINFO_*
-        //        note: yourself, and then you can use: pathinfo('/www/index.html', PATHINFO_BASENAME | PATHINFO_EXTENSION);
-        //        note: which makes it fully compliant with PHP syntax.
-        //  depends on: basename
-        //   example 1: pathinfo('/www/htdocs/index.html', 1);
-        //   returns 1: '/www/htdocs'
-        //   example 2: pathinfo('/www/htdocs/index.html', 'PATHINFO_BASENAME');
-        //   returns 2: 'index.html'
-        //   example 3: pathinfo('/www/htdocs/index.html', 'PATHINFO_EXTENSION');
-        //   returns 3: 'html'
-        //   example 4: pathinfo('/www/htdocs/index.html', 'PATHINFO_FILENAME');
-        //   returns 4: 'index'
-        //   example 5: pathinfo('/www/htdocs/index.html', 2 | 4);
-        //   returns 5: {basename: 'index.html', extension: 'html'}
-        //   example 6: pathinfo('/www/htdocs/index.html', 'PATHINFO_ALL');
-        //   returns 6: {dirname: '/www/htdocs', basename: 'index.html', extension: 'html', filename: 'index'}
-        //   example 7: pathinfo('/www/htdocs/index.html');
-        //   returns 7: {dirname: '/www/htdocs', basename: 'index.html', extension: 'html', filename: 'index'}
-
-        var opt = '',
-            optName = '',
-            optTemp = 0,
-            tmp_arr = {},
-            cnt = 0,
-            i = 0;
-        var have_basename = false,
-            have_extension = false,
-            have_filename = false;
-
-        // Input defaulting & sanitation
-        if (!path) {
-            return false;
-        }
-        if (!options) {
-            options = 'PATHINFO_ALL';
-        }
-
-        // Initialize binary arguments. Both the string & integer (constant) input is
-        // allowed
-        var OPTS = {
-            'PATHINFO_DIRNAME': 1,
-            'PATHINFO_BASENAME': 2,
-            'PATHINFO_EXTENSION': 4,
-            'PATHINFO_FILENAME': 8,
-            'PATHINFO_ALL': 0
-        };
-        // PATHINFO_ALL sums up all previously defined PATHINFOs (could just pre-calculate)
-        for (optName in OPTS) {
-            OPTS.PATHINFO_ALL = OPTS.PATHINFO_ALL | OPTS[optName];
-        }
-        if (typeof options !== 'number') { // Allow for a single string or an array of string flags
-            options = [].concat(options);
-            for (i = 0; i < options.length; i++) {
-                // Resolve string input to bitwise e.g. 'PATHINFO_EXTENSION' becomes 4
-                if (OPTS[options[i]]) {
-                    optTemp = optTemp | OPTS[options[i]];
-                }
-            }
-            options = optTemp;
-        }
-
-        // Internal Functions
-        var __getExt = function (path) {
-            var str = path + '';
-            var dotP = str.lastIndexOf('.') + 1;
-            return !dotP ? false : dotP !== str.length ? str.substr(dotP) : '';
-        };
-
-        // Gather path infos
-        if (options & OPTS.PATHINFO_DIRNAME) {
-            var dirName = path.replace(/\\/g, '/')
-                .replace(/\/[^\/]*\/?$/, ''); // dirname
-            tmp_arr.dirname = dirName === path ? '.' : dirName;
-        }
-
-        if (options & OPTS.PATHINFO_BASENAME) {
-            if (false === have_basename) {
-                have_basename = this.basename(path);
-            }
-            tmp_arr.basename = have_basename;
-        }
-
-        if (options & OPTS.PATHINFO_EXTENSION) {
-            if (false === have_basename) {
-                have_basename = this.basename(path);
-            }
-            if (false === have_extension) {
-                have_extension = __getExt(have_basename);
-            }
-            if (false !== have_extension) {
-                tmp_arr.extension = have_extension;
-            }
-        }
-
-        if (options & OPTS.PATHINFO_FILENAME) {
-            if (false === have_basename) {
-                have_basename = this.basename(path);
-            }
-            if (false === have_extension) {
-                have_extension = __getExt(have_basename);
-            }
-            if (false === have_filename) {
-                have_filename = have_basename.slice(0, have_basename.length - (have_extension ? have_extension.length + 1 :
-                        have_extension === false ? 0 : 1));
-            }
-
-            tmp_arr.filename = have_filename;
-        }
-
-        // If array contains only 1 element: return string
-        cnt = 0;
-        for (opt in tmp_arr) {
-            cnt++;
-        }
-        if (cnt == 1) {
-            return tmp_arr[opt];
-        }
-
-        // Return full-blown array
-        return tmp_arr;
-    }, realpath: function (path) {
-        //  discuss at: http://phpjs.org/functions/realpath/
-        // original by: mk.keck
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //        note: Returned path is an url like e.g. 'http://yourhost.tld/path/'
-        //   example 1: realpath('../.././_supporters/pj_test_supportfile_1.htm');
-        //   returns 1: 'file:/home/kevin/workspace/_supporters/pj_test_supportfile_1.htm'
-
-        var p = 0,
-            arr = [];
-        /* Save the root, if not given */
-        var r = this.window.location.href;
-        /* Avoid input failures */
-        path = (path + '')
-            .replace('\\', '/');
-        /* Check if there's a port in path (like 'http://') */
-        if (path.indexOf('://') !== -1) {
-            p = 1;
-        }
-        /* Ok, there's not a port in path, so let's take the root */
-        if (!p) {
-            path = r.substring(0, r.lastIndexOf('/') + 1) + path;
-        }
-        /* Explode the given path into it's parts */
-        arr = path.split('/');
-        /* The path is an array now */
-        path = [];
-        /* Foreach part make a check */
-        for (var k in arr) { /* This is'nt really interesting */
-            if (arr[k] == '.') {
-                continue;
-            }
-            /* This reduces the realpath */
-            if (arr[k] == '..') {
-                /* But only if there more than 3 parts in the path-array.
-                 * The first three parts are for the uri */
-                if (path.length > 3) {
-                    path.pop();
-                }
-            } /* This adds parts to the realpath */
-            else {
-                /* But only if the part is not empty or the uri
-                 * (the first three parts ar needed) was not
-                 * saved */
-                if ((path.length < 2) || (arr[k] !== '')) {
-                    path.push(arr[k]);
-                }
-            }
-        }
-        /* Returns the absloute path as a string */
-        return path.join('/');
-    }, call_user_func: function (cb) {
-        //  discuss at: http://phpjs.org/functions/call_user_func/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Diplom@t (http://difane.com/)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: call_user_func('isNaN', 'a');
-        //   returns 1: true
-
-        var func;
-
-        if (typeof cb === 'string') {
-            func = (typeof this[cb] === 'function') ? this[cb] : func = (new Function(null, 'return ' + cb))();
-        } else if (Object.prototype.toString.call(cb) === '[object Array]') {
-            func = (typeof cb[0] === 'string') ? eval(cb[0] + "['" + cb[1] + "']") : func = cb[0][cb[1]];
-        } else if (typeof cb === 'function') {
-            func = cb;
-        }
-
-        if (typeof func !== 'function') {
-            throw new Error(func + ' is not a valid function');
-        }
-
-        var parameters = Array.prototype.slice.call(arguments, 1);
-        return (typeof cb[0] === 'string') ? func.apply(eval(cb[0]), parameters) : (typeof cb[0] !== 'object') ? func.apply(
-            null, parameters) : func.apply(cb[0], parameters);
-    }, call_user_func_array: function (cb, parameters) {
-        //  discuss at: http://phpjs.org/functions/call_user_func_array/
-        // original by: Thiago Mata (http://thiagomata.blog.com)
-        //  revised by: Jon Hohle
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Diplom@t (http://difane.com/)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: call_user_func_array('isNaN', ['a']);
-        //   returns 1: true
-        //   example 2: call_user_func_array('isNaN', [1]);
-        //   returns 2: false
-
-        var func;
-
-        if (typeof cb === 'string') {
-            func = (typeof this[cb] === 'function') ? this[cb] : func = (new Function(null, 'return ' + cb))();
-        } else if (Object.prototype.toString.call(cb) === '[object Array]') {
-            func = (typeof cb[0] === 'string') ? eval(cb[0] + "['" + cb[1] + "']") : func = cb[0][cb[1]];
-        } else if (typeof cb === 'function') {
-            func = cb;
-        }
-
-        if (typeof func !== 'function') {
-            throw new Error(func + ' is not a valid function');
-        }
-
-        return (typeof cb[0] === 'string') ? func.apply(eval(cb[0]), parameters) : (typeof cb[0] !== 'object') ? func.apply(
-            null, parameters) : func.apply(cb[0], parameters);
-    }, create_function: function (args, code) {
-        //       discuss at: http://phpjs.org/functions/create_function/
-        //      original by: Johnny Mast (http://www.phpvrouwen.nl)
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //        example 1: f = create_function('a, b', "return (a + b);");
-        //        example 1: f(1, 2);
-        //        returns 1: 3
-
-        try {
-            return Function.apply(null, args.split(',')
-                .concat(code));
-        } catch (e) {
-            return false;
-        }
-    }, function_exists: function (func_name) {
-        //  discuss at: http://phpjs.org/functions/function_exists/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Steve Clay
-        // improved by: Legaev Andrey
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: function_exists('isFinite');
-        //   returns 1: true
-
-        if (typeof func_name === 'string') {
-            func_name = this.window[func_name];
-        }
-        return typeof func_name === 'function';
-    }, get_defined_functions: function () {
-        //  discuss at: http://phpjs.org/functions/get_defined_functions/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: Test case 1: If get_defined_functions can find itself in the defined functions, it worked :)
-        //   example 1: function test_in_array (array, p_val) {for(var i = 0, l = array.length; i < l; i++) {if(array[i] == p_val) return true;} return false;}
-        //   example 1: funcs = get_defined_functions();
-        //   example 1: found = test_in_array(funcs, 'get_defined_functions');
-        //   example 1: $result = found;
-        //   returns 1: true
-
-        var i = '',
-            arr = [],
-            already = {};
-
-        for (i in this.window) {
-            try {
-                if (typeof this.window[i] === 'function') {
-                    if (!already[i]) {
-                        already[i] = 1;
-                        arr.push(i);
-                    }
-                } else if (typeof this.window[i] === 'object') {
-                    for (var j in this.window[i]) {
-                        if (typeof this.window[j] === 'function' && this.window[j] && !already[j]) {
-                            already[j] = 1;
-                            arr.push(j);
-                        }
-                    }
-                }
-            } catch (e) {
-                // Some objects in Firefox throw exceptions when their properties are accessed (e.g., sessionStorage)
-            }
-        }
-
-        return arr;
-    }, i18n_loc_get_default: function () {
-        //  discuss at: http://phpjs.org/functions/i18n_loc_get_default/
-        //        http: //kevin.vanzonneveld.net
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Renamed in PHP6 from locale_get_default(). Not listed yet at php.net
-        //        note: List of locales at http://demo.icu-project.org/icu-bin/locexp
-        //        note: To be usable with sort() if it is passed the SORT_LOCALE_STRING sorting flag: http://php.net/manual/en/function.sort.php
-        //  depends on: i18n_loc_set_default
-        //   example 1: i18n_loc_set_default('pt_PT');
-        //   example 1: i18n_loc_get_default();
-        //   returns 1: 'pt_PT'
-
-        try {
-            this.php_js = this.php_js || {};
-        } catch (e) {
-            this.php_js = {};
-        }
-
-        // Ensure defaults are set up
-        return this.php_js.i18nLocale || (i18n_loc_set_default('en_US_POSIX'), 'en_US_POSIX');
-    }, i18n_loc_set_default: function (name) {
-        //  discuss at: http://phpjs.org/functions/i18n_loc_set_default/
-        //        http: //kevin.vanzonneveld.net
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Renamed in PHP6 from locale_set_default(). Not listed yet at php.net
-        //        note: List of locales at http://demo.icu-project.org/icu-bin/locexp (use for implementing other locales here)
-        //        note: To be usable with sort() if it is passed the SORT_LOCALE_STRING sorting flag: http://php.net/manual/en/function.sort.php
-        //   example 1: i18n_loc_set_default('pt_PT');
-        //   returns 1: true
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        // END REDUNDANT
-
-        this.php_js.i18nLocales = {
-            en_US_POSIX: {
-                sorting: function (str1, str2) { // Fix: This one taken from strcmp, but need for other locales; we don't use localeCompare since its locale is not settable
-                    return (str1 == str2) ? 0 : ((str1 > str2) ? 1 : -1);
-                }
-            }
-        };
-
-        this.php_js.i18nLocale = name;
-        return true;
-    }, assert_options: function (what, value) {
-        //  discuss at: http://phpjs.org/functions/assert_options/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: assert_options('ASSERT_CALLBACK');
-        //   returns 1: null
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        this.php_js.ini = this.php_js.ini || {};
-        this.php_js.assert_values = this.php_js.assert_values || {};
-        // END REDUNDANT
-
-        var ini, dflt;
-        switch (what) {
-            case 'ASSERT_ACTIVE':
-                ini = 'assert.active';
-                dflt = 1;
-                break;
-            case 'ASSERT_WARNING':
-                ini = 'assert.warning';
-                dflt = 1;
-                throw 'We have not yet implemented warnings for us to throw in JavaScript (assert_options())';
-            case 'ASSERT_BAIL':
-                ini = 'assert.bail';
-                dflt = 0;
-                break;
-            case 'ASSERT_QUIET_EVAL':
-                ini = 'assert.quiet_eval';
-                dflt = 0;
-                break;
-            case 'ASSERT_CALLBACK':
-                ini = 'assert.callback';
-                dflt = null;
-                break;
-            default:
-                throw 'Improper type for assert_options()';
-        }
-        // I presume this is to be the most recent value, instead of the default value
-        var originalValue = this.php_js.assert_values[ini] || (this.php_js.ini[ini] && this.php_js.ini[ini].local_value) ||
-            dflt;
-
-        if (value) {
-            this.php_js.assert_values[ini] = value; // We use 'ini' instead of 'what' as key to be more convenient for assert() to test for current value
-        }
-        return originalValue;
-    }, getenv: function (varname) {
-        //  discuss at: http://phpjs.org/functions/getenv/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: We are not using $_ENV as in PHP, you could define
-        //        note: "$_ENV = this.php_js.ENV;" and get/set accordingly
-        //        note: Returns e.g. 'en-US' when set global this.php_js.ENV is set
-        //        note: Uses global: php_js to store environment info
-        //   example 1: getenv('LC_ALL');
-        //   returns 1: false
-
-        if (!this.php_js || !this.php_js.ENV || !this.php_js.ENV[varname]) {
-            return false;
-        }
-
-        return this.php_js.ENV[varname];
-    }, getlastmod: function () {
-        //  discuss at: http://phpjs.org/functions/getlastmod/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Will not work on browsers which don't support document.lastModified
-        //        test: skip
-        //   example 1: getlastmod();
-        //   returns 1: 1237610043
-
-        return new Date(this.window.document.lastModified)
-                .getTime() / 1000;
-    }, ini_get: function (varname) {
-        //  discuss at: http://phpjs.org/functions/ini_get/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: The ini values must be set by ini_set or manually within an ini file
-        //   example 1: ini_set('date.timezone', 'Asia/Hong_Kong');
-        //   example 1: ini_get('date.timezone');
-        //   returns 1: 'Asia/Hong_Kong'
-
-        if (this.php_js && this.php_js.ini && this.php_js.ini[varname] && this.php_js.ini[varname].local_value !==
-            undefined) {
-            if (this.php_js.ini[varname].local_value === null) {
-                return '';
-            }
-            return this.php_js.ini[varname].local_value;
-        }
-
-        return '';
-    }, ini_set: function (varname, newvalue) {
-        //  discuss at: http://phpjs.org/functions/ini_set/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: This will not set a global_value or access level for the ini item
-        //   example 1: ini_set('date.timezone', 'Asia/Hong_Kong');
-        //   example 1: ini_set('date.timezone', 'America/Chicago');
-        //   returns 1: 'Asia/Hong_Kong'
-
-        var oldval = '';
-        var self = this;
-
-        try {
-            this.php_js = this.php_js || {};
-        } catch (e) {
-            this.php_js = {};
-        }
-
-        this.php_js.ini = this.php_js.ini || {};
-        this.php_js.ini[varname] = this.php_js.ini[varname] || {};
-
-        oldval = this.php_js.ini[varname].local_value;
-
-        var _setArr = function (oldval) {
-            // Although these are set individually, they are all accumulated
-            if (typeof oldval === 'undefined') {
-                self.php_js.ini[varname].local_value = [];
-            }
-            self.php_js.ini[varname].local_value.push(newvalue);
-        };
-
-        switch (varname) {
-            case 'extension':
-                if (typeof this.dl === 'function') {
-                    // This function is only experimental in php.js
-                    this.dl(newvalue);
-                }
-                _setArr(oldval, newvalue);
-                break;
-            default:
-                this.php_js.ini[varname].local_value = newvalue;
-                break;
-        }
-
-        return oldval;
-    }, set_time_limit: function (seconds) {
-        //  discuss at: http://phpjs.org/functions/set_time_limit/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        test: skip
-        //   example 1: set_time_limit(4);
-        //   returns 1: undefined
-
-        // BEGIN REDUNDANT
-        this.php_js = this.php_js || {};
-        // END REDUNDANT
-
-        this.window.setTimeout(function () {
-            if (!this.php_js.timeoutStatus) {
-                this.php_js.timeoutStatus = true;
-            }
-            throw 'Maximum execution time exceeded';
-        }, seconds * 1000);
-    }, version_compare: function (v1, v2, operator) {
-        //       discuss at: http://phpjs.org/functions/version_compare/
-        //      original by: Philippe Jausions (http://pear.php.net/user/jausions)
-        //      original by: Aidan Lister (http://aidanlister.com/)
-        // reimplemented by: Kankrelune (http://www.webfaktory.info/)
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //      improved by: Scott Baker
-        //      improved by: Theriault
-        //        example 1: version_compare('8.2.5rc', '8.2.5a');
-        //        returns 1: 1
-        //        example 2: version_compare('8.2.50', '8.2.52', '<');
-        //        returns 2: true
-        //        example 3: version_compare('5.3.0-dev', '5.3.0');
-        //        returns 3: -1
-        //        example 4: version_compare('4.1.0.52','4.01.0.51');
-        //        returns 4: 1
-
-        this.php_js = this.php_js || {};
-        this.php_js.ENV = this.php_js.ENV || {};
-        // END REDUNDANT
-        // Important: compare must be initialized at 0.
-        var i = 0,
-            x = 0,
-            compare = 0,
-            // vm maps textual PHP versions to negatives so they're less than 0.
-            // PHP currently defines these as CASE-SENSITIVE. It is important to
-            // leave these as negatives so that they can come before numerical versions
-            // and as if no letters were there to begin with.
-            // (1alpha is < 1 and < 1.1 but > 1dev1)
-            // If a non-numerical value can't be mapped to this table, it receives
-            // -7 as its value.
-            vm = {
-                'dev': -6,
-                'alpha': -5,
-                'a': -5,
-                'beta': -4,
-                'b': -4,
-                'RC': -3,
-                'rc': -3,
-                '#': -2,
-                'p': 1,
-                'pl': 1
-            },
-            // This function will be called to prepare each version argument.
-            // It replaces every _, -, and + with a dot.
-            // It surrounds any nonsequence of numbers/dots with dots.
-            // It replaces sequences of dots with a single dot.
-            //    version_compare('4..0', '4.0') == 0
-            // Important: A string of 0 length needs to be converted into a value
-            // even less than an unexisting value in vm (-7), hence [-8].
-            // It's also important to not strip spaces because of this.
-            //   version_compare('', ' ') == 1
-            prepVersion = function (v) {
-                v = ('' + v)
-                    .replace(/[_\-+]/g, '.');
-                v = v.replace(/([^.\d]+)/g, '.$1.')
-                    .replace(/\.{2,}/g, '.');
-                return (!v.length ? [-8] : v.split('.'));
-            };
-        // This converts a version component to a number.
-        // Empty component becomes 0.
-        // Non-numerical component becomes a negative number.
-        // Numerical component becomes itself as an integer.
-        numVersion = function (v) {
-            return !v ? 0 : (isNaN(v) ? vm[v] || -7 : parseInt(v, 10));
-        };
-        v1 = prepVersion(v1);
-        v2 = prepVersion(v2);
-        x = Math.max(v1.length, v2.length);
-        for (i = 0; i < x; i++) {
-            if (v1[i] == v2[i]) {
-                continue;
-            }
-            v1[i] = numVersion(v1[i]);
-            v2[i] = numVersion(v2[i]);
-            if (v1[i] < v2[i]) {
-                compare = -1;
-                break;
-            } else if (v1[i] > v2[i]) {
-                compare = 1;
-                break;
-            }
-        }
-        if (!operator) {
-            return compare;
-        }
-
-        // Important: operator is CASE-SENSITIVE.
-        // "No operator" seems to be treated as "<."
-        // Any other values seem to make the function return null.
-        switch (operator) {
-            case '>':
-            case 'gt':
-                return (compare > 0);
-            case '>=':
-            case 'ge':
-                return (compare >= 0);
-            case '<=':
-            case 'le':
-                return (compare <= 0);
-            case '==':
-            case '=':
-            case 'eq':
-                return (compare === 0);
-            case '<>':
-            case '!=':
-            case 'ne':
-                return (compare !== 0);
-            case '':
-            case '<':
-            case 'lt':
-                return (compare < 0);
-            default:
-                return null;
-        }
-    }, json_decode: function (str_json) {
-        //       discuss at: http://phpjs.org/functions/json_decode/
-        //      original by: Public Domain (http://www.json.org/json2.js)
-        // reimplemented by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      improved by: T.J. Leahy
-        //      improved by: Michael White
-        //        example 1: json_decode('[ 1 ]');
-        //        returns 1: [1]
-
-        /*
-         http://www.JSON.org/json2.js
-         2008-11-19
-         Public Domain.
-         NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
-         See http://www.JSON.org/js.html
-         */
-
-        var json = this.window.JSON;
-        if (typeof json === 'object' && typeof json.parse === 'function') {
-            try {
-                return json.parse(str_json);
-            } catch (err) {
-                if (!(err instanceof SyntaxError)) {
-                    throw new Error('Unexpected error type in json_decode()');
-                }
-                this.php_js = this.php_js || {};
-                this.php_js.last_error_json = 4; // usable by json_last_error()
-                return null;
-            }
-        }
-
-        var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
-        var j;
-        var text = str_json;
-
-        // Parsing happens in four stages. In the first stage, we replace certain
-        // Unicode characters with escape sequences. JavaScript handles many characters
-        // incorrectly, either silently deleting them, or treating them as line endings.
-        cx.lastIndex = 0;
-        if (cx.test(text)) {
-            text = text.replace(cx, function (a) {
-                return '\\u' + ('0000' + a.charCodeAt(0)
-                        .toString(16))
-                        .slice(-4);
-            });
-        }
-
-        // In the second stage, we run the text against regular expressions that look
-        // for non-JSON patterns. We are especially concerned with '()' and 'new'
-        // because they can cause invocation, and '=' because it can cause mutation.
-        // But just to be safe, we want to reject all unexpected forms.
-        // We split the second stage into 4 regexp operations in order to work around
-        // crippling inefficiencies in IE's and Safari's regexp engines. First we
-        // replace the JSON backslash pairs with '@' (a non-JSON character). Second, we
-        // replace all simple value tokens with ']' characters. Third, we delete all
-        // open brackets that follow a colon or comma or that begin the text. Finally,
-        // we look to see that the remaining characters are only whitespace or ']' or
-        // ',' or ':' or '{' or '}'. If that is so, then the text is safe for eval.
-        if ((/^[\],:{}\s]*$/)
-                .test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@')
-                    .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']')
-                    .replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
-
-            // In the third stage we use the eval function to compile the text into a
-            // JavaScript structure. The '{' operator is subject to a syntactic ambiguity
-            // in JavaScript: it can begin a block or an object literal. We wrap the text
-            // in parens to eliminate the ambiguity.
-            j = eval('(' + text + ')');
-
-            return j;
-        }
-
-        this.php_js = this.php_js || {};
-        this.php_js.last_error_json = 4; // usable by json_last_error()
-        return null;
-    }, json_encode: function (mixed_val) {
-        //       discuss at: http://phpjs.org/functions/json_encode/
-        //      original by: Public Domain (http://www.json.org/json2.js)
-        // reimplemented by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      improved by: Michael White
-        //         input by: felix
-        //      bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //        example 1: json_encode('Kevin');
-        //        returns 1: '"Kevin"'
-
-        /*
-         http://www.JSON.org/json2.js
-         2008-11-19
-         Public Domain.
-         NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
-         See http://www.JSON.org/js.html
-         */
-        var retVal, json = this.window.JSON;
-        try {
-            if (typeof json === 'object' && typeof json.stringify === 'function') {
-                retVal = json.stringify(mixed_val); // Errors will not be caught here if our own equivalent to resource
-                //  (an instance of PHPJS_Resource) is used
-                if (retVal === undefined) {
-                    throw new SyntaxError('json_encode');
-                }
-                return retVal;
-            }
-
-            var value = mixed_val;
-
-            var quote = function (string) {
-                var escapable =
-                    /[\\\"\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
-                var meta = { // table of character substitutions
-                    '\b': '\\b',
-                    '\t': '\\t',
-                    '\n': '\\n',
-                    '\f': '\\f',
-                    '\r': '\\r',
-                    '"': '\\"',
-                    '\\': '\\\\'
-                };
-
-                escapable.lastIndex = 0;
-                return escapable.test(string) ? '"' + string.replace(escapable, function (a) {
-                        var c = meta[a];
-                        return typeof c === 'string' ? c : '\\u' + ('0000' + a.charCodeAt(0)
-                                .toString(16))
-                                .slice(-4);
-                    }) + '"' : '"' + string + '"';
-            };
-
-            var str = function (key, holder) {
-                var gap = '';
-                var indent = '    ';
-                var i = 0; // The loop counter.
-                var k = ''; // The member key.
-                var v = ''; // The member value.
-                var length = 0;
-                var mind = gap;
-                var partial = [];
-                var value = holder[key];
-
-                // If the value has a toJSON method, call it to obtain a replacement value.
-                if (value && typeof value === 'object' && typeof value.toJSON === 'function') {
-                    value = value.toJSON(key);
-                }
-
-                // What happens next depends on the value's type.
-                switch (typeof value) {
-                    case 'string':
-                        return quote(value);
-
-                    case 'number':
-                        // JSON numbers must be finite. Encode non-finite numbers as null.
-                        return isFinite(value) ? String(value) : 'null';
-
-                    case 'boolean':
-                    case 'null':
-                        // If the value is a boolean or null, convert it to a string. Note:
-                        // typeof null does not produce 'null'. The case is included here in
-                        // the remote chance that this gets fixed someday.
-                        return String(value);
-
-                    case 'object':
-                        // If the type is 'object', we might be dealing with an object or an array or
-                        // null.
-                        // Due to a specification blunder in ECMAScript, typeof null is 'object',
-                        // so watch out for that case.
-                        if (!value) {
-                            return 'null';
-                        }
-                        if ((this.PHPJS_Resource && value instanceof this.PHPJS_Resource) || (window.PHPJS_Resource &&
-                            value instanceof window.PHPJS_Resource)) {
-                            throw new SyntaxError('json_encode');
-                        }
-
-                        // Make an array to hold the partial results of stringifying this object value.
-                        gap += indent;
-                        partial = [];
-
-                        // Is the value an array?
-                        if (Object.prototype.toString.apply(value) === '[object Array]') {
-                            // The value is an array. Stringify every element. Use null as a placeholder
-                            // for non-JSON values.
-                            length = value.length;
-                            for (i = 0; i < length; i += 1) {
-                                partial[i] = str(i, value) || 'null';
-                            }
-
-                            // Join all of the elements together, separated with commas, and wrap them in
-                            // brackets.
-                            v = partial.length === 0 ? '[]' : gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind +
-                                ']' : '[' + partial.join(',') + ']';
-                            gap = mind;
-                            return v;
-                        }
-
-                        // Iterate through all of the keys in the object.
-                        for (k in value) {
-                            if (Object.hasOwnProperty.call(value, k)) {
-                                v = str(k, value);
-                                if (v) {
-                                    partial.push(quote(k) + (gap ? ': ' : ':') + v);
-                                }
-                            }
-                        }
-
-                        // Join all of the member texts together, separated with commas,
-                        // and wrap them in braces.
-                        v = partial.length === 0 ? '{}' : gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' :
-                            '{' + partial.join(',') + '}';
-                        gap = mind;
-                        return v;
-                    case 'undefined':
-                    // Fall-through
-                    case 'function':
-                    // Fall-through
-                    default:
-                        throw new SyntaxError('json_encode');
-                }
-            };
-
-            // Make a fake root object containing our value under the key of ''.
-            // Return the result of stringifying the value.
-            return str('', {
-                '': value
-            });
-
-        } catch (err) { // Todo: ensure error handling above throws a SyntaxError in all cases where it could
-            // (i.e., when the JSON global is not available and there is an error)
-            if (!(err instanceof SyntaxError)) {
-                throw new Error('Unexpected error type in json_encode()');
-            }
-            this.php_js = this.php_js || {};
-            this.php_js.last_error_json = 4; // usable by json_last_error()
-            return null;
-        }
-    }, json_last_error: function () {
-        //  discuss at: http://phpjs.org/functions/json_last_error/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: json_last_error();
-        //   returns 1: 0
-
-        /*
-         JSON_ERROR_NONE = 0
-         JSON_ERROR_DEPTH = 1 // max depth limit to be removed per PHP comments in json.c (not possible in JS?)
-         JSON_ERROR_STATE_MISMATCH = 2 // internal use? also not documented
-         JSON_ERROR_CTRL_CHAR = 3 // [\u0000-\u0008\u000B-\u000C\u000E-\u001F] if used directly within json_decode(),
-         // but JSON functions auto-escape these, so error not possible in JavaScript
-         JSON_ERROR_SYNTAX = 4
-         */
-        return this.php_js && this.php_js.last_error_json ? this.php_js.last_error_json : 0;
-    }, abs: function (mixed_number) {
-        //  discuss at: http://phpjs.org/functions/abs/
-        // original by: Waldo Malqui Silva
-        // improved by: Karol Kowalski
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-        //   example 1: abs(4.2);
-        //   returns 1: 4.2
-        //   example 2: abs(-4.2);
-        //   returns 2: 4.2
-        //   example 3: abs(-5);
-        //   returns 3: 5
-        //   example 4: abs('_argos');
-        //   returns 4: 0
-
-        return Math.abs(mixed_number) || 0;
-    }, acos: function (arg) {
-        //  discuss at: http://phpjs.org/functions/acos/
-        // original by: Onno Marsman
-        //   example 1: acos(0.3);
-        //   returns 1: 1.2661036727794992
-
-        return Math.acos(arg);
-    }, acosh: function (arg) {
-        //  discuss at: http://phpjs.org/functions/acosh/
-        // original by: Onno Marsman
-        //   example 1: acosh(8723321.4);
-        //   returns 1: 16.674657798418625
-
-        return Math.log(arg + Math.sqrt(arg * arg - 1));
-    }, asin: function (arg) {
-        //  discuss at: http://phpjs.org/functions/asin/
-        // original by: Onno Marsman
-        //   example 1: asin(0.3);
-        //   returns 1: 0.3046926540153975
-
-        return Math.asin(arg);
-    }, asinh: function (arg) {
-        //  discuss at: http://phpjs.org/functions/asinh/
-        // original by: Onno Marsman
-        //   example 1: asinh(8723321.4);
-        //   returns 1: 16.67465779841863
-
-        return Math.log(arg + Math.sqrt(arg * arg + 1));
-    }, atan: function (arg) {
-        //  discuss at: http://phpjs.org/functions/atan/
-        // original by: Onno Marsman
-        //   example 1: atan(8723321.4);
-        //   returns 1: 1.5707962121596615
-
-        return Math.atan(arg);
-    }, atan2: function (y, x) {
-        //  discuss at: http://phpjs.org/functions/atan2/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: atan2(1, 1);
-        //   returns 1: 0.7853981633974483
-
-        return Math.atan2(y, x);
-    }, atanh: function (arg) {
-        //  discuss at: http://phpjs.org/functions/atanh/
-        // original by: Onno Marsman
-        //   example 1: atanh(0.3);
-        //   returns 1: 0.3095196042031118
-
-        return 0.5 * Math.log((1 + arg) / (1 - arg));
-    }, base_convert: function (number, frombase, tobase) {
-        //  discuss at: http://phpjs.org/functions/base_convert/
-        // original by: Philippe Baumann
-        // improved by: Rafał Kukawski (http://blog.kukawski.pl)
-        //   example 1: base_convert('A37334', 16, 2);
-        //   returns 1: '101000110111001100110100'
-
-        return parseInt(number + '', frombase | 0)
-            .toString(tobase | 0);
-    }, bindec: function (binary_string) {
-        //  discuss at: http://phpjs.org/functions/bindec/
-        // original by: Philippe Baumann
-        //   example 1: bindec('110011');
-        //   returns 1: 51
-        //   example 2: bindec('000110011');
-        //   returns 2: 51
-        //   example 3: bindec('111');
-        //   returns 3: 7
-
-        binary_string = (binary_string + '')
-            .replace(/[^01]/gi, '');
-        return parseInt(binary_string, 2);
-    }, ceil: function (value) {
-        //  discuss at: http://phpjs.org/functions/ceil/
-        // original by: Onno Marsman
-        //   example 1: ceil(8723321.4);
-        //   returns 1: 8723322
-
-        return Math.ceil(value);
-    }, cos: function (arg) {
-        //  discuss at: http://phpjs.org/functions/cos/
-        // original by: Onno Marsman
-        //   example 1: cos(8723321.4);
-        //   returns 1: -0.18127180117605912
-
-        return Math.cos(arg);
-    }, cosh: function (arg) {
-        //  discuss at: http://phpjs.org/functions/cosh/
-        // original by: Onno Marsman
-        //   example 1: cosh(-0.18127180117607017);
-        //   returns 1: 1.0164747716114113
-
-        return (Math.exp(arg) + Math.exp(-arg)) / 2;
-    }, decbin: function (number) {
-        //  discuss at: http://phpjs.org/functions/decbin/
-        // original by: Enrique Gonzalez
-        // bugfixed by: Onno Marsman
-        // improved by: http://stackoverflow.com/questions/57803/how-to-convert-decimal-to-hex-in-javascript
-        //    input by: pilus
-        //    input by: nord_ua
-        //   example 1: decbin(12);
-        //   returns 1: '1100'
-        //   example 2: decbin(26);
-        //   returns 2: '11010'
-        //   example 3: decbin('26');
-        //   returns 3: '11010'
-
-        if (number < 0) {
-            number = 0xFFFFFFFF + number + 1;
-        }
-        return parseInt(number, 10)
-            .toString(2);
-    }, dechex: function (number) {
-        //  discuss at: http://phpjs.org/functions/dechex/
-        // original by: Philippe Baumann
-        // bugfixed by: Onno Marsman
-        // improved by: http://stackoverflow.com/questions/57803/how-to-convert-decimal-to-hex-in-javascript
-        //    input by: pilus
-        //   example 1: dechex(10);
-        //   returns 1: 'a'
-        //   example 2: dechex(47);
-        //   returns 2: '2f'
-        //   example 3: dechex(-1415723993);
-        //   returns 3: 'ab9dc427'
-
-        if (number < 0) {
-            number = 0xFFFFFFFF + number + 1;
-        }
-        return parseInt(number, 10)
-            .toString(16);
-    }, decoct: function (number) {
-        //  discuss at: http://phpjs.org/functions/decoct/
-        // original by: Enrique Gonzalez
-        // bugfixed by: Onno Marsman
-        // improved by: http://stackoverflow.com/questions/57803/how-to-convert-decimal-to-hex-in-javascript
-        //    input by: pilus
-        //   example 1: decoct(15);
-        //   returns 1: '17'
-        //   example 2: decoct(264);
-        //   returns 2: '410'
-
-        if (number < 0) {
-            number = 0xFFFFFFFF + number + 1;
-        }
-        return parseInt(number, 10)
-            .toString(8);
-    }, deg2rad: function (angle) {
-        //  discuss at: http://phpjs.org/functions/deg2rad/
-        // original by: Enrique Gonzalez
-        // improved by: Thomas Grainger (http://graingert.co.uk)
-        //   example 1: deg2rad(45);
-        //   returns 1: 0.7853981633974483
-
-        return angle * .017453292519943295; // (angle / 180) * Math.PI;
-    }, exp: function (arg) {
-        //  discuss at: http://phpjs.org/functions/exp/
-        // original by: Onno Marsman
-        //   example 1: exp(0.3);
-        //   returns 1: 1.3498588075760032
-
-        return Math.exp(arg);
-    }, expm1: function (x) {
-        //  discuss at: http://phpjs.org/functions/expm1/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Precision 'n' can be adjusted as desired
-        //   example 1: expm1(1e-15);
-        //   returns 1: 1.0000000000000007e-15
-
-        var ret = 0,
-            n = 50; // degree of precision
-        var factorial = function factorial(n) {
-            if ((n === 0) || (n === 1)) {
-                return 1;
-            } else {
-                var result = (n * factorial(n - 1));
-                return result;
-            }
-        };
-        for (var i = 1; i < n; i++) {
-            ret += Math.pow(x, i) / factorial(i);
-        }
-        return ret;
-    }, floor: function (value) {
-        //  discuss at: http://phpjs.org/functions/floor/
-        // original by: Onno Marsman
-        //   example 1: floor(8723321.4);
-        //   returns 1: 8723321
-
-        return Math.floor(value);
-    }, fmod: function (x, y) {
-        //  discuss at: http://phpjs.org/functions/fmod/
-        // original by: Onno Marsman
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //   example 1: fmod(5.7, 1.3);
-        //   returns 1: 0.5
-
-        var tmp, tmp2, p = 0,
-            pY = 0,
-            l = 0.0,
-            l2 = 0.0;
-
-        tmp = x.toExponential()
-            .match(/^.\.?(.*)e(.+)$/);
-        p = parseInt(tmp[2], 10) - (tmp[1] + '')
-                .length;
-        tmp = y.toExponential()
-            .match(/^.\.?(.*)e(.+)$/);
-        pY = parseInt(tmp[2], 10) - (tmp[1] + '')
-                .length;
-
-        if (pY > p) {
-            p = pY;
-        }
-
-        tmp2 = (x % y);
-
-        if (p < -100 || p > 20) {
-            // toFixed will give an out of bound error so we fix it like this:
-            l = Math.round(Math.log(tmp2) / Math.log(10));
-            l2 = Math.pow(10, l);
-
-            return (tmp2 / l2)
-                    .toFixed(l - p) * l2;
-        } else {
-            return parseFloat(tmp2.toFixed(-p));
-        }
-    }, getrandmax: function () {
-        //  discuss at: http://phpjs.org/functions/getrandmax/
-        // original by: Onno Marsman
-        //   example 1: getrandmax();
-        //   returns 1: 2147483647
-
-        return 2147483647;
-    }, hexdec: function (hex_string) {
-        //  discuss at: http://phpjs.org/functions/hexdec/
-        // original by: Philippe Baumann
-        //   example 1: hexdec('that');
-        //   returns 1: 10
-        //   example 2: hexdec('a0');
-        //   returns 2: 160
-
-        hex_string = (hex_string + '')
-            .replace(/[^a-f0-9]/gi, '');
-        return parseInt(hex_string, 16);
-    }, hypot: function (x, y) {
-        //  discuss at: http://phpjs.org/functions/hypot/
-        // original by: Onno Marsman
-        //   example 1: hypot(3, 4);
-        //   returns 1: 5
-        //   example 2: hypot([], 'a');
-        //   returns 2: 0
-
-        return Math.sqrt(x * x + y * y) || 0;
-    }, is_finite: function (val) {
-        //  discuss at: http://phpjs.org/functions/is_finite/
-        // original by: Onno Marsman
-        //   example 1: is_finite(Infinity);
-        //   returns 1: false
-        //   example 2: is_finite(-Infinity);
-        //   returns 2: false
-        //   example 3: is_finite(0);
-        //   returns 3: true
-
-        var warningType = '';
-
-        if (val === Infinity || val === -Infinity) {
-            return false;
-        }
-
-        //Some warnings for maximum PHP compatibility
-        if (typeof val === 'object') {
-            warningType = (Object.prototype.toString.call(val) === '[object Array]' ? 'array' : 'object');
-        } else if (typeof val === 'string' && !val.match(/^[\+\-]?\d/)) {
-            //simulate PHP's behaviour: '-9a' doesn't give a warning, but 'a9' does.
-            warningType = 'string';
-        }
-        if (warningType) {
-            throw new Error('Warning: is_finite() expects parameter 1 to be double, ' + warningType + ' given');
-        }
-
-        return true;
-    }, is_infinite: function (val) {
-        //  discuss at: http://phpjs.org/functions/is_infinite/
-        // original by: Onno Marsman
-        //   example 1: is_infinite(Infinity);
-        //   returns 1: true
-        //   example 2: is_infinite(-Infinity);
-        //   returns 2: true
-        //   example 3: is_infinite(0);
-        //   returns 3: false
-
-        var warningType = '';
-
-        if (val === Infinity || val === -Infinity) {
-            return true;
-        }
-
-        //Some warnings for maximum PHP compatibility
-        if (typeof val === 'object') {
-            warningType = (Object.prototype.toString.call(val) === '[object Array]' ? 'array' : 'object');
-        } else if (typeof val === 'string' && !val.match(/^[\+\-]?\d/)) {
-            //simulate PHP's behaviour: '-9a' doesn't give a warning, but 'a9' does.
-            warningType = 'string';
-        }
-        if (warningType) {
-            throw new Error('Warning: is_infinite() expects parameter 1 to be double, ' + warningType + ' given');
-        }
-
-        return false;
-    }, is_nan: function (val) {
-        //  discuss at: http://phpjs.org/functions/is_nan/
-        // original by: Onno Marsman
-        //    input by: Robin
-        //   example 1: is_nan(NaN);
-        //   returns 1: true
-        //   example 2: is_nan(0);
-        //   returns 2: false
-
-        var warningType = '';
-
-        if (typeof val === 'number' && isNaN(val)) {
-            return true;
-        }
-
-        //Some errors for maximum PHP compatibility
-        if (typeof val === 'object') {
-            warningType = (Object.prototype.toString.call(val) === '[object Array]' ? 'array' : 'object');
-        } else if (typeof val === 'string' && !val.match(/^[\+\-]?\d/)) {
-            //simulate PHP's behaviour: '-9a' doesn't give a warning, but 'a9' does.
-            warningType = 'string';
-        }
-        if (warningType) {
-            throw new Error('Warning: is_nan() expects parameter 1 to be double, ' + warningType + ' given');
-        }
-
-        return false;
-    }, lcg_value: function () {
-        //  discuss at: http://phpjs.org/functions/lcg_value/
-        // original by: Onno Marsman
-        //        test: skip
-        //   example 1: lcg_value()
-        //   returns 1: 1
-
-        return Math.random();
-    }, log: function (arg, base) {
-        //  discuss at: http://phpjs.org/functions/log/
-        // original by: Onno Marsman
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: log(8723321.4, 7);
-        //   returns 1: 8.212871815082147
-
-        return (typeof base === 'undefined') ?
-            Math.log(arg) :
-            Math.log(arg) / Math.log(base);
-    }, log10: function (arg) {
-        //  discuss at: http://phpjs.org/functions/log10/
-        // original by: Philip Peterson
-        // improved by: Onno Marsman
-        // improved by: Tod Gentille
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: log10(10);
-        //   returns 1: 1
-        //   example 2: log10(1);
-        //   returns 2: 0
-
-        return Math.log(arg) / 2.302585092994046; // Math.LN10
-    }, log1p: function (x) {
-        //  discuss at: http://phpjs.org/functions/log1p/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: Precision 'n' can be adjusted as desired
-        //   example 1: log1p(1e-15);
-        //   returns 1: 9.999999999999995e-16
-
-        var ret = 0,
-            n = 50; // degree of precision
-        if (x <= -1) {
-            return '-INF'; // JavaScript style would be to return Number.NEGATIVE_INFINITY
-        }
-        if (x < 0 || x > 1) {
-            return Math.log(1 + x);
-        }
-        for (var i = 1; i < n; i++) {
-            if ((i % 2) === 0) {
-                ret -= Math.pow(x, i) / i;
-            } else {
-                ret += Math.pow(x, i) / i;
-            }
-        }
-        return ret;
-    }, max: function () {
-        //  discuss at: http://phpjs.org/functions/max/
-        // original by: Onno Marsman
-        //  revised by: Onno Marsman
-        // improved by: Jack
-        //        note: Long code cause we're aiming for maximum PHP compatibility
-        //   example 1: max(1, 3, 5, 6, 7);
-        //   returns 1: 7
-        //   example 2: max([2, 4, 5]);
-        //   returns 2: 5
-        //   example 3: max(0, 'hello');
-        //   returns 3: 0
-        //   example 4: max('hello', 0);
-        //   returns 4: 'hello'
-        //   example 5: max(-1, 'hello');
-        //   returns 5: 'hello'
-        //   example 6: max([2, 4, 8], [2, 5, 7]);
-        //   returns 6: [2, 5, 7]
-
-        var ar, retVal, i = 0,
-            n = 0,
-            argv = arguments,
-            argc = argv.length,
-            _obj2Array = function (obj) {
-                if (Object.prototype.toString.call(obj) === '[object Array]') {
-                    return obj;
-                } else {
-                    var ar = [];
-                    for (var i in obj) {
-                        if (obj.hasOwnProperty(i)) {
-                            ar.push(obj[i]);
-                        }
-                    }
-                    return ar;
-                }
-            }; //function _obj2Array
-        _compare = function (current, next) {
-            var i = 0,
-                n = 0,
-                tmp = 0,
-                nl = 0,
-                cl = 0;
-
-            if (current === next) {
-                return 0;
-            } else if (typeof current === 'object') {
-                if (typeof next === 'object') {
-                    current = _obj2Array(current);
-                    next = _obj2Array(next);
-                    cl = current.length;
-                    nl = next.length;
-                    if (nl > cl) {
-                        return 1;
-                    } else if (nl < cl) {
-                        return -1;
-                    }
-                    for (i = 0, n = cl; i < n; ++i) {
-                        tmp = _compare(current[i], next[i]);
-                        if (tmp == 1) {
-                            return 1;
-                        } else if (tmp == -1) {
-                            return -1;
-                        }
-                    }
-                    return 0;
-                }
-                return -1;
-            } else if (typeof next === 'object') {
-                return 1;
-            } else if (isNaN(next) && !isNaN(current)) {
-                if (current == 0) {
-                    return 0;
-                }
-                return (current < 0 ? 1 : -1);
-            } else if (isNaN(current) && !isNaN(next)) {
-                if (next == 0) {
-                    return 0;
-                }
-                return (next > 0 ? 1 : -1);
-            }
-
-            if (next == current) {
-                return 0;
-            }
-            return (next > current ? 1 : -1);
-        }; //function _compare
-        if (argc === 0) {
-            throw new Error('At least one value should be passed to max()');
-        } else if (argc === 1) {
-            if (typeof argv[0] === 'object') {
-                ar = _obj2Array(argv[0]);
-            } else {
-                throw new Error('Wrong parameter count for max()');
-            }
-            if (ar.length === 0) {
-                throw new Error('Array must contain at least one element for max()');
-            }
-        } else {
-            ar = argv;
-        }
-
-        retVal = ar[0];
-        for (i = 1, n = ar.length; i < n; ++i) {
-            if (_compare(retVal, ar[i]) == 1) {
-                retVal = ar[i];
-            }
-        }
-
-        return retVal;
-    }, min: function () {
-        //  discuss at: http://phpjs.org/functions/min/
-        // original by: Onno Marsman
-        //  revised by: Onno Marsman
-        // improved by: Jack
-        //        note: Long code cause we're aiming for maximum PHP compatibility
-        //   example 1: min(1, 3, 5, 6, 7);
-        //   returns 1: 1
-        //   example 2: min([2, 4, 5]);
-        //   returns 2: 2
-        //   example 3: min(0, 'hello');
-        //   returns 3: 0
-        //   example 4: min('hello', 0);
-        //   returns 4: 'hello'
-        //   example 5: min(-1, 'hello');
-        //   returns 5: -1
-        //   example 6: min([2, 4, 8], [2, 5, 7]);
-        //   returns 6: [2, 4, 8]
-
-        var ar, retVal, i = 0,
-            n = 0,
-            argv = arguments,
-            argc = argv.length,
-            _obj2Array = function (obj) {
-                if (Object.prototype.toString.call(obj) === '[object Array]') {
-                    return obj;
-                }
-                var ar = [];
-                for (var i in obj) {
-                    if (obj.hasOwnProperty(i)) {
-                        ar.push(obj[i]);
-                    }
-                }
-                return ar;
-            }; //function _obj2Array
-        _compare = function (current, next) {
-            var i = 0,
-                n = 0,
-                tmp = 0,
-                nl = 0,
-                cl = 0;
-
-            if (current === next) {
-                return 0;
-            } else if (typeof current === 'object') {
-                if (typeof next === 'object') {
-                    current = _obj2Array(current);
-                    next = _obj2Array(next);
-                    cl = current.length;
-                    nl = next.length;
-                    if (nl > cl) {
-                        return 1;
-                    } else if (nl < cl) {
-                        return -1;
-                    }
-                    for (i = 0, n = cl; i < n; ++i) {
-                        tmp = _compare(current[i], next[i]);
-                        if (tmp == 1) {
-                            return 1;
-                        } else if (tmp == -1) {
-                            return -1;
-                        }
-                    }
-                    return 0;
-                }
-                return -1;
-            } else if (typeof next === 'object') {
-                return 1;
-            } else if (isNaN(next) && !isNaN(current)) {
-                if (current == 0) {
-                    return 0;
-                }
-                return (current < 0 ? 1 : -1);
-            } else if (isNaN(current) && !isNaN(next)) {
-                if (next == 0) {
-                    return 0;
-                }
-                return (next > 0 ? 1 : -1);
-            }
-
-            if (next == current) {
-                return 0;
-            }
-            return (next > current ? 1 : -1);
-        }; //function _compare
-        if (argc === 0) {
-            throw new Error('At least one value should be passed to min()');
-        } else if (argc === 1) {
-            if (typeof argv[0] === 'object') {
-                ar = _obj2Array(argv[0]);
-            } else {
-                throw new Error('Wrong parameter count for min()');
-            }
-            if (ar.length === 0) {
-                throw new Error('Array must contain at least one element for min()');
-            }
-        } else {
-            ar = argv;
-        }
-
-        retVal = ar[0];
-        for (i = 1, n = ar.length; i < n; ++i) {
-            if (_compare(retVal, ar[i]) == -1) {
-                retVal = ar[i];
-            }
-        }
-
-        return retVal;
-    }, mt_getrandmax: function () {
-        //  discuss at: http://phpjs.org/functions/mt_getrandmax/
-        // original by: Onno Marsman
-        //   example 1: mt_getrandmax();
-        //   returns 1: 2147483647
-
-        return 2147483647;
-    }, mt_rand: function (min, max) {
-        //  discuss at: http://phpjs.org/functions/mt_rand/
-        // original by: Onno Marsman
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //    input by: Kongo
-        //   example 1: mt_rand(1, 1);
-        //   returns 1: 1
-
-        var argc = arguments.length;
-        if (argc === 0) {
-            min = 0;
-            max = 2147483647;
-        } else if (argc === 1) {
-            throw new Error('Warning: mt_rand() expects exactly 2 parameters, 1 given');
-        } else {
-            min = parseInt(min, 10);
-            max = parseInt(max, 10);
-        }
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }, octdec: function (oct_string) {
-        //  discuss at: http://phpjs.org/functions/octdec/
-        // original by: Philippe Baumann
-        //   example 1: octdec('77');
-        //   returns 1: 63
-
-        oct_string = (oct_string + '')
-            .replace(/[^0-7]/gi, '');
-        return parseInt(oct_string, 8);
-    }, pi: function () {
-        //  discuss at: http://phpjs.org/functions/pi/
-        // original by: Onno Marsman
-        // improved by: dude
-        //   example 1: pi(8723321.4);
-        //   returns 1: 3.141592653589793
-
-        return 3.141592653589793; // Math.PI
-    }, pow: function (base, exp) {
-        //  discuss at: http://phpjs.org/functions/pow/
-        // original by: Onno Marsman
-        //   example 1: pow(8723321.4, 7);
-        //   returns 1: 3.8439091680778995e+48
-
-        return Math.pow(base, exp);
-    }, rad2deg: function (angle) {
-        //  discuss at: http://phpjs.org/functions/rad2deg/
-        // original by: Enrique Gonzalez
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: rad2deg(3.141592653589793);
-        //   returns 1: 180
-
-        return angle * 57.29577951308232; // angle / Math.PI * 180
-    }, rand: function (min, max) {
-        //  discuss at: http://phpjs.org/functions/rand/
-        // original by: Leslie Hoare
-        // bugfixed by: Onno Marsman
-        //        note: See the commented out code below for a version which will work with our experimental (though probably unnecessary) srand() function)
-        //   example 1: rand(1, 1);
-        //   returns 1: 1
-
-        var argc = arguments.length;
-        if (argc === 0) {
-            min = 0;
-            max = 2147483647;
-        } else if (argc === 1) {
-            throw new Error('Warning: rand() expects exactly 2 parameters, 1 given');
-        }
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-
-        /*
-         // See note above for an explanation of the following alternative code
-
-         // +   reimplemented by: Brett Zamir (http://brett-zamir.me)
-         // -    depends on: srand
-         // %          note 1: This is a very possibly imperfect adaptation from the PHP source code
-         var rand_seed, ctx, PHP_RAND_MAX=2147483647; // 0x7fffffff
-
-         if (!this.php_js || this.php_js.rand_seed === undefined) {
-         this.srand();
-         }
-         rand_seed = this.php_js.rand_seed;
-
-         var argc = arguments.length;
-         if (argc === 1) {
-         throw new Error('Warning: rand() expects exactly 2 parameters, 1 given');
-         }
-
-         var do_rand = function (ctx) {
-         return ((ctx * 1103515245 + 12345) % (PHP_RAND_MAX + 1));
-         };
-
-         var php_rand = function (ctxArg) { // php_rand_r
-         this.php_js.rand_seed = do_rand(ctxArg);
-         return parseInt(this.php_js.rand_seed, 10);
-         };
-
-         var number = php_rand(rand_seed);
-
-         if (argc === 2) {
-         number = min + parseInt(parseFloat(parseFloat(max) - min + 1.0) * (number/(PHP_RAND_MAX + 1.0)), 10);
-         }
-         return number;
-         */
-    }, round: function (value, precision, mode) {
-        //  discuss at: http://phpjs.org/functions/round/
-        // original by: Philip Peterson
-        //  revised by: Onno Marsman
-        //  revised by: T.Wild
-        //  revised by: Rafał Kukawski (http://blog.kukawski.pl/)
-        //    input by: Greenseed
-        //    input by: meo
-        //    input by: William
-        //    input by: Josep Sanz (http://www.ws3.es/)
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //        note: Great work. Ideas for improvement:
-        //        note: - code more compliant with developer guidelines
-        //        note: - for implementing PHP constant arguments look at
-        //        note: the pathinfo() function, it offers the greatest
-        //        note: flexibility & compatibility possible
-        //   example 1: round(1241757, -3);
-        //   returns 1: 1242000
-        //   example 2: round(3.6);
-        //   returns 2: 4
-        //   example 3: round(2.835, 2);
-        //   returns 3: 2.84
-        //   example 4: round(1.1749999999999, 2);
-        //   returns 4: 1.17
-        //   example 5: round(58551.799999999996, 2);
-        //   returns 5: 58551.8
-
-        var m, f, isHalf, sgn; // helper variables
-        precision |= 0; // making sure precision is integer
-        m = Math.pow(10, precision);
-        value *= m;
-        sgn = (value > 0) | -(value < 0); // sign of the number
-        isHalf = value % 1 === 0.5 * sgn;
-        f = Math.floor(value);
-
-        if (isHalf) {
-            switch (mode) {
-                case 'PHP_ROUND_HALF_DOWN':
-                    value = f + (sgn < 0); // rounds .5 toward zero
-                    break;
-                case 'PHP_ROUND_HALF_EVEN':
-                    value = f + (f % 2 * sgn); // rouds .5 towards the next even integer
-                    break;
-                case 'PHP_ROUND_HALF_ODD':
-                    value = f + !(f % 2); // rounds .5 towards the next odd integer
-                    break;
-                default:
-                    value = f + (sgn > 0); // rounds .5 away from zero
-            }
-        }
-
-        return (isHalf ? value : Math.round(value)) / m;
-    }, sin: function (arg) {
-        //  discuss at: http://phpjs.org/functions/sin/
-        // original by: Onno Marsman
-        //   example 1: sin(8723321.4);
-        //   returns 1: -0.9834330348825929
-
-        return Math.sin(arg);
-    }, sinh: function (arg) {
-        //  discuss at: http://phpjs.org/functions/sinh/
-        // original by: Onno Marsman
-        //   example 1: sinh(-0.9834330348825909);
-        //   returns 1: -1.1497971402636502
-
-        return (Math.exp(arg) - Math.exp(-arg)) / 2;
-    }, sqrt: function (arg) {
-        //  discuss at: http://phpjs.org/functions/sqrt/
-        // original by: Onno Marsman
-        //   example 1: sqrt(8723321.4);
-        //   returns 1: 2953.5269424875746
-
-        return Math.sqrt(arg);
-    }, tan: function (arg) {
-        //  discuss at: http://phpjs.org/functions/tan/
-        // original by: Onno Marsman
-        //   example 1: tan(8723321.4);
-        //   returns 1: 5.4251848798448234
-
-        return Math.tan(arg);
-    }, tanh: function (arg) {
-        //  discuss at: http://phpjs.org/functions/tanh/
-        // original by: Onno Marsman
-        //   example 1: tanh(5.4251848798444815);
-        //   returns 1: 0.9999612058841574
-
-        return (Math.exp(arg) - Math.exp(-arg)) / (Math.exp(arg) + Math.exp(-arg));
     }, pack: function (format) {
         //  discuss at: http://phpjs.org/functions/pack/
         // original by: Tim de Koning (http://www.kingsquare.nl)
@@ -8012,7 +399,7 @@ php = {
                         }
 
                         if (bin[(lastBit = precisionBits - 1 + (k = (exp = bias + 1 - k) >= minExp && exp <= maxExp ? k + 1 :
-                                    bias + 1 - (exp = minExp - 1))) + 1]) {
+                            bias + 1 - (exp = minExp - 1))) + 1]) {
                             if (!(rounded = bin[lastBit])) {
                                 for (j = lastBit + 2; !rounded && j < len; rounded = bin[j++]) {
                                 }
@@ -8056,7 +443,7 @@ php = {
                         n = 0;
                         j = 0;
                         k = (tmpResult = (signal ? '1' : '0') + tmpResult + bin.slice(k, k + precisionBits)
-                                .join(''))
+                            .join(''))
                             .length;
                         r = [];
 
@@ -8162,7 +549,7 @@ php = {
             }
             if (reqWidth > seed.length) { // so short we pad
                 return Array(1 + (reqWidth - seed.length))
-                        .join('0') + seed;
+                    .join('0') + seed;
             }
             return seed;
         };
@@ -8179,7 +566,7 @@ php = {
 
         retId = prefix; // start with prefix, add current milliseconds hex string
         retId += formatSeed(parseInt(new Date()
-                .getTime() / 1000, 10), 8);
+            .getTime() / 1000, 10), 8);
         retId += formatSeed(this.php_js.uniqidSeed, 5); // add seed hex string
         if (more_entropy) {
             // for more entropy we add a float lower to 10
@@ -8189,324 +576,606 @@ php = {
         }
 
         return retId;
-    }, gopher_parsedir: function (dirent) {
-        //  discuss at: http://phpjs.org/functions/gopher_parsedir/
+    }, xdiff_string_diff: function (old_data, new_data, context_lines, minimal) {
+        //  discuss at: http://phpjs.org/functions/xdiff_string_diff
         // original by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: var entry = gopher_parsedir('0All about my gopher site.\t/allabout.txt\tgopher.example.com\t70\u000d\u000a');
-        //   example 1: entry.title;
-        //   returns 1: 'All about my gopher site.'
-
-        /* Types
-         * 0 = plain text file
-         * 1 = directory menu listing
-         * 2 = CSO search query
-         * 3 = error message
-         * 4 = BinHex encoded text file
-         * 5 = binary archive file
-         * 6 = UUEncoded text file
-         * 7 = search engine query
-         * 8 = telnet session pointer
-         * 9 = binary file
-         * g = Graphics file format, primarily a GIF file
-         * h = HTML file
-         * i = informational message
-         * s = Audio file format, primarily a WAV file
-         */
-
-        var entryPattern = /^(.)(.*?)\t(.*?)\t(.*?)\t(.*?)\u000d\u000a$/;
-        var entry = dirent.match(entryPattern);
-
-        if (entry === null) {
-            throw 'Could not parse the directory entry';
-            // return false;
-        }
-
-        var type = entry[1];
-        switch (type) {
-            case 'i':
-                type = 255; // GOPHER_INFO
-                break;
-            case '1':
-                type = 1; // GOPHER_DIRECTORY
-                break;
-            case '0':
-                type = 0; // GOPHER_DOCUMENT
-                break;
-            case '4':
-                type = 4; // GOPHER_BINHEX
-                break;
-            case '5':
-                type = 5; // GOPHER_DOSBINARY
-                break;
-            case '6':
-                type = 6; // GOPHER_UUENCODED
-                break;
-            case '9':
-                type = 9; // GOPHER_BINARY
-                break;
-            case 'h':
-                type = 254; // GOPHER_HTTP
-                break;
-            default:
-                return {
-                    type: -1,
-                    data: dirent
-                }; // GOPHER_UNKNOWN
-        }
-        return {
-            type: type,
-            title: entry[2],
-            path: entry[3],
-            host: entry[4],
-            port: entry[5]
-        };
-    }, inet_ntop: function (a) {
-        //  discuss at: http://phpjs.org/functions/inet_ntop/
-        // original by: Theriault
-        //   example 1: inet_ntop('\x7F\x00\x00\x01');
-        //   returns 1: '127.0.0.1'
-        //   example 2: inet_ntop('\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1');
-        //   returns 2: '::1'
-
-        var i = 0,
-            m = '',
-            c = [];
-        a += '';
-        if (a.length === 4) { // IPv4
-            return [
-                a.charCodeAt(0), a.charCodeAt(1), a.charCodeAt(2), a.charCodeAt(3)].join('.');
-        } else if (a.length === 16) { // IPv6
-            for (i = 0; i < 16; i++) {
-                c.push(((a.charCodeAt(i++) << 8) + a.charCodeAt(i))
-                    .toString(16));
-            }
-            return c.join(':')
-                .replace(/((^|:)0(?=:|$))+:?/g, function (t) {
-                    m = (t.length > m.length) ? t : m;
-                    return t;
-                })
-                .replace(m || ' ', '::');
-        } else { // Invalid length
-            return false;
-        }
-    }, inet_pton: function (a) {
-        //  discuss at: http://phpjs.org/functions/inet_pton/
-        // original by: Theriault
-        //   example 1: inet_pton('::');
-        //   returns 1: '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0'
-        //   example 2: inet_pton('127.0.0.1');
-        //   returns 2: '\x7F\x00\x00\x01'
-
-        var r, m, x, i, j, f = String.fromCharCode;
-        m = a.match(/^(?:\d{1,3}(?:\.|$)){4}/); // IPv4
-        if (m) {
-            m = m[0].split('.');
-            m = f(m[0]) + f(m[1]) + f(m[2]) + f(m[3]);
-            // Return if 4 bytes, otherwise false.
-            return m.length === 4 ? m : false;
-        }
-        r = /^((?:[\da-f]{1,4}(?::|)){0,8})(::)?((?:[\da-f]{1,4}(?::|)){0,8})$/;
-        m = a.match(r); // IPv6
-        if (m) {
-            // Translate each hexadecimal value.
-            for (j = 1; j < 4; j++) {
-                // Indice 2 is :: and if no length, continue.
-                if (j === 2 || m[j].length === 0) {
-                    continue;
-                }
-                m[j] = m[j].split(':');
-                for (i = 0; i < m[j].length; i++) {
-                    m[j][i] = parseInt(m[j][i], 16);
-                    // Would be NaN if it was blank, return false.
-                    if (isNaN(m[j][i])) {
-                        return false; // Invalid IP.
-                    }
-                    m[j][i] = f(m[j][i] >> 8) + f(m[j][i] & 0xFF);
-                }
-                m[j] = m[j].join('');
-            }
-            x = m[1].length + m[3].length;
-            if (x === 16) {
-                return m[1] + m[3];
-            } else if (x < 16 && m[2].length > 0) {
-                return m[1] + (new Array(16 - x + 1))
-                        .join('\x00') + m[3];
-            }
-        }
-        return false; // Invalid IP.
-    }, ip2long: function (IP) {
-        //  discuss at: http://phpjs.org/functions/ip2long/
-        // original by: Waldo Malqui Silva
-        // improved by: Victor
-        //  revised by: fearphage (http://http/my.opera.com/fearphage/)
-        //  revised by: Theriault
-        //   example 1: ip2long('192.0.34.166');
-        //   returns 1: 3221234342
-        //   example 2: ip2long('0.0xABCDEF');
-        //   returns 2: 11259375
-        //   example 3: ip2long('255.255.255.256');
-        //   returns 3: false
-
-        var i = 0;
-        // PHP allows decimal, octal, and hexadecimal IP components.
-        // PHP allows between 1 (e.g. 127) to 4 (e.g 127.0.0.1) components.
-        IP = IP.match(
-            /^([1-9]\d*|0[0-7]*|0x[\da-f]+)(?:\.([1-9]\d*|0[0-7]*|0x[\da-f]+))?(?:\.([1-9]\d*|0[0-7]*|0x[\da-f]+))?(?:\.([1-9]\d*|0[0-7]*|0x[\da-f]+))?$/i
-        ); // Verify IP format.
-        if (!IP) {
-            return false; // Invalid format.
-        }
-        // Reuse IP variable for component counter.
-        IP[0] = 0;
-        for (i = 1; i < 5; i += 1) {
-            IP[0] += !!((IP[i] || '')
-                .length);
-            IP[i] = parseInt(IP[i]) || 0;
-        }
-        // Continue to use IP for overflow values.
-        // PHP does not allow any component to overflow.
-        IP.push(256, 256, 256, 256);
-        // Recalculate overflow of last component supplied to make up for missing components.
-        IP[4 + IP[0]] *= Math.pow(256, 4 - IP[0]);
-        if (IP[1] >= IP[5] || IP[2] >= IP[6] || IP[3] >= IP[7] || IP[4] >= IP[8]) {
-            return false;
-        }
-        return IP[1] * (IP[0] === 1 || 16777216) + IP[2] * (IP[0] <= 2 || 65536) + IP[3] * (IP[0] <= 3 || 256) + IP[4] * 1;
-    }, long2ip: function (ip) {
-        //  discuss at: http://phpjs.org/functions/long2ip/
-        // original by: Waldo Malqui Silva
-        //   example 1: long2ip( 3221234342 );
-        //   returns 1: '192.0.34.166'
-
-        if (!isFinite(ip))
-            return false;
-
-        return [ip >>> 24, ip >>> 16 & 0xFF, ip >>> 8 & 0xFF, ip & 0xFF].join('.');
-    }, setcookie: function (name, value, expires, path, domain, secure) {
-        //  discuss at: http://phpjs.org/functions/setcookie/
-        // original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-        // bugfixed by: Andreas
-        // bugfixed by: Onno Marsman
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //  depends on: setrawcookie
-        //   example 1: setcookie('author_name', 'Kevin van Zonneveld');
-        //   returns 1: true
-
-        return this.setrawcookie(name, encodeURIComponent(value), expires, path, domain, secure);
-    }, setrawcookie: function (name, value, expires, path, domain, secure) {
-        //  discuss at: http://phpjs.org/functions/setrawcookie/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // original by: setcookie
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: Michael
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //   example 1: setrawcookie('author_name', 'Kevin van Zonneveld');
-        //   returns 1: true
-
-        if (typeof expires === 'string' && (/^\d+$/)
-                .test(expires)) {
-            expires = parseInt(expires, 10);
-        }
-
-        if (expires instanceof Date) {
-            expires = expires.toGMTString();
-        } else if (typeof expires === 'number') {
-            expires = (new Date(expires * 1e3))
-                .toGMTString();
-        }
-
-        var r = [name + '=' + value],
-            s = {},
-            i = '';
-        s = {
-            expires: expires,
-            path: path,
-            domain: domain
-        };
-        for (i in s) {
-            if (s.hasOwnProperty(i)) { // Exclude items on Object.prototype
-                s[i] && r.push(i + '=' + s[i]);
-            }
-        }
-
-        return secure && r.push('secure'), this.window.document.cookie = r.join(';'), true;
-    }, preg_grep: function (pattern, input, flags) {
-        //  discuss at: http://phpjs.org/functions/preg_grep/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: If pass pattern as string, must escape backslashes, even for single quotes
-        //        note: The regular expression itself must be expressed JavaScript style
-        //        note: It is not recommended to submit the pattern as a string, as we may implement
-        //        note: parsing of PHP-style expressions (flags, etc.) in the future
-        //   example 1: var arr = [1, 4, 4.5, 3, 'a', 4.4];
-        //   example 1: preg_grep("/^(\\d+)?\\.\\d+$/", arr);
-        //   returns 1: {2: 4.5, 5: 4.4}
-
-        var p = '';
-        var retObj = {};
-        var invert = (flags === 1 || flags === 'PREG_GREP_INVERT'); // Todo: put flags as number and do bitwise checks (at least if other flags allowable); see pathinfo()
-
-        if (typeof pattern === 'string') {
-            pattern = eval(pattern);
-        }
-
-        if (invert) {
-            for (p in input) {
-                if ((input[p] + '')
-                        .search(pattern) === -1) {
-                    retObj[p] = input[p];
-                }
-            }
-        } else {
-            for (p in input) {
-                if ((input[p] + '')
-                        .search(pattern) !== -1) {
-                    retObj[p] = input[p];
-                }
-            }
-        }
-
-        return retObj;
-    }, preg_quote: function (str, delimiter) {
-        //  discuss at: http://phpjs.org/functions/preg_quote/
-        // original by: booeyOH
-        // improved by: Ates Goral (http://magnetiq.com)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    based on: Imgen Tata (http://www.myipdf.com/)
+        // bugfixed by: Imgen Tata (http://www.myipdf.com/)
         // improved by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Onno Marsman
-        //   example 1: preg_quote("$40");
-        //   returns 1: '\\$40'
-        //   example 2: preg_quote("*RRRING* Hello?");
-        //   returns 2: '\\*RRRING\\* Hello\\?'
-        //   example 3: preg_quote("\\.+*?[^]$(){}=!<>|:");
-        //   returns 3: '\\\\\\.\\+\\*\\?\\[\\^\\]\\$\\(\\)\\{\\}\\=\\!\\<\\>\\|\\:'
+        //        note: The minimal argument is not currently supported
+        //   example 1: xdiff_string_diff('', 'Hello world!');
+        //   returns 1: '@@ -0,0 +1,1 @@\n+Hello world!'
 
-        return String(str)
-            .replace(new RegExp('[.\\\\+*?\\[\\^\\]$(){}=!<>|:\\' + (delimiter || '') + '-]', 'g'), '\\$&');
-    }, sql_regcase: function (str) {
-        //  discuss at: http://phpjs.org/functions/sql_regcase/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: setlocale
-        //   example 1: sql_regcase('Foo - bar.');
-        //   returns 1: '[Ff][Oo][Oo] - [Bb][Aa][Rr].'
+        // (This code was done by Imgen Tata; I have only reformatted for use in php.js)
 
-        this.setlocale('LC_ALL', 0);
+        // See http://en.wikipedia.org/wiki/Diff#Unified_format
         var i = 0,
-            upper = '',
-            lower = '',
-            pos = 0,
-            retStr = '';
+            j = 0,
+            k = 0,
+            ori_hunk_start, new_hunk_start, ori_hunk_end, new_hunk_end, ori_hunk_line_no, new_hunk_line_no,
+            ori_hunk_size,
+            new_hunk_size,
+            // Potential configuration
+            MAX_CONTEXT_LINES = Number.POSITIVE_INFINITY,
+            MIN_CONTEXT_LINES = 0,
+            DEFAULT_CONTEXT_LINES = 3,
+            //
+            HEADER_PREFIX = '@@ ',
+            HEADER_SUFFIX = ' @@',
+            ORIGINAL_INDICATOR = '-',
+            NEW_INDICATOR = '+',
+            RANGE_SEPARATOR = ',',
+            CONTEXT_INDICATOR = ' ',
+            DELETION_INDICATOR = '-',
+            ADDITION_INDICATOR = '+',
+            ori_lines, new_lines, NEW_LINE = '\n',
+            /**
+             * Trims string
+             */
+            trim = function (text) {
+                if (typeof text !== 'string') {
+                    throw new Error('String parameter required');
+                }
 
-        upper = this.php_js.locales[this.php_js.localeCategories.LC_CTYPE].LC_CTYPE.upper;
-        lower = this.php_js.locales[this.php_js.localeCategories.LC_CTYPE].LC_CTYPE.lower;
+                return text.replace(/(^\s*)|(\s*$)/g, '');
+            },
+            /**
+             * Verifies type of arguments
+             */
+            verify_type = function (type) {
+                var args = arguments,
+                    args_len = arguments.length,
+                    basic_types = ['number', 'boolean', 'string', 'function', 'object', 'undefined'],
+                    basic_type, i, j, type_of_type = typeof type;
+                if (type_of_type !== 'string' && type_of_type !== 'function') {
+                    throw new Error('Bad type parameter');
+                }
 
-        for (i = 0; i < str.length; i++) {
-            if (((pos = upper.indexOf(str.charAt(i))) !== -1) || ((pos = lower.indexOf(str.charAt(i))) !== -1)) {
-                retStr += '[' + upper.charAt(pos) + lower.charAt(pos) + ']';
-            } else {
-                retStr += str.charAt(i);
+                if (args_len < 2) {
+                    throw new Error('Too few arguments');
+                }
+
+                if (type_of_type === 'string') {
+                    type = trim(type);
+
+                    if (type === '') {
+                        throw new Error('Bad type parameter');
+                    }
+
+                    for (j = 0; j < basic_types.length; j++) {
+                        basic_type = basic_types[j];
+
+                        if (basic_type == type) {
+                            for (i = 1; i < args_len; i++) {
+                                if (typeof args[i] !== type) {
+                                    throw new Error('Bad type');
+                                }
+                            }
+
+                            return;
+                        }
+                    }
+
+                    throw new Error('Bad type parameter');
+                }
+
+                // Not basic type. we need to use instanceof operator
+                for (i = 1; i < args_len; i++) {
+                    if (!(args[i] instanceof type)) {
+                        throw new Error('Bad type');
+                    }
+                }
+            },
+            /**
+             * Checks if the specified array contains an element with specified value
+             */
+            has_value = function (array, value) {
+                var i;
+                verify_type(Array, array);
+
+                for (i = 0; i < array.length; i++) {
+                    if (array[i] === value) {
+                        return true;
+                    }
+                }
+
+                return false;
+            },
+            /**
+             * Checks the type of arguments
+             * @param {String | Function} type Specifies the desired type
+             * @return {Boolean} Return true if all arguments after the type argument are of specified type. Else false
+             */
+            are_type_of = function (type) {
+                var args = arguments,
+                    args_len = arguments.length,
+                    basic_types = ['number', 'boolean', 'string', 'function', 'object', 'undefined'],
+                    basic_type, i, j, type_of_type = typeof type;
+                if (type_of_type !== 'string' && type_of_type !== 'function') {
+                    throw new Error('Bad type parameter');
+                }
+
+                if (args_len < 2) {
+                    throw new Error('Too few arguments');
+                }
+
+                if (type_of_type === 'string') {
+                    type = trim(type);
+
+                    if (type === '') {
+                        return false;
+                    }
+
+                    for (j = 0; j < basic_types.length; j++) {
+                        basic_type = basic_types[j];
+
+                        if (basic_type == type) {
+                            for (i = 1; i < args_len; i++) {
+                                if (typeof args[i] != type) {
+                                    return false;
+                                }
+                            }
+
+                            return true;
+                        }
+                    }
+
+                    throw new Error('Bad type parameter');
+                }
+
+                // Not basic type. we need to use instanceof operator
+                for (i = 1; i < args_len; i++) {
+                    if (!(args[i] instanceof type)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+            /*
+     * Initialize and return an array with specified size and initial value
+     */
+            get_initialized_array = function (array_size, init_value) {
+                var array = [],
+                    i;
+                verify_type('number', array_size);
+
+                for (i = 0; i < array_size; i++) {
+                    array.push(init_value);
+                }
+
+                return array;
+            },
+            /**
+             * Splits text into lines and return as a string array
+             */
+            split_into_lines = function (text) {
+                verify_type('string', text);
+
+                if (text === '') {
+                    return [];
+                }
+                return text.split('\n');
+            },
+            is_empty_array = function (obj) {
+                return are_type_of(Array, obj) && obj.length === 0;
+            },
+            /**
+             * Finds longest common sequence between two sequences
+             * @see {@link http://wordaligned.org/articles/longest-common-subsequence}
+             */
+            find_longest_common_sequence = function (seq1, seq2, seq1_is_in_lcs, seq2_is_in_lcs) {
+                if (!are_type_of(Array, seq1, seq2)) {
+                    throw new Error('Array parameters are required');
+                }
+
+                // Deal with edge case
+                if (is_empty_array(seq1) || is_empty_array(seq2)) {
+                    return [];
+                }
+
+                // Function to calculate lcs lengths
+                var lcs_lens = function (xs, ys) {
+                        var i, j, prev,
+                            curr = get_initialized_array(ys.length + 1, 0);
+
+                        for (i = 0; i < xs.length; i++) {
+                            prev = curr.slice(0);
+                            for (j = 0; j < ys.length; j++) {
+                                if (xs[i] === ys[j]) {
+                                    curr[j + 1] = prev[j] + 1;
+                                } else {
+                                    curr[j + 1] = Math.max(curr[j], prev[j + 1]);
+                                }
+                            }
+                        }
+
+                        return curr;
+                    },
+                    // Function to find lcs and fill in the array to indicate the optimal longest common sequence
+                    find_lcs = function (xs, xidx, xs_is_in, ys) {
+                        var i, xb, xe, ll_b, ll_e, pivot, max, yb, ye,
+                            nx = xs.length,
+                            ny = ys.length;
+
+                        if (nx === 0) {
+                            return [];
+                        }
+                        if (nx === 1) {
+                            if (has_value(ys, xs[0])) {
+                                xs_is_in[xidx] = true;
+                                return [xs[0]];
+                            }
+                            return [];
+                        }
+                        i = Math.floor(nx / 2);
+                        xb = xs.slice(0, i);
+                        xe = xs.slice(i);
+                        ll_b = lcs_lens(xb, ys);
+                        ll_e = lcs_lens(xe.slice(0)
+                            .reverse(), ys.slice(0)
+                            .reverse());
+
+                        pivot = 0;
+                        max = 0;
+                        for (j = 0; j <= ny; j++) {
+                            if (ll_b[j] + ll_e[ny - j] > max) {
+                                pivot = j;
+                                max = ll_b[j] + ll_e[ny - j];
+                            }
+                        }
+                        yb = ys.slice(0, pivot);
+                        ye = ys.slice(pivot);
+                        return find_lcs(xb, xidx, xs_is_in, yb)
+                            .concat(find_lcs(xe, xidx + i, xs_is_in, ye));
+                    };
+
+                // Fill in seq1_is_in_lcs to find the optimal longest common subsequence of first sequence
+                find_lcs(seq1, 0, seq1_is_in_lcs, seq2);
+                // Fill in seq2_is_in_lcs to find the optimal longest common subsequence of second sequence and return the result
+                return find_lcs(seq2, 0, seq2_is_in_lcs, seq1);
+            };
+
+        // First, check the parameters
+        if (are_type_of('string', old_data, new_data) === false) {
+            return false;
+        }
+
+        if (old_data == new_data) {
+            return '';
+        }
+
+        if (typeof context_lines !== 'number' || context_lines > MAX_CONTEXT_LINES || context_lines < MIN_CONTEXT_LINES) {
+            context_lines = DEFAULT_CONTEXT_LINES;
+        }
+
+        ori_lines = split_into_lines(old_data);
+        new_lines = split_into_lines(new_data);
+        var ori_len = ori_lines.length,
+            new_len = new_lines.length,
+            ori_is_in_lcs = get_initialized_array(ori_len, false),
+            new_is_in_lcs = get_initialized_array(new_len, false),
+            lcs_len = find_longest_common_sequence(ori_lines, new_lines, ori_is_in_lcs, new_is_in_lcs)
+                .length,
+            unidiff = '';
+
+        if (lcs_len === 0) { // No common sequence
+            unidiff = HEADER_PREFIX + ORIGINAL_INDICATOR + (ori_len > 0 ? '1' : '0') + RANGE_SEPARATOR + ori_len + ' ' +
+                NEW_INDICATOR + (new_len > 0 ? '1' : '0') + RANGE_SEPARATOR + new_len + HEADER_SUFFIX;
+
+            for (i = 0; i < ori_len; i++) {
+                unidiff += NEW_LINE + DELETION_INDICATOR + ori_lines[i];
+            }
+
+            for (j = 0; j < new_len; j++) {
+                unidiff += NEW_LINE + ADDITION_INDICATOR + new_lines[j];
+            }
+
+            return unidiff;
+        }
+
+        var leading_context = [],
+            trailing_context = [],
+            actual_leading_context = [],
+            actual_trailing_context = [],
+
+            // Regularize leading context by the context_lines parameter
+            regularize_leading_context = function (context) {
+                if (context.length === 0 || context_lines === 0) {
+                    return [];
+                }
+
+                var context_start_pos = Math.max(context.length - context_lines, 0);
+
+                return context.slice(context_start_pos);
+            },
+
+            // Regularize trailing context by the context_lines parameter
+            regularize_trailing_context = function (context) {
+                if (context.length === 0 || context_lines === 0) {
+                    return [];
+                }
+
+                return context.slice(0, Math.min(context_lines, context.length));
+            };
+
+        // Skip common lines in the beginning
+        while (i < ori_len && ori_is_in_lcs[i] === true && new_is_in_lcs[i] === true) {
+            leading_context.push(ori_lines[i]);
+            i++;
+        }
+
+        j = i;
+        k = i; // The index in the longest common sequence
+        ori_hunk_start = i;
+        new_hunk_start = j;
+        ori_hunk_end = i;
+        new_hunk_end = j;
+
+        while (i < ori_len || j < new_len) {
+            while (i < ori_len && ori_is_in_lcs[i] === false) {
+                i++;
+            }
+            ori_hunk_end = i;
+
+            while (j < new_len && new_is_in_lcs[j] === false) {
+                j++;
+            }
+            new_hunk_end = j;
+
+            // Find the trailing context
+            trailing_context = [];
+            while (i < ori_len && ori_is_in_lcs[i] === true && j < new_len && new_is_in_lcs[j] === true) {
+                trailing_context.push(ori_lines[i]);
+                k++;
+                i++;
+                j++;
+            }
+
+            if (k >= lcs_len || // No more in longest common lines
+                trailing_context.length >= 2 * context_lines) { // Context break found
+                if (trailing_context.length < 2 * context_lines) { // It must be last block of common lines but not a context break
+                    trailing_context = [];
+
+                    // Force break out
+                    i = ori_len;
+                    j = new_len;
+
+                    // Update hunk ends to force output to the end
+                    ori_hunk_end = ori_len;
+                    new_hunk_end = new_len;
+                }
+
+                // Output the diff hunk
+
+                // Trim the leading and trailing context block
+                actual_leading_context = regularize_leading_context(leading_context);
+                actual_trailing_context = regularize_trailing_context(trailing_context);
+
+                ori_hunk_start -= actual_leading_context.length;
+                new_hunk_start -= actual_leading_context.length;
+                ori_hunk_end += actual_trailing_context.length;
+                new_hunk_end += actual_trailing_context.length;
+
+                ori_hunk_line_no = ori_hunk_start + 1;
+                new_hunk_line_no = new_hunk_start + 1;
+                ori_hunk_size = ori_hunk_end - ori_hunk_start;
+                new_hunk_size = new_hunk_end - new_hunk_start;
+
+                // Build header
+                unidiff += HEADER_PREFIX + ORIGINAL_INDICATOR + ori_hunk_line_no + RANGE_SEPARATOR + ori_hunk_size + ' ' +
+                    NEW_INDICATOR + new_hunk_line_no + RANGE_SEPARATOR + new_hunk_size + HEADER_SUFFIX + NEW_LINE;
+
+                // Build the diff hunk content
+                while (ori_hunk_start < ori_hunk_end || new_hunk_start < new_hunk_end) {
+                    if (ori_hunk_start < ori_hunk_end && ori_is_in_lcs[ori_hunk_start] === true && new_is_in_lcs[
+                        new_hunk_start] === true) { // The context line
+                        unidiff += CONTEXT_INDICATOR + ori_lines[ori_hunk_start] + NEW_LINE;
+                        ori_hunk_start++;
+                        new_hunk_start++;
+                    } else if (ori_hunk_start < ori_hunk_end && ori_is_in_lcs[ori_hunk_start] === false) { // The deletion line
+                        unidiff += DELETION_INDICATOR + ori_lines[ori_hunk_start] + NEW_LINE;
+                        ori_hunk_start++;
+                    } else if (new_hunk_start < new_hunk_end && new_is_in_lcs[new_hunk_start] === false) { // The additional line
+                        unidiff += ADDITION_INDICATOR + new_lines[new_hunk_start] + NEW_LINE;
+                        new_hunk_start++;
+                    }
+                }
+
+                // Update hunk position and leading context
+                ori_hunk_start = i;
+                new_hunk_start = j;
+                leading_context = trailing_context;
             }
         }
-        return retStr;
+
+        // Trim the trailing new line if it exists
+        if (unidiff.length > 0 && unidiff.charAt(unidiff.length) === NEW_LINE) {
+            unidiff = unidiff.slice(0, -1);
+        }
+
+        return unidiff;
+    }, xdiff_string_patch: function (originalStr, patch, flags, error) {
+        //  discuss at: http://phpjs.org/functions/xdiff_string_patch/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Steven Levithan (stevenlevithan.com)
+        //        note: The XDIFF_PATCH_IGNORESPACE flag and the error argument are not currently supported
+        //        note: This has not been widely tested
+        //   example 1: xdiff_string_patch('', '@@ -0,0 +1,1 @@\n+Hello world!');
+        //   returns 1: 'Hello world!'
+
+        // First two functions were adapted from Steven Levithan, also under an MIT license
+        // Adapted from XRegExp 1.5.0
+        // (c) 2007-2010 Steven Levithan
+        // MIT License
+        // <http://xregexp.com>
+        var getNativeFlags = function (regex) {
+                return (regex.global ? 'g' : '') + (regex.ignoreCase ? 'i' : '') + (regex.multiline ? 'm' : '') + (regex.extended ?
+                        'x' : '') + // Proposed for ES4; included in AS3
+                    (regex.sticky ? 'y' : '');
+            },
+            cbSplit = function (string, sep /* separator */) {
+                // If separator `s` is not a regex, use the native `split`
+                if (!(sep instanceof RegExp)) { // Had problems to get it to work here using prototype test
+                    return String.prototype.split.apply(string, arguments);
+                }
+                var str = String(string),
+                    output = [],
+                    lastLastIndex = 0,
+                    match, lastLength, limit = Infinity,
+
+                    // This is required if not `s.global`, and it avoids needing to set `s.lastIndex` to zero
+                    // and restore it to its original value when we're done using the regex
+                    x = sep._xregexp,
+                    s = new RegExp(sep.source, getNativeFlags(sep) + 'g'); // Brett paring down
+                if (x) {
+                    s._xregexp = {
+                        source: x.source,
+                        captureNames: x.captureNames ? x.captureNames.slice(0) : null
+                    };
+                }
+
+                while ((match = s.exec(str))) { // Run the altered `exec` (required for `lastIndex` fix, etc.)
+                    if (s.lastIndex > lastLastIndex) {
+                        output.push(str.slice(lastLastIndex, match.index));
+
+                        if (match.length > 1 && match.index < str.length) {
+                            Array.prototype.push.apply(output, match.slice(1));
+                        }
+
+                        lastLength = match[0].length;
+                        lastLastIndex = s.lastIndex;
+
+                        if (output.length >= limit) {
+                            break;
+                        }
+                    }
+
+                    if (s.lastIndex === match.index) {
+                        s.lastIndex++;
+                    }
+                }
+
+                if (lastLastIndex === str.length) {
+                    if (!s.test('') || lastLength) {
+                        output.push('');
+                    }
+                } else {
+                    output.push(str.slice(lastLastIndex));
+                }
+
+                return output.length > limit ? output.slice(0, limit) : output;
+            },
+            i = 0,
+            ll = 0,
+            ranges = [],
+            lastLinePos = 0,
+            firstChar = '',
+            rangeExp = /^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@$/,
+            lineBreaks = /\r?\n/,
+            lines = cbSplit(patch.replace(/(\r?\n)+$/, ''), lineBreaks),
+            origLines = cbSplit(originalStr, lineBreaks),
+            newStrArr = [],
+            linePos = 0,
+            errors = '',
+            // Both string & integer (constant) input is allowed
+            optTemp = 0,
+            OPTS = { // Unsure of actual PHP values, so better to rely on string
+                'XDIFF_PATCH_NORMAL': 1,
+                'XDIFF_PATCH_REVERSE': 2,
+                'XDIFF_PATCH_IGNORESPACE': 4
+            };
+
+        // Input defaulting & sanitation
+        if (typeof originalStr !== 'string' || !patch) {
+            return false;
+        }
+        if (!flags) {
+            flags = 'XDIFF_PATCH_NORMAL';
+        }
+
+        if (typeof flags !== 'number') { // Allow for a single string or an array of string flags
+            flags = [].concat(flags);
+            for (i = 0; i < flags.length; i++) {
+                // Resolve string input to bitwise e.g. 'XDIFF_PATCH_NORMAL' becomes 1
+                if (OPTS[flags[i]]) {
+                    optTemp = optTemp | OPTS[flags[i]];
+                }
+            }
+            flags = optTemp;
+        }
+
+        if (flags & OPTS.XDIFF_PATCH_NORMAL) {
+            for (i = 0, ll = lines.length; i < ll; i++) {
+                ranges = lines[i].match(rangeExp);
+                if (ranges) {
+                    lastLinePos = linePos;
+                    linePos = ranges[1] - 1;
+                    while (lastLinePos < linePos) {
+                        newStrArr[newStrArr.length] = origLines[lastLinePos++];
+                    }
+                    while (lines[++i] && (rangeExp.exec(lines[i])) === null) {
+                        firstChar = lines[i].charAt(0);
+                        switch (firstChar) {
+                            case '-':
+                                ++linePos; // Skip including that line
+                                break;
+                            case '+':
+                                newStrArr[newStrArr.length] = lines[i].slice(1);
+                                break;
+                            case ' ':
+                                newStrArr[newStrArr.length] = origLines[linePos++];
+                                break;
+                            default:
+                                throw 'Unrecognized initial character in unidiff line'; // Reconcile with returning errrors arg?
+                        }
+                    }
+                    if (lines[i]) {
+                        i--;
+                    }
+                }
+            }
+            while (linePos < origLines.length) {
+                newStrArr[newStrArr.length] = origLines[linePos++];
+            }
+        } else if (flags & OPTS.XDIFF_PATCH_REVERSE) { // Only differs from above by a few lines
+            for (i = 0, ll = lines.length; i < ll; i++) {
+                ranges = lines[i].match(rangeExp);
+                if (ranges) {
+                    lastLinePos = linePos;
+                    linePos = ranges[3] - 1;
+                    while (lastLinePos < linePos) {
+                        newStrArr[newStrArr.length] = origLines[lastLinePos++];
+                    }
+                    while (lines[++i] && (rangeExp.exec(lines[i])) === null) {
+                        firstChar = lines[i].charAt(0);
+                        switch (firstChar) {
+                            case '-':
+                                newStrArr[newStrArr.length] = lines[i].slice(1);
+                                break;
+                            case '+':
+                                ++linePos; // Skip including that line
+                                break;
+                            case ' ':
+                                newStrArr[newStrArr.length] = origLines[linePos++];
+                                break;
+                            default:
+                                throw 'Unrecognized initial character in unidiff line'; // Reconcile with returning errrors arg?
+                        }
+                    }
+                    if (lines[i]) {
+                        i--;
+                    }
+                }
+            }
+            while (linePos < origLines.length) {
+                newStrArr[newStrArr.length] = origLines[linePos++];
+            }
+        }
+        if (typeof error === 'string') {
+            this.window[error] = errors;
+        }
+        return newStrArr.join('\n');
     }, addcslashes: function (str, charlist) {
         //  discuss at: http://phpjs.org/functions/addcslashes/
         // original by: Brett Zamir (http://brett-zamir.me)
@@ -8544,9 +1213,9 @@ php = {
             percentHex = /%([\dA-Fa-f]+)/g;
         var _pad = function (n, c) {
             if ((n = n + '')
-                    .length < c) {
+                .length < c) {
                 return new Array(++c - n.length)
-                        .join('0') + n;
+                    .join('0') + n;
             }
             return n;
         };
@@ -8555,7 +1224,7 @@ php = {
             c = charlist.charAt(i);
             next = charlist.charAt(i + 1);
             if (c === '\\' && next && (/\d/)
-                    .test(next)) { // Octal
+                .test(next)) { // Octal
                 rangeBegin = charlist.slice(i + 1)
                     .match(/^\d+/)[0];
                 octalLength = rangeBegin.length;
@@ -8563,7 +1232,7 @@ php = {
                 if (charlist.charAt(postOctalPos) + charlist.charAt(postOctalPos + 1) === '..') { // Octal begins range
                     begin = rangeBegin.charCodeAt(0);
                     if ((/\\\d/)
-                            .test(charlist.charAt(postOctalPos + 2) + charlist.charAt(postOctalPos + 3))) { // Range ends with octal
+                        .test(charlist.charAt(postOctalPos + 2) + charlist.charAt(postOctalPos + 3))) { // Range ends with octal
                         rangeEnd = charlist.slice(postOctalPos + 3)
                             .match(/^\d+/)[0];
                         i += 1; // Skip range end backslash
@@ -8590,7 +1259,7 @@ php = {
                 rangeBegin = c;
                 begin = rangeBegin.charCodeAt(0);
                 if ((/\\\d/)
-                        .test(charlist.charAt(i + 3) + charlist.charAt(i + 4))) { // Range ends with octal
+                    .test(charlist.charAt(i + 3) + charlist.charAt(i + 4))) { // Range ends with octal
                     rangeEnd = charlist.slice(i + 4)
                         .match(/^\d+/)[0];
                     i += 1; // Skip range end backslash
@@ -8652,7 +1321,7 @@ php = {
                             }
                             while ((escHexGrp = percentHex.exec(encoded)) !== null) {
                                 target += '\\' + _pad(parseInt(escHexGrp[1], 16)
-                                        .toString(8), 3);
+                                    .toString(8), 3);
                             }
                             break;
                     }
@@ -9159,14 +1828,14 @@ php = {
                 return axo.documentElement;
             }
             /*else if (win.XMLHttpRequest) { // Supposed to work in older Safari
-             var req = new win.XMLHttpRequest;
-             req.open('GET', 'data:application/xml;charset=utf-8,'+encodeURIComponent(str), false);
-             if (req.overrideMimeType) {
-             req.overrideMimeType('application/xml');
-             }
-             req.send(null);
-             return req.responseXML;
-             }*/
+      var req = new win.XMLHttpRequest;
+      req.open('GET', 'data:application/xml;charset=utf-8,'+encodeURIComponent(str), false);
+      if (req.overrideMimeType) {
+        req.overrideMimeType('application/xml');
+      }
+      req.send(null);
+      return req.responseXML;
+    }*/
             // Document fragment did not work with innerHTML, so we create a temporary element holder
             // If we're in XHTML, we'll try to allow the XHTML namespace to be available by default
             //if (d.createElementNS && (d.contentType && d.contentType !== 'text/html')) { // Don't create namespaced elements if we're being served as HTML (currently only Mozilla supports this detection in true XHTML-supporting browsers, but Safari and Opera should work with the above DOMParser anyways, and IE doesn't support createElementNS anyways)
@@ -9250,8 +1919,8 @@ php = {
                 d.write(arg);
             }
             /* else { // This could recurse if we ever add print!
-             print(arg);
-             }*/
+      print(arg);
+    }*/
         }
     }, explode: function (delimiter, string, limit) {
         //  discuss at: http://phpjs.org/functions/explode/
@@ -9456,6 +2125,13 @@ php = {
         }
 
         return hash_map;
+    }, hex2bin: function (hex) {
+        var bytes = [];
+
+        for (var i = 0; i < hex.length - 1; i += 2)
+            bytes.push(parseInt(hex.substr(i, 2), 16));
+
+        return String.fromCharCode.apply(String, bytes);
     }, html_entity_decode: function (string, quote_style) {
         //  discuss at: http://phpjs.org/functions/html_entity_decode/
         // original by: john (http://www.jd-tech.net)
@@ -9487,7 +2163,7 @@ php = {
 
         // fix &amp; problem
         // http://phpjs.org/functions/get_html_translation_table:416#comment_97660
-        delete(hash_map['&']);
+        delete (hash_map['&']);
         hash_map['&'] = '&amp;';
 
         for (symbol in hash_map) {
@@ -10286,123 +2962,123 @@ php = {
         return meta;
 
         /*
-         "    abc", "ABK", // skip leading whitespace
-         "1234.678!@abc", "ABK", // skip leading non-alpha chars
-         "aero", "ER", // leading 'a' followed by 'e' turns into 'e'
-         "air", "AR", // leading 'a' turns into 'e', other vowels ignored
-         // leading vowels added to result
-         "egg", "EK",
-         "if", "IF",
-         "of", "OF",
-         "use", "US",
-         // other vowels ignored
-         "xAEIOU", "S",
-         // GN, KN, PN become 'N'
-         "gnome", "NM",
-         "knight", "NFT",
-         "pneumatic", "NMTK",
-         // leading 'WR' becomes 'R'
-         "wrong", "RNK",
-         // leading 'WH+vowel" becomes 'W'
-         "wheel", "WL",
-         // leading 'X' becomes 'S', 'KS' otherwise
-         "xerox", "SRKS",
-         "exchange", "EKSXNJ",
-         // duplicate chars, except 'C' are ignored
-         "accuracy", "AKKRS",
-         "blogger", "BLKR",
-         "fffound", "FNT",
-         // ignore 'B' if after 'M'
-         "billboard", "BLBRT",
-         "symbol", "SML",
-         // 'CIA' -> 'X'
-         "special", "SPXL",
-         // 'SC[IEY]' -> 'C' ignored
-         "science", "SNS",
-         // '[^S]C' -> 'C' becomes 'S'
-         "dance", "TNS",
-         // 'CH' -> 'X'
-         "change", "XNJ",
-         "school", "SXL",
-         // 'C' -> 'K'
-         "micro", "MKR",
-         // 'DGE', 'DGI', DGY' -> 'J'
-         // 'T' otherwise
-         "bridge", "BRJ",
-         "pidgin", "PJN",
-         "edgy", "EJ",
-         "handgun", "HNTKN",
-         "draw", "TR",
-         //'GN\b' 'GNED' -> ignore 'G'
-         "sign", "SN",
-         "signed", "SNT",
-         "signs", "SKNS",
-         // [^G]G[EIY] -> 'J'...
-         "agency", "AJNS",
-         // 'GH' -> 'F' if not b--gh, d--gh, h--gh
-         "night", "NFT",
-         "bright", "BRT",
-         "height", "HT",
-         "midnight", "MTNT",
-         // 'K' otherwise
-         "jogger", "JKR",
-         // '[^CGPST]H[AEIOU]' -> 'H', ignore otherwise
-         "horse", "HRS",
-         "adhere", "ATHR",
-         "mahjong", "MJNK",
-         "fight", "FFT", // interesting
-         "ghost", "FST",
-         // 'K' -> 'K' if not after 'C'
-         "ski", "SK",
-         "brick", "BRK",
-         // 'PH' -> 'F'
-         "phrase", "FRS",
-         // 'P.' -> 'P'
-         "hypnotic", "PNTK",
-         "topnotch", "TPNX",
-         // 'Q' -> 'K'
-         "quit", "KT",
-         "squid", "SKT",
-         // 'SIO', 'SIA', 'SH' -> 'X'
-         "version", "FRXN",
-         "silesia", "SLX",
-         "enthusiasm", "EN0XSM",
-         "shell", "XL",
-         // 'S' -> 'S' in other cases
-         "spy", "SP",
-         "system", "SSTM",
-         // 'TIO', 'TIA' -> 'X'
-         "ratio", "RX",
-         "nation", "NXN",
-         "spatial", "SPXL",
-         // 'TH' -> '0'
-         "the", "0",
-         "nth", "N0",
-         "truth", "TR0",
-         // 'TCH' -> ignore 'T'
-         "watch", "WX",
-         // 'T' otherwise
-         "vote", "FT",
-         "tweet", "TWT",
-         // 'V' -> 'F'
-         "evolve", "EFLF",
-         // 'W' -> 'W' if followed by vowel
-         "rewrite", "RRT",
-         "outwrite", "OTRT",
-         "artwork", "ARTWRK",
-         // 'X' -> 'KS' if not first char
-         "excel", "EKSSL",
-         // 'Y' -> 'Y' if followed by vowel
-         "cyan", "SYN",
-         "way", "W",
-         "hybrid", "BRT",
-         // 'Z' -> 'S'
-         "zip", "SP",
-         "zoom", "SM",
-         "jazz", "JS",
-         "zigzag", "SKSK",
-         "abc abc", "ABKBK" // eventhough there are two words, second 'a' is ignored
-         */
+  "    abc", "ABK", // skip leading whitespace
+  "1234.678!@abc", "ABK", // skip leading non-alpha chars
+  "aero", "ER", // leading 'a' followed by 'e' turns into 'e'
+  "air", "AR", // leading 'a' turns into 'e', other vowels ignored
+  // leading vowels added to result
+  "egg", "EK",
+  "if", "IF",
+  "of", "OF",
+  "use", "US",
+  // other vowels ignored
+  "xAEIOU", "S",
+  // GN, KN, PN become 'N'
+  "gnome", "NM",
+  "knight", "NFT",
+  "pneumatic", "NMTK",
+  // leading 'WR' becomes 'R'
+  "wrong", "RNK",
+  // leading 'WH+vowel" becomes 'W'
+  "wheel", "WL",
+  // leading 'X' becomes 'S', 'KS' otherwise
+  "xerox", "SRKS",
+  "exchange", "EKSXNJ",
+  // duplicate chars, except 'C' are ignored
+  "accuracy", "AKKRS",
+  "blogger", "BLKR",
+  "fffound", "FNT",
+  // ignore 'B' if after 'M'
+  "billboard", "BLBRT",
+  "symbol", "SML",
+  // 'CIA' -> 'X'
+  "special", "SPXL",
+  // 'SC[IEY]' -> 'C' ignored
+  "science", "SNS",
+  // '[^S]C' -> 'C' becomes 'S'
+  "dance", "TNS",
+  // 'CH' -> 'X'
+  "change", "XNJ",
+  "school", "SXL",
+  // 'C' -> 'K'
+  "micro", "MKR",
+  // 'DGE', 'DGI', DGY' -> 'J'
+  // 'T' otherwise
+  "bridge", "BRJ",
+  "pidgin", "PJN",
+  "edgy", "EJ",
+  "handgun", "HNTKN",
+  "draw", "TR",
+  //'GN\b' 'GNED' -> ignore 'G'
+  "sign", "SN",
+  "signed", "SNT",
+  "signs", "SKNS",
+  // [^G]G[EIY] -> 'J'...
+  "agency", "AJNS",
+  // 'GH' -> 'F' if not b--gh, d--gh, h--gh
+  "night", "NFT",
+  "bright", "BRT",
+  "height", "HT",
+  "midnight", "MTNT",
+  // 'K' otherwise
+  "jogger", "JKR",
+  // '[^CGPST]H[AEIOU]' -> 'H', ignore otherwise
+  "horse", "HRS",
+  "adhere", "ATHR",
+  "mahjong", "MJNK",
+  "fight", "FFT", // interesting
+  "ghost", "FST",
+  // 'K' -> 'K' if not after 'C'
+  "ski", "SK",
+  "brick", "BRK",
+  // 'PH' -> 'F'
+  "phrase", "FRS",
+  // 'P.' -> 'P'
+  "hypnotic", "PNTK",
+  "topnotch", "TPNX",
+  // 'Q' -> 'K'
+  "quit", "KT",
+  "squid", "SKT",
+  // 'SIO', 'SIA', 'SH' -> 'X'
+  "version", "FRXN",
+  "silesia", "SLX",
+  "enthusiasm", "EN0XSM",
+  "shell", "XL",
+  // 'S' -> 'S' in other cases
+  "spy", "SP",
+  "system", "SSTM",
+  // 'TIO', 'TIA' -> 'X'
+  "ratio", "RX",
+  "nation", "NXN",
+  "spatial", "SPXL",
+  // 'TH' -> '0'
+  "the", "0",
+  "nth", "N0",
+  "truth", "TR0",
+  // 'TCH' -> ignore 'T'
+  "watch", "WX",
+  // 'T' otherwise
+  "vote", "FT",
+  "tweet", "TWT",
+  // 'V' -> 'F'
+  "evolve", "EFLF",
+  // 'W' -> 'W' if followed by vowel
+  "rewrite", "RRT",
+  "outwrite", "OTRT",
+  "artwork", "ARTWRK",
+  // 'X' -> 'KS' if not first char
+  "excel", "EKSSL",
+  // 'Y' -> 'Y' if followed by vowel
+  "cyan", "SYN",
+  "way", "W",
+  "hybrid", "BRT",
+  // 'Z' -> 'S'
+  "zip", "SP",
+  "zoom", "SM",
+  "jazz", "JS",
+  "zigzag", "SKSK",
+  "abc abc", "ABKBK" // eventhough there are two words, second 'a' is ignored
+  */
     }
     , money_format: function (format, number) {
         //  discuss at: http://phpjs.org/functions/money_format/
@@ -10485,7 +3161,7 @@ php = {
             if (filler) {
                 var fillnum = left - init_lgth;
                 integer = new Array(fillnum + 1)
-                        .join(fill) + integer;
+                    .join(fill) + integer;
             }
             if (flags.indexOf('^') === -1) { // flag: ^ (disable grouping characters (of locale))
                 // use grouping characters
@@ -10532,7 +3208,7 @@ php = {
                     fraction = Math.round(parseFloat(fraction.slice(0, right) + '.' + fraction.substr(right, 1))) + '';
                     if (right > fraction.length) {
                         fraction = new Array(right - fraction.length + 1)
-                                .join('0') + fraction; // prepend with 0's
+                            .join('0') + fraction; // prepend with 0's
                     }
                 } else if (right > fraction.length) {
                     fraction += new Array(right - fraction.length + 1)
@@ -10561,7 +3237,7 @@ php = {
                 // an impact here (as they do below), but assuming for now behaves as sign_posn 0 as
                 // far as localized sep_by_space and sign_posn behavior
                 repl = (cs_precedes ? symbol + (sep_by_space === 1 ? ' ' : '') : '') + value + (!cs_precedes ? (
-                            sep_by_space === 1 ? ' ' : '') + symbol : '');
+                    sep_by_space === 1 ? ' ' : '') + symbol : '');
                 if (neg) {
                     repl = '(' + repl + ')';
                 } else {
@@ -10587,28 +3263,28 @@ php = {
                     // 4: sign immed. succeeds curr. symbol; (but may be space between)
                     case 0:
                         valueAndCS = cs_precedes ? symbol + (sep_by_space === 1 ? ' ' : '') + value : value + (sep_by_space ===
-                            1 ? ' ' : '') + symbol;
+                        1 ? ' ' : '') + symbol;
                         repl = '(' + valueAndCS + ')';
                         break;
                     case 1:
                         valueAndCS = cs_precedes ? symbol + (sep_by_space === 1 ? ' ' : '') + value : value + (sep_by_space ===
-                            1 ? ' ' : '') + symbol;
+                        1 ? ' ' : '') + symbol;
                         repl = signPadding + sign + (sep_by_space === 2 ? ' ' : '') + valueAndCS;
                         break;
                     case 2:
                         valueAndCS = cs_precedes ? symbol + (sep_by_space === 1 ? ' ' : '') + value : value + (sep_by_space ===
-                            1 ? ' ' : '') + symbol;
+                        1 ? ' ' : '') + symbol;
                         repl = valueAndCS + (sep_by_space === 2 ? ' ' : '') + sign + signPadding;
                         break;
                     case 3:
                         repl = cs_precedes ? signPadding + sign + (sep_by_space === 2 ? ' ' : '') + symbol + (sep_by_space ===
-                            1 ? ' ' : '') + value : value + (sep_by_space === 1 ? ' ' : '') + sign + signPadding + (
-                                sep_by_space === 2 ? ' ' : '') + symbol;
+                        1 ? ' ' : '') + value : value + (sep_by_space === 1 ? ' ' : '') + sign + signPadding + (
+                            sep_by_space === 2 ? ' ' : '') + symbol;
                         break;
                     case 4:
                         repl = cs_precedes ? symbol + (sep_by_space === 2 ? ' ' : '') + signPadding + sign + (sep_by_space ===
-                            1 ? ' ' : '') + value : value + (sep_by_space === 1 ? ' ' : '') + symbol + (sep_by_space === 2 ?
-                                ' ' : '') + sign + signPadding;
+                        1 ? ' ' : '') + value : value + (sep_by_space === 1 ? ' ' : '') + symbol + (sep_by_space === 2 ?
+                            ' ' : '') + sign + signPadding;
                         break;
                 }
             }
@@ -10813,7 +3489,7 @@ php = {
             s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
         }
         if ((s[1] || '')
-                .length < prec) {
+            .length < prec) {
             s[1] = s[1] || '';
             s[1] += new Array(prec - s[1].length + 1)
                 .join('0');
@@ -11352,7 +4028,7 @@ php = {
             var NS_XML = 'http://www.w3.org/XML/1998/namespace';
             if (d.getElementsByTagNameNS && d.getElementsByTagNameNS(NS_XHTML, 'html')[0]) {
                 if (d.getElementsByTagNameNS(NS_XHTML, 'html')[0].getAttributeNS && d.getElementsByTagNameNS(NS_XHTML,
-                        'html')[0].getAttributeNS(NS_XML, 'lang')) {
+                    'html')[0].getAttributeNS(NS_XML, 'lang')) {
                     phpjs.locale = d.getElementsByTagName(NS_XHTML, 'html')[0].getAttributeNS(NS_XML, 'lang');
                 } else if (d.getElementsByTagNameNS(NS_XHTML, 'html')[0].lang) { // XHTML 1.0 only
                     phpjs.locale = d.getElementsByTagNameNS(NS_XHTML, 'html')[0].lang;
@@ -11441,18 +4117,18 @@ php = {
         };
 
         /*var lsb_hex = function (val) { // Not in use; needed?
-         var str="";
-         var i;
-         var vh;
-         var vl;
+    var str="";
+    var i;
+    var vh;
+    var vl;
 
-         for ( i=0; i<=6; i+=2 ) {
-         vh = (val>>>(i*4+4))&0x0f;
-         vl = (val>>>(i*4))&0x0f;
-         str += vh.toString(16) + vl.toString(16);
-         }
-         return str;
-         };*/
+    for ( i=0; i<=6; i+=2 ) {
+      vh = (val>>>(i*4+4))&0x0f;
+      vl = (val>>>(i*4))&0x0f;
+      str += vh.toString(16) + vl.toString(16);
+    }
+    return str;
+  };*/
 
         var cvt_hex = function (val) {
             var str = '';
@@ -11764,10 +4440,10 @@ php = {
             // Note: casts negative numbers to positive ones
             var number = value >>> 0;
             prefix = prefix && number && {
-                    '2': '0b',
-                    '8': '0',
-                    '16': '0x'
-                }[base] || '';
+                '2': '0b',
+                '8': '0',
+                '16': '0x'
+            }[base] || '';
             value = prefix + pad(number.toString(base), precision || 0, '0', false);
             return justify(value, prefix, leftJustify, minWidth, zeroPad);
         };
@@ -12129,7 +4805,7 @@ php = {
                 // Fix: Double-check i whitespace ignored in string and/or formats
                 _NWS.lastIndex = 0;
                 if ((_NWS)
-                        .test(str.charAt(j)) || str.charAt(j) === '') { // Whitespace doesn't need to be an exact match)
+                    .test(str.charAt(j)) || str.charAt(j) === '') { // Whitespace doesn't need to be an exact match)
                     return _setExtraConversionSpecs(i + 1);
                 } else {
                     // Adjust strings when encounter non-matching whitespace, so they align in future checks above
@@ -12153,20 +4829,20 @@ php = {
 
 // These test cases allowing for missing delimiters are not currently supported
         /*
-         str_getcsv('"row2""cell1",row2cell2,row2cell3', null, null, '"');
-         ['row2"cell1', 'row2cell2', 'row2cell3']
+    str_getcsv('"row2""cell1",row2cell2,row2cell3', null, null, '"');
+    ['row2"cell1', 'row2cell2', 'row2cell3']
 
-         str_getcsv('row1cell1,"row1,cell2",row1cell3', null, null, '"');
-         ['row1cell1', 'row1,cell2', 'row1cell3']
+    str_getcsv('row1cell1,"row1,cell2",row1cell3', null, null, '"');
+    ['row1cell1', 'row1,cell2', 'row1cell3']
 
-         str_getcsv('"row2""cell1",row2cell2,"row2""""cell3"');
-         ['row2"cell1', 'row2cell2', 'row2""cell3']
+    str_getcsv('"row2""cell1",row2cell2,"row2""""cell3"');
+    ['row2"cell1', 'row2cell2', 'row2""cell3']
 
-         str_getcsv('row1cell1,"row1,cell2","row1"",""cell3"', null, null, '"');
-         ['row1cell1', 'row1,cell2', 'row1","cell3'];
+    str_getcsv('row1cell1,"row1,cell2","row1"",""cell3"', null, null, '"');
+    ['row1cell1', 'row1,cell2', 'row1","cell3'];
 
-         Should also test newlines within
-         */
+    Should also test newlines within
+*/
         var i, inpLen, output = [];
         var backwards = function (str) { // We need to go backwards to simulate negative look-behind (don't split on
             //an escaped enclosure even if followed by the delimiter and another enclosure mark)
@@ -12441,9 +5117,7 @@ php = {
         //   example 1: str_split('Hello Friend', 3);
         //   returns 1: ['Hel', 'lo ', 'Fri', 'end']
 
-        if (split_length === null) {
-            split_length = 1;
-        }
+        split_length = split_length || 1;
         if (string === null || split_length < 1) {
             return false;
         }
@@ -12629,7 +5303,7 @@ php = {
         strct: for (var i = start, lgth = 0; i < count; i++) {
             for (var j = 0; j < mask.length; j++) {
                 if (str.charAt(i)
-                        .indexOf(mask[j]) !== -1) {
+                    .indexOf(mask[j]) !== -1) {
                     continue strct;
                 }
             }
@@ -12775,7 +5449,7 @@ php = {
             lgth = 0;
 
         if (!this.php_js || !this.php_js.ini || !this.php_js.ini['unicode.semantics'] || this.php_js.ini[
-                'unicode.semantics'].local_value.toLowerCase() !== 'on') {
+            'unicode.semantics'].local_value.toLowerCase() !== 'on') {
             return string.length;
         }
 
@@ -12986,8 +5660,8 @@ php = {
                     }
                     buffer += chr;
                 } else if ((text == false) && (chr === '.') && (i < (f_string.length - 1)) && (f_string.substring(i + 1, i +
-                        2)
-                        .match(/\d/))) {
+                    2)
+                    .match(/\d/))) {
                     result[result.length] = buffer;
                     buffer = '';
                 } else {
@@ -13821,440 +6495,5816 @@ php = {
         for (i = -1, l = (r = str.split(/\r\n|\n|\r/))
             .length; ++i < l; r[i] += s) {
             for (s = r[i], r[i] = ''; s.length > m; r[i] += s.slice(0, j) + ((s = s.slice(j))
-                    .length ? b : '')) {
+                .length ? b : '')) {
                 j = c == 2 || (j = s.slice(0, m + 1)
                     .match(/\S*(\s)?$/))[1] ? m : j.input.length - j[0].length || c == 1 && m || j.input.length + (j = s.slice(
-                        m)
-                        .match(/^\S*/))[0].length;
+                    m)
+                    .match(/^\S*/))[0].length;
             }
         }
 
         return r.join('\n');
-    }, base64_decode: function (data) {
-        //  discuss at: http://phpjs.org/functions/base64_decode/
-        // original by: Tyler Akins (http://rumkin.com)
-        // improved by: Thunder.m
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //    input by: Aman Gupta
-        //    input by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: Onno Marsman
-        // bugfixed by: Pellentesque Malesuada
-        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //   example 1: base64_decode('S2V2aW4gdmFuIFpvbm5ldmVsZA==');
-        //   returns 1: 'Kevin van Zonneveld'
+    }, bcadd: function (left_operand, right_operand, scale) {
+        //  discuss at: http://phpjs.org/functions/bcadd/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bcadd(1, 2);
+        //   returns 1: 3
+        //        todo: implement these testcases
 
-        var b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-        var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
-            ac = 0,
-            dec = '',
-            tmp_arr = [];
+        var libbcmath = this._phpjs_shared_bc();
 
-        if (!data) {
-            return data;
+        var first, second, result;
+
+        if (typeof scale === 'undefined') {
+            scale = libbcmath.scale;
+        }
+        scale = ((scale < 0) ? 0 : scale);
+
+        // create objects
+        first = libbcmath.bc_init_num();
+        second = libbcmath.bc_init_num();
+        result = libbcmath.bc_init_num();
+
+        first = libbcmath.php_str2num(left_operand.toString());
+        second = libbcmath.php_str2num(right_operand.toString());
+
+        result = libbcmath.bc_add(first, second, scale);
+
+        if (result.n_scale > scale) {
+            result.n_scale = scale;
         }
 
-        data += '';
+        return result.toString();
+    }, bccomp: function (left_operand, right_operand, scale) {
+        //  discuss at: http://phpjs.org/functions/bccomp/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bccomp(1, 2);
+        //   returns 1: 3
+        //        todo: implement these testcases
 
-        do { // unpack four hexets into three octets using index points in b64
-            h1 = b64.indexOf(data.charAt(i++));
-            h2 = b64.indexOf(data.charAt(i++));
-            h3 = b64.indexOf(data.charAt(i++));
-            h4 = b64.indexOf(data.charAt(i++));
+        var libbcmath = this._phpjs_shared_bc();
 
-            bits = h1 << 18 | h2 << 12 | h3 << 6 | h4;
+        var first, second; //bc_num
+        if (typeof scale === 'undefined') {
+            scale = libbcmath.scale;
+        }
+        scale = ((scale < 0) ? 0 : scale);
 
-            o1 = bits >> 16 & 0xff;
-            o2 = bits >> 8 & 0xff;
-            o3 = bits & 0xff;
+        first = libbcmath.bc_init_num();
+        second = libbcmath.bc_init_num();
 
-            if (h3 == 64) {
-                tmp_arr[ac++] = String.fromCharCode(o1);
-            } else if (h4 == 64) {
-                tmp_arr[ac++] = String.fromCharCode(o1, o2);
-            } else {
-                tmp_arr[ac++] = String.fromCharCode(o1, o2, o3);
+        first = libbcmath.bc_str2num(left_operand.toString(), scale); // note bc_ not php_str2num
+        second = libbcmath.bc_str2num(right_operand.toString(), scale); // note bc_ not php_str2num
+        return libbcmath.bc_compare(first, second, scale);
+    }, bcdiv: function (left_operand, right_operand, scale) {
+        //  discuss at: http://phpjs.org/functions/bcdiv/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bcdiv(1, 2);
+        //   returns 1: 3
+        //        todo: implement these testcases
+
+        var libbcmath = this._phpjs_shared_bc();
+
+        var first, second, result;
+
+        if (typeof scale === 'undefined') {
+            scale = libbcmath.scale;
+        }
+        scale = ((scale < 0) ? 0 : scale);
+
+        // create objects
+        first = libbcmath.bc_init_num();
+        second = libbcmath.bc_init_num();
+        result = libbcmath.bc_init_num();
+
+        first = libbcmath.php_str2num(left_operand.toString());
+        second = libbcmath.php_str2num(right_operand.toString());
+
+        result = libbcmath.bc_divide(first, second, scale);
+        if (result === -1) {
+            // error
+            throw new Error(11, '(BC) Division by zero');
+        }
+        if (result.n_scale > scale) {
+            result.n_scale = scale;
+        }
+        return result.toString();
+    }, bcmul: function (left_operand, right_operand, scale) {
+        //  discuss at: http://phpjs.org/functions/bcmul/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bcmul(1, 2);
+        //   returns 1: 3
+        //        todo: implement these testcases
+
+        var libbcmath = this._phpjs_shared_bc();
+
+        var first, second, result;
+
+        if (typeof scale === 'undefined') {
+            scale = libbcmath.scale;
+        }
+        scale = ((scale < 0) ? 0 : scale);
+
+        // create objects
+        first = libbcmath.bc_init_num();
+        second = libbcmath.bc_init_num();
+        result = libbcmath.bc_init_num();
+
+        first = libbcmath.php_str2num(left_operand.toString());
+        second = libbcmath.php_str2num(right_operand.toString());
+
+        result = libbcmath.bc_multiply(first, second, scale);
+
+        if (result.n_scale > scale) {
+            result.n_scale = scale;
+        }
+        return result.toString();
+    }, bcround: function (val, precision) {
+        //  discuss at: http://phpjs.org/functions/bcround/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bcround(1, 2);
+        //   returns 1: 3
+        //        todo: implement these testcases
+
+        var libbcmath = this._phpjs_shared_bc();
+
+        var temp, result, digit;
+        var right_operand;
+
+        // create number
+        temp = libbcmath.bc_init_num();
+        temp = libbcmath.php_str2num(val.toString());
+
+        // check if any rounding needs
+        if (precision >= temp.n_scale) {
+            // nothing to round, just add the zeros.
+            while (temp.n_scale < precision) {
+                temp.n_value[temp.n_len + temp.n_scale] = 0;
+                temp.n_scale++;
             }
-        } while (i < data.length);
-
-        dec = tmp_arr.join('');
-
-        return dec;
-    }, base64_encode: function (data) {
-        //  discuss at: http://phpjs.org/functions/base64_encode/
-        // original by: Tyler Akins (http://rumkin.com)
-        // improved by: Bayron Guevara
-        // improved by: Thunder.m
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Rafał Kukawski (http://kukawski.pl)
-        // bugfixed by: Pellentesque Malesuada
-        //   example 1: base64_encode('Kevin van Zonneveld');
-        //   returns 1: 'S2V2aW4gdmFuIFpvbm5ldmVsZA=='
-
-        var b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-        var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
-            ac = 0,
-            enc = '',
-            tmp_arr = [];
-
-        if (!data) {
-            return data;
+            return temp.toString();
         }
 
-        do { // pack three octets into four hexets
-            o1 = data.charCodeAt(i++);
-            o2 = data.charCodeAt(i++);
-            o3 = data.charCodeAt(i++);
+        // get the digit we are checking (1 after the precision)
+        // loop through digits after the precision marker
+        digit = temp.n_value[temp.n_len + precision];
 
-            bits = o1 << 16 | o2 << 8 | o3;
+        right_operand = libbcmath.bc_init_num();
+        right_operand = libbcmath.bc_new_num(1, precision);
 
-            h1 = bits >> 18 & 0x3f;
-            h2 = bits >> 12 & 0x3f;
-            h3 = bits >> 6 & 0x3f;
-            h4 = bits & 0x3f;
+        if (digit >= 5) {
+            //round away from zero by adding 1 (or -1) at the "precision".. ie 1.44999 @ 3dp = (1.44999 + 0.001).toString().substr(0,5)
+            right_operand.n_value[right_operand.n_len + right_operand.n_scale - 1] = 1;
+            if (temp.n_sign == libbcmath.MINUS) {
+                // round down
+                right_operand.n_sign = libbcmath.MINUS;
+            }
+            result = libbcmath.bc_add(temp, right_operand, precision);
+        } else {
+            // leave-as-is.. just truncate it.
+            result = temp;
+        }
 
-            // use hexets to index into b64, and append result to encoded string
-            tmp_arr[ac++] = b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
-        } while (i < data.length);
+        if (result.n_scale > precision) {
+            result.n_scale = precision;
+        }
+        return result.toString();
+    }, bcscale: function (scale) {
+        //  discuss at: http://phpjs.org/functions/bcscale/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)this.
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bcscale(1);
+        //   returns 1: 3
+        //        todo: implement these testcases
 
-        enc = tmp_arr.join('');
+        var libbcmath = this._phpjs_shared_bc();
 
-        var r = data.length % 3;
+        scale = parseInt(scale, 10);
+        if (isNaN(scale)) {
+            return false;
+        }
+        if (scale < 0) {
+            return false;
+        }
+        libbcmath.scale = scale;
+        return true;
+    }, bcsub: function (left_operand, right_operand, scale) {
+        //  discuss at: http://phpjs.org/functions/bcsub/
+        // original by: lmeyrick (https://sourceforge.net/projects/bcmath-js/)
+        //  depends on: _phpjs_shared_bc
+        //   example 1: bcsub(1, 2);
+        //   returns 1: -1
+        //        todo: implement these testcases
 
-        return (r ? enc.slice(0, r - 3) : enc) + '==='.slice(r || 3);
-    }, get_headers: function (url, format) {
-        //  discuss at: http://phpjs.org/functions/get_headers/
-        // original by: Paulo Freitas
-        // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //  depends on: array_filter
-        //        note: This function uses XmlHttpRequest and cannot retrieve resource from different domain.
-        //        note: Synchronous so may lock up browser, mainly here for study purposes.
+        var libbcmath = this._phpjs_shared_bc();
+
+        var first, second, result;
+
+        if (typeof scale === 'undefined') {
+            scale = libbcmath.scale;
+        }
+        scale = ((scale < 0) ? 0 : scale);
+
+        // create objects
+        first = libbcmath.bc_init_num();
+        second = libbcmath.bc_init_num();
+        result = libbcmath.bc_init_num();
+
+        first = libbcmath.php_str2num(left_operand.toString());
+        second = libbcmath.php_str2num(right_operand.toString());
+
+        result = libbcmath.bc_sub(first, second, scale);
+
+        if (result.n_scale > scale) {
+            result.n_scale = scale;
+        }
+
+        return result.toString();
+    }, array: function () {
+        //  discuss at: http://phpjs.org/functions/array/
+        // original by: d3x
+        // improved by: Brett Zamir (http://brett-zamir.me)
         //        test: skip
-        //   example 1: get_headers('http://kevin.vanzonneveld.net/pj_test_supportfile_1.htm')[0];
-        //   returns 1: 'Date: Wed, 13 May 2009 23:53:11 GMT'
+        //   example 1: array('Kevin', 'van', 'Zonneveld');
+        //   returns 1: ['Kevin', 'van', 'Zonneveld']
+        //   example 2: ini_set('phpjs.return_phpjs_arrays', 'on');
+        //   example 2: array({0:2}, {a:41}, {2:3}).change_key_case('CASE_UPPER').keys();
+        //   returns 2: [0,'A',2]
 
-        var req = this.window.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest();
-
-        if (!req) {
-            throw new Error('XMLHttpRequest not supported');
+        try {
+            this.php_js = this.php_js || {};
+        } catch (e) {
+            this.php_js = {};
         }
-        var tmp, headers, pair, i, j = 0;
-        ß;
-        req.open('HEAD', url, false);
-        req.send(null);
 
-        if (req.readyState < 3) {
+        var arrInst, e, __, that = this,
+            PHPJS_Array = function PHPJS_Array() {
+            };
+        mainArgs = arguments, p = this.php_js,
+            _indexOf = function (value, from, strict) {
+                var i = from || 0,
+                    nonstrict = !strict,
+                    length = this.length;
+                while (i < length) {
+                    if (this[i] === value || (nonstrict && this[i] == value)) {
+                        return i;
+                    }
+                    i++;
+                }
+                return -1;
+            };
+        // BEGIN REDUNDANT
+        if (!p.Relator) {
+            p.Relator = (function () { // Used this functional class for giving privacy to the class we are creating
+                // Code adapted from http://www.devpro.it/code/192.html
+                // Relator explained at http://webreflection.blogspot.com/2008/07/javascript-relator-object-aka.html
+                // Its use as privacy technique described at http://webreflection.blogspot.com/2008/10/new-relator-object-plus-unshared.html
+                // 1) At top of closure, put: var __ = Relator.$();
+                // 2) In constructor, put: var _ = __.constructor(this);
+                // 3) At top of each prototype method, put: var _ = __.method(this);
+                // 4) Use like:  _.privateVar = 5;
+                function _indexOf(value) {
+                    var i = 0,
+                        length = this.length;
+                    while (i < length) {
+                        if (this[i] === value) {
+                            return i;
+                        }
+                        i++;
+                    }
+                    return -1;
+                }
+
+                function Relator() {
+                    var Stack = [],
+                        Array = [];
+                    if (!Stack.indexOf) {
+                        Stack.indexOf = _indexOf;
+                    }
+                    return {
+                        // create a new relator
+                        $: function () {
+                            return Relator();
+                        },
+                        constructor: function (that) {
+                            var i = Stack.indexOf(that);
+                            ~
+                                i ? Array[i] : Array[Stack.push(that) - 1] = {};
+                            this.method(that)
+                                .that = that;
+                            return this.method(that);
+                        },
+                        method: function (that) {
+                            return Array[Stack.indexOf(that)];
+                        }
+                    };
+                }
+
+                return Relator();
+            }());
+        }
+        // END REDUNDANT
+
+        if (p && p.ini && p.ini['phpjs.return_phpjs_arrays'].local_value.toLowerCase() === 'on') {
+            if (!p.PHPJS_Array) {
+                // We keep this Relator outside the class in case adding prototype methods below
+                // Prototype methods added elsewhere can also use this ArrayRelator to share these "pseudo-global mostly-private" variables
+                __ = p.ArrayRelator = p.ArrayRelator || p.Relator.$();
+                // We could instead allow arguments of {key:XX, value:YY} but even more cumbersome to write
+                p.PHPJS_Array = function PHPJS_Array() {
+                    var _ = __.constructor(this),
+                        args = arguments,
+                        i = 0,
+                        argl, p;
+                    args = (args.length === 1 && args[0] && typeof args[0] === 'object' &&
+                        args[0].length && !args[0].propertyIsEnumerable('length')) ? args[0] : args; // If first and only arg is an array, use that (Don't depend on this)
+                    if (!_.objectChain) {
+                        _.objectChain = args;
+                        _.object = {};
+                        _.keys = [];
+                        _.values = [];
+                    }
+                    for (argl = args.length; i < argl; i++) {
+                        for (p in args[i]) {
+                            // Allow for access by key; use of private members to store sequence allows these to be iterated via for...in (but for read-only use, with hasOwnProperty or function filtering to avoid prototype methods, and per ES, potentially out of order)
+                            this[p] = _.object[p] = args[i][p];
+                            // Allow for easier access by prototype methods
+                            _.keys[_.keys.length] = p;
+                            _.values[_.values.length] = args[i][p];
+                            break;
+                        }
+                    }
+                };
+                e = p.PHPJS_Array.prototype;
+                e.change_key_case = function (cs) {
+                    var _ = __.method(this),
+                        oldkey, newkey, i = 0,
+                        kl = _.keys.length,
+                        case_fn = (!cs || cs === 'CASE_LOWER') ? 'toLowerCase' : 'toUpperCase';
+                    while (i < kl) {
+                        oldkey = _.keys[i];
+                        newkey = _.keys[i] = _.keys[i][case_fn]();
+                        if (oldkey !== newkey) {
+                            this[oldkey] = _.object[oldkey] = _.objectChain[i][oldkey] = null; // Break reference before deleting
+                            delete this[oldkey];
+                            delete _.object[oldkey];
+                            delete _.objectChain[i][oldkey];
+                            this[newkey] = _.object[newkey] = _.objectChain[i][newkey] = _.values[i]; // Fix: should we make a deep copy?
+                        }
+                        i++;
+                    }
+                    return this;
+                };
+                e.flip = function () {
+                    var _ = __.method(this),
+                        i = 0,
+                        kl = _.keys.length;
+                    while (i < kl) {
+                        oldkey = _.keys[i];
+                        newkey = _.values[i];
+                        if (oldkey !== newkey) {
+                            this[oldkey] = _.object[oldkey] = _.objectChain[i][oldkey] = null; // Break reference before deleting
+                            delete this[oldkey];
+                            delete _.object[oldkey];
+                            delete _.objectChain[i][oldkey];
+                            this[newkey] = _.object[newkey] = _.objectChain[i][newkey] = oldkey;
+                            _.keys[i] = newkey;
+                        }
+                        i++;
+                    }
+                    return this;
+                };
+                e.walk = function (funcname, userdata) {
+                    var _ = __.method(this),
+                        obj, func, ini, i = 0,
+                        kl = 0;
+
+                    try {
+                        if (typeof funcname === 'function') {
+                            for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                if (arguments.length > 1) {
+                                    funcname(_.values[i], _.keys[i], userdata);
+                                } else {
+                                    funcname(_.values[i], _.keys[i]);
+                                }
+                            }
+                        } else if (typeof funcname === 'string') {
+                            this.php_js = this.php_js || {};
+                            this.php_js.ini = this.php_js.ini || {};
+                            ini = this.php_js.ini['phpjs.no-eval'];
+                            if (ini && (
+                                parseInt(ini.local_value, 10) !== 0 && (!ini.local_value.toLowerCase || ini.local_value
+                                    .toLowerCase() !== 'off')
+                            )) {
+                                if (arguments.length > 1) {
+                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                        this.window[funcname](_.values[i], _.keys[i], userdata);
+                                    }
+                                } else {
+                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                        this.window[funcname](_.values[i], _.keys[i]);
+                                    }
+                                }
+                            } else {
+                                if (arguments.length > 1) {
+                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                        eval(funcname + '(_.values[i], _.keys[i], userdata)');
+                                    }
+                                } else {
+                                    for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                        eval(funcname + '(_.values[i], _.keys[i])');
+                                    }
+                                }
+                            }
+                        } else if (funcname && typeof funcname === 'object' && funcname.length === 2) {
+                            obj = funcname[0];
+                            func = funcname[1];
+                            if (arguments.length > 1) {
+                                for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                    obj[func](_.values[i], _.keys[i], userdata);
+                                }
+                            } else {
+                                for (i = 0, kl = _.keys.length; i < kl; i++) {
+                                    obj[func](_.values[i], _.keys[i]);
+                                }
+                            }
+                        } else {
+                            return false;
+                        }
+                    } catch (e) {
+                        return false;
+                    }
+
+                    return this;
+                };
+                // Here we'll return actual arrays since most logical and practical for these functions to do this
+                e.keys = function (search_value, argStrict) {
+                    var _ = __.method(this),
+                        pos,
+                        search = typeof search_value !== 'undefined',
+                        tmp_arr = [],
+                        strict = !!argStrict;
+                    if (!search) {
+                        return _.keys;
+                    }
+                    while ((pos = _indexOf(_.values, pos, strict)) !== -1) {
+                        tmp_arr[tmp_arr.length] = _.keys[pos];
+                    }
+                    return tmp_arr;
+                };
+                e.values = function () {
+                    var _ = __.method(this);
+                    return _.values;
+                };
+                // Return non-object, non-array values, since most sensible
+                e.search = function (needle, argStrict) {
+                    var _ = __.method(this),
+                        strict = !!argStrict,
+                        haystack = _.values,
+                        i, vl, val, flags;
+                    if (typeof needle === 'object' && needle.exec) { // Duck-type for RegExp
+                        if (!strict) { // Let's consider case sensitive searches as strict
+                            flags = 'i' + (needle.global ? 'g' : '') +
+                                (needle.multiline ? 'm' : '') +
+                                (needle.sticky ? 'y' : ''); // sticky is FF only
+                            needle = new RegExp(needle.source, flags);
+                        }
+                        for (i = 0, vl = haystack.length; i < vl; i++) {
+                            val = haystack[i];
+                            if (needle.test(val)) {
+                                return _.keys[i];
+                            }
+                        }
+                        return false;
+                    }
+                    for (i = 0, vl = haystack.length; i < vl; i++) {
+                        val = haystack[i];
+                        if ((strict && val === needle) || (!strict && val == needle)) {
+                            return _.keys[i];
+                        }
+                    }
+                    return false;
+                };
+                e.sum = function () {
+                    var _ = __.method(this),
+                        sum = 0,
+                        i = 0,
+                        kl = _.keys.length;
+                    while (i < kl) {
+                        if (!isNaN(parseFloat(_.values[i]))) {
+                            sum += parseFloat(_.values[i]);
+                        }
+                        i++;
+                    }
+                    return sum;
+                };
+                // Experimental functions
+                e.foreach = function (handler) {
+                    var _ = __.method(this),
+                        i = 0,
+                        kl = _.keys.length;
+                    while (i < kl) {
+                        if (handler.length === 1) {
+                            handler(_.values[i]); // only pass the value
+                        } else {
+                            handler(_.keys[i], _.values[i]);
+                        }
+                        i++;
+                    }
+                    return this;
+                };
+                e.list = function () {
+                    var key, _ = __.method(this),
+                        i = 0,
+                        argl = arguments.length;
+                    while (i < argl) {
+                        key = _.keys[i];
+                        if (key && key.length === parseInt(key, 10)
+                                .toString()
+                                .length && // Key represents an int
+                            parseInt(key, 10) < argl) { // Key does not exceed arguments
+                            that.window[arguments[key]] = _.values[key];
+                        }
+                        i++;
+                    }
+                    return this;
+                };
+                // Parallel functionality and naming of built-in JavaScript array methods
+                e.forEach = function (handler) {
+                    var _ = __.method(this),
+                        i = 0,
+                        kl = _.keys.length;
+                    while (i < kl) {
+                        handler(_.values[i], _.keys[i], this);
+                        i++;
+                    }
+                    return this;
+                };
+                // Our own custom convenience functions
+                e.$object = function () {
+                    var _ = __.method(this);
+                    return _.object;
+                };
+                e.$objectChain = function () {
+                    var _ = __.method(this);
+                    return _.objectChain;
+                };
+            }
+            PHPJS_Array.prototype = p.PHPJS_Array.prototype;
+            arrInst = new PHPJS_Array();
+            p.PHPJS_Array.apply(arrInst, mainArgs);
+            return arrInst;
+        }
+        return Array.prototype.slice.call(mainArgs);
+    }, array_change_key_case: function (array, cs) {
+        //  discuss at: http://phpjs.org/functions/array_change_key_case/
+        // original by: Ates Goral (http://magnetiq.com)
+        // improved by: marrtins
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_change_key_case(42);
+        //   returns 1: false
+        //   example 2: array_change_key_case([ 3, 5 ]);
+        //   returns 2: [3, 5]
+        //   example 3: array_change_key_case({ FuBaR: 42 });
+        //   returns 3: {"fubar": 42}
+        //   example 4: array_change_key_case({ FuBaR: 42 }, 'CASE_LOWER');
+        //   returns 4: {"fubar": 42}
+        //   example 5: array_change_key_case({ FuBaR: 42 }, 'CASE_UPPER');
+        //   returns 5: {"FUBAR": 42}
+        //   example 6: array_change_key_case({ FuBaR: 42 }, 2);
+        //   returns 6: {"FUBAR": 42}
+        //   example 7: ini_set('phpjs.return_phpjs_arrays', 'on');
+        //   example 7: var arr = [{a: 0}, {B: 1}, {c: 2}];
+        //   example 7: var newArr = array_change_key_case(arr);
+        //   example 7: newArr.splice(1, 1);
+        //   returns 7: {b: 1}
+
+        var case_fn, key, tmp_ar = {};
+
+        if (Object.prototype.toString.call(array) === '[object Array]') {
+            return array;
+        }
+        if (array && typeof array === 'object' && array.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
+            return array.change_key_case(cs);
+        }
+        if (array && typeof array === 'object') {
+            case_fn = (!cs || cs === 'CASE_LOWER') ? 'toLowerCase' : 'toUpperCase';
+            for (key in array) {
+                tmp_ar[key[case_fn]()] = array[key];
+            }
+            return tmp_ar;
+        }
+
+        return false;
+    }, array_chunk: function (input, size, preserve_keys) {
+        //  discuss at: http://phpjs.org/functions/array_chunk/
+        // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: Important note: Per the ECMAScript specification, objects may not always iterate in a predictable order
+        //   example 1: array_chunk(['Kevin', 'van', 'Zonneveld'], 2);
+        //   returns 1: [['Kevin', 'van'], ['Zonneveld']]
+        //   example 2: array_chunk(['Kevin', 'van', 'Zonneveld'], 2, true);
+        //   returns 2: [{0:'Kevin', 1:'van'}, {2: 'Zonneveld'}]
+        //   example 3: array_chunk({1:'Kevin', 2:'van', 3:'Zonneveld'}, 2);
+        //   returns 3: [['Kevin', 'van'], ['Zonneveld']]
+        //   example 4: array_chunk({1:'Kevin', 2:'van', 3:'Zonneveld'}, 2, true);
+        //   returns 4: [{1: 'Kevin', 2: 'van'}, {3: 'Zonneveld'}]
+
+        var x, p = '',
+            i = 0,
+            c = -1,
+            l = input.length || 0,
+            n = [];
+
+        if (size < 1) {
+            return null;
+        }
+
+        if (Object.prototype.toString.call(input) === '[object Array]') {
+            if (preserve_keys) {
+                while (i < l) {
+                    (x = i % size) ? n[c][i] = input[i] : n[++c] = {}, n[c][i] = input[i];
+                    i++;
+                }
+            } else {
+                while (i < l) {
+                    (x = i % size) ? n[c][x] = input[i] : n[++c] = [input[i]];
+                    i++;
+                }
+            }
+        } else {
+            if (preserve_keys) {
+                for (p in input) {
+                    if (input.hasOwnProperty(p)) {
+                        (x = i % size) ? n[c][p] = input[p] : n[++c] = {}, n[c][p] = input[p];
+                        i++;
+                    }
+                }
+            } else {
+                for (p in input) {
+                    if (input.hasOwnProperty(p)) {
+                        (x = i % size) ? n[c][x] = input[p] : n[++c] = [input[p]];
+                        i++;
+                    }
+                }
+            }
+        }
+        return n;
+    }, array_combine: function (keys, values) {
+        //  discuss at: http://phpjs.org/functions/array_combine/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_combine([0,1,2], ['kevin','van','zonneveld']);
+        //   returns 1: {0: 'kevin', 1: 'van', 2: 'zonneveld'}
+
+        var new_array = {},
+            keycount = keys && keys.length,
+            i = 0;
+
+        // input sanitation
+        if (typeof keys !== 'object' || typeof values !== 'object' || // Only accept arrays or array-like objects
+            typeof keycount !== 'number' || typeof values.length !== 'number' || !keycount) { // Require arrays to have a count
             return false;
         }
 
-        tmp = req.getAllResponseHeaders();
-        tmp = tmp.split('\n');
-        tmp = this.array_filter(tmp, function (value) {
-            return value.substring(1) !== '';
-        });
-        headers = format ? {} : [];
-
-        for (var i in tmp) {
-            if (format) {
-                pair = tmp[i].split(':');
-                headers[pair.splice(0, 1)] = pair.join(':')
-                    .substring(1);
-            } else {
-                headers[j++] = tmp[i];
-            }
+        // number of elements does not match
+        if (keycount != values.length) {
+            return false;
         }
 
-        return headers;
-    }, get_meta_tags: function (file) {
-        //  discuss at: http://phpjs.org/functions/get_meta_tags/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //        note: This function uses XmlHttpRequest and cannot retrieve resource from different domain.
-        //        note: Synchronous so may lock up browser, mainly here for study purposes.
-        //  depends on: file_get_contents
-        //        test: skip
-        //   example 1: get_meta_tags('http://kevin.vanzonneveld.net/pj_test_supportfile_2.htm');
-        //   returns 1: {description: 'a php manual', author: 'name', keywords: 'php documentation', 'geo_position': '49.33;-86.59'}
-
-        var fulltxt = '';
-
-        if (false) {
-            // Use this for testing instead of the line above:
-            fulltxt = '<meta name="author" content="name">' + '<meta name="keywords" content="php documentation">' +
-                '<meta name="DESCRIPTION" content="a php manual">' + '<meta name="geo.position" content="49.33;-86.59">' +
-                '</head>';
-        } else {
-            fulltxt = this.file_get_contents(file)
-                .match(/^[\s\S]*<\/head>/i); // We have to disallow some character, so we choose a Unicode non-character
+        for (i = 0; i < keycount; i++) {
+            new_array[keys[i]] = values[i];
         }
 
-        var patt = /<meta[^>]*?>/gim;
-        var patt1 = /<meta\s+.*?name\s*=\s*(['"]?)(.*?)\1\s+.*?content\s*=\s*(['"]?)(.*?)\3/gim;
-        var patt2 = /<meta\s+.*?content\s*=\s*(['"?])(.*?)\1\s+.*?name\s*=\s*(['"]?)(.*?)\3/gim;
-        var txt, match, name, arr = {};
-
-        while ((txt = patt.exec(fulltxt)) !== null) {
-            while ((match = patt1.exec(txt)) !== null) {
-                name = match[2].replace(/\W/g, '_')
-                    .toLowerCase();
-                arr[name] = match[4];
-            }
-            while ((match = patt2.exec(txt)) !== null) {
-                name = match[4].replace(/\W/g, '_')
-                    .toLowerCase();
-                arr[name] = match[2];
-            }
-        }
-        return arr;
-    }, http_build_query: function (formdata, numeric_prefix, arg_separator) {
-        //  discuss at: http://phpjs.org/functions/http_build_query/
-        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Legaev Andrey
+        return new_array;
+    }, array_count_values: function (array) {
+        //  discuss at: http://phpjs.org/functions/array_count_values/
+        // original by: Ates Goral (http://magnetiq.com)
         // improved by: Michael White (http://getsprink.com)
         // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // improved by: Brett Zamir (http://brett-zamir.me)
-        //  revised by: stag019
-        //    input by: Dreamer
+        //    input by: sankai
+        //    input by: Shingo
         // bugfixed by: Brett Zamir (http://brett-zamir.me)
-        // bugfixed by: MIO_KODUKI (http://mio-koduki.blogspot.com/)
-        //        note: If the value is null, key and value are skipped in the http_build_query of PHP while in phpjs they are not.
-        //  depends on: urlencode
-        //   example 1: http_build_query({foo: 'bar', php: 'hypertext processor', baz: 'boom', cow: 'milk'}, '', '&amp;');
-        //   returns 1: 'foo=bar&amp;php=hypertext+processor&amp;baz=boom&amp;cow=milk'
-        //   example 2: http_build_query({'php': 'hypertext processor', 0: 'foo', 1: 'bar', 2: 'baz', 3: 'boom', 'cow': 'milk'}, 'myvar_');
-        //   returns 2: 'myvar_0=foo&myvar_1=bar&myvar_2=baz&myvar_3=boom&php=hypertext+processor&cow=milk'
+        //   example 1: array_count_values([ 3, 5, 3, "foo", "bar", "foo" ]);
+        //   returns 1: {3:2, 5:1, "foo":2, "bar":1}
+        //   example 2: array_count_values({ p1: 3, p2: 5, p3: 3, p4: "foo", p5: "bar", p6: "foo" });
+        //   returns 2: {3:2, 5:1, "foo":2, "bar":1}
+        //   example 3: array_count_values([ true, 4.2, 42, "fubar" ]);
+        //   returns 3: {42:1, "fubar":1}
 
-        var value, key, tmp = [],
-            that = this;
+        var tmp_arr = {},
+            key = '',
+            t = '';
 
-        var _http_build_query_helper = function (key, val, arg_separator) {
-            var k, tmp = [];
-            if (val === true) {
-                val = '1';
-            } else if (val === false) {
-                val = '0';
+        var __getType = function (obj) {
+            // Objects are php associative arrays.
+            var t = typeof obj;
+            t = t.toLowerCase();
+            if (t === 'object') {
+                t = 'array';
             }
-            if (val != null) {
-                if (typeof val === 'object') {
-                    for (k in val) {
-                        if (val[k] != null) {
-                            tmp.push(_http_build_query_helper(key + '[' + k + ']', val[k], arg_separator));
-                        }
+            return t;
+        };
+
+        var __countValue = function (value) {
+            switch (typeof value) {
+                case 'number':
+                    if (Math.floor(value) !== value) {
+                        return;
                     }
-                    return tmp.join(arg_separator);
-                } else if (typeof val !== 'function') {
-                    return that.urlencode(key) + '=' + that.urlencode(val);
-                } else {
-                    throw new Error('There was an error processing for http_build_query().');
-                }
-            } else {
-                return '';
+                // Fall-through
+                case 'string':
+                    if (value in this && this.hasOwnProperty(value)) {
+                        ++this[value];
+                    } else {
+                        this[value] = 1;
+                    }
             }
         };
 
-        if (!arg_separator) {
-            arg_separator = '&';
-        }
-        for (key in formdata) {
-            value = formdata[key];
-            if (numeric_prefix && !isNaN(key)) {
-                key = String(numeric_prefix) + key;
-            }
-            var query = _http_build_query_helper(key, value, arg_separator);
-            if (query !== '') {
-                tmp.push(query);
+        t = __getType(array);
+        if (t === 'array') {
+            for (key in array) {
+                if (array.hasOwnProperty(key)) {
+                    __countValue.call(tmp_arr, array[key]);
+                }
             }
         }
 
-        return tmp.join(arg_separator);
-    }, parse_url: function (str, component) {
-        //       discuss at: http://phpjs.org/functions/parse_url/
-        //      original by: Steven Levithan (http://blog.stevenlevithan.com)
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //         input by: Lorenzo Pisani
-        //         input by: Tony
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //             note: original by http://stevenlevithan.com/demo/parseuri/js/assets/parseuri.js
-        //             note: blog post at http://blog.stevenlevithan.com/archives/parseuri
-        //             note: demo at http://stevenlevithan.com/demo/parseuri/js/assets/parseuri.js
-        //             note: Does not replace invalid characters with '_' as in PHP, nor does it return false with
-        //             note: a seriously malformed URL.
-        //             note: Besides function name, is essentially the same as parseUri as well as our allowing
-        //             note: an extra slash after the scheme/protocol (to allow file:/// as in PHP)
-        //        example 1: parse_url('http://username:password@hostname/path?arg=value#anchor');
-        //        returns 1: {scheme: 'http', host: 'hostname', user: 'username', pass: 'password', path: '/path', query: 'arg=value', fragment: 'anchor'}
+        return tmp_arr;
+    }, array_diff: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_diff/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Sanjoy Roy
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_diff(['Kevin', 'van', 'Zonneveld'], ['van', 'Zonneveld']);
+        //   returns 1: {0:'Kevin'}
 
-        var query, key = ['source', 'scheme', 'authority', 'userInfo', 'user', 'pass', 'host', 'port',
-                'relative', 'path', 'directory', 'file', 'query', 'fragment'
+        var retArr = {},
+            argl = arguments.length,
+            k1 = '',
+            i = 1,
+            k = '',
+            arr = {};
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < argl; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (arr[k] === arr1[k1]) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_diff_assoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_diff_assoc/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: 0m3r
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_diff_assoc({0: 'Kevin', 1: 'van', 2: 'Zonneveld'}, {0: 'Kevin', 4: 'van', 5: 'Zonneveld'});
+        //   returns 1: {1: 'van', 2: 'Zonneveld'}
+
+        var retArr = {},
+            argl = arguments.length,
+            k1 = '',
+            i = 1,
+            k = '',
+            arr = {};
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < argl; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (arr[k] === arr1[k1] && k === k1) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_diff_key: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_diff_key/
+        // original by: Ates Goral (http://magnetiq.com)
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Everlasto
+        //   example 1: array_diff_key({red: 1, green: 2, blue: 3, white: 4}, {red: 5});
+        //   returns 1: {"green":2, "blue":3, "white":4}
+        //   example 2: array_diff_key({red: 1, green: 2, blue: 3, white: 4}, {red: 5}, {red: 5});
+        //   returns 2: {"green":2, "blue":3, "white":4}
+
+        var argl = arguments.length,
+            retArr = {},
+            k1 = '',
+            i = 1,
+            k = '',
+            arr = {};
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < argl; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (k === k1) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_diff_uassoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_diff_uassoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_diff_uassoc($array1, $array2, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
+        //   returns 1: {b: 'brown', c: 'blue', 0: 'red'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            cb = arguments[arglm1],
+            arr = {},
+            i = 1,
+            k1 = '',
+            k = '';
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (arr[k] === arr1[k1] && cb(k, k1) === 0) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_diff_ukey: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_diff_ukey/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {blue: 1, red: 2, green: 3, purple: 4}
+        //   example 1: $array2 = {green: 5, blue: 6, yellow: 7, cyan: 8}
+        //   example 1: array_diff_ukey($array1, $array2, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
+        //   returns 1: {red: 2, purple: 4}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            cb = arguments[arglm1],
+            arr = {},
+            i = 1,
+            k1 = '',
+            k = '';
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb(k, k1) === 0) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_fill: function (start_index, num, mixed_val) {
+        //  discuss at: http://phpjs.org/functions/array_fill/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Waldo Malqui Silva
+        //   example 1: array_fill(5, 6, 'banana');
+        //   returns 1: { 5: 'banana', 6: 'banana', 7: 'banana', 8: 'banana', 9: 'banana', 10: 'banana' }
+
+        var key, tmp_arr = {};
+
+        if (!isNaN(start_index) && !isNaN(num)) {
+            for (key = 0; key < num; key++) {
+                tmp_arr[(key + start_index)] = mixed_val;
+            }
+        }
+
+        return tmp_arr;
+    }, array_fill_keys: function (keys, value) {
+        //  discuss at: http://phpjs.org/functions/array_fill_keys/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: keys = {'a': 'foo', 2: 5, 3: 10, 4: 'bar'}
+        //   example 1: array_fill_keys(keys, 'banana')
+        //   returns 1: {"foo": "banana", 5: "banana", 10: "banana", "bar": "banana"}
+
+        var retObj = {},
+            key = '';
+
+        for (key in keys) {
+            retObj[keys[key]] = value;
+        }
+
+        return retObj;
+    }, array_filter: function (arr, func) {
+        //  discuss at: http://phpjs.org/functions/array_filter/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //    input by: max4ever
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: Takes a function as an argument, not a function's name
+        //   example 1: var odd = function (num) {return (num & 1);};
+        //   example 1: array_filter({"a": 1, "b": 2, "c": 3, "d": 4, "e": 5}, odd);
+        //   returns 1: {"a": 1, "c": 3, "e": 5}
+        //   example 2: var even = function (num) {return (!(num & 1));}
+        //   example 2: array_filter([6, 7, 8, 9, 10, 11, 12], even);
+        //   returns 2: {0: 6, 2: 8, 4: 10, 6: 12}
+        //   example 3: array_filter({"a": 1, "b": false, "c": -1, "d": 0, "e": null, "f":'', "g":undefined});
+        //   returns 3: {"a":1, "c":-1};
+
+        var retObj = {},
+            k;
+
+        func = func || function (v) {
+            return v;
+        };
+
+        // Fix: Issue #73
+        if (Object.prototype.toString.call(arr) === '[object Array]') {
+            retObj = [];
+        }
+
+        for (k in arr) {
+            if (func(arr[k])) {
+                retObj[k] = arr[k];
+            }
+        }
+
+        return retObj;
+    }, array_flip: function (trans) {
+        //  discuss at: http://phpjs.org/functions/array_flip/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Pier Paolo Ramon (http://www.mastersoup.com/)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: array
+        //        test: skip
+        //   example 1: array_flip( {a: 1, b: 1, c: 2} );
+        //   returns 1: {1: 'b', 2: 'c'}
+        //   example 2: ini_set('phpjs.return_phpjs_arrays', 'on');
+        //   example 2: array_flip(array({a: 0}, {b: 1}, {c: 2}))[1];
+        //   returns 2: 'b'
+
+        var key, tmp_ar = {};
+
+        // Duck-type check for our own array()-created PHPJS_Array
+        if (trans && typeof trans === 'object' && trans.change_key_case) {
+            return trans.flip();
+        }
+
+        for (key in trans) {
+            if (!trans.hasOwnProperty(key)) {
+                continue;
+            }
+            tmp_ar[trans[key]] = key;
+        }
+
+        return tmp_ar;
+    }, array_intersect: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_intersect/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: These only output associative arrays (would need to be
+        //        note: all numeric and counting from zero to be numeric)
+        //   example 1: $array1 = {'a' : 'green', 0:'red', 1: 'blue'};
+        //   example 1: $array2 = {'b' : 'green', 0:'yellow', 1:'red'};
+        //   example 1: $array3 = ['green', 'red'];
+        //   example 1: $result = array_intersect($array1, $array2, $array3);
+        //   returns 1: {0: 'red', a: 'green'}
+
+        var retArr = {},
+            argl = arguments.length,
+            arglm1 = argl - 1,
+            k1 = '',
+            arr = {},
+            i = 0,
+            k = '';
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < argl; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (arr[k] === arr1[k1]) {
+                        if (i === arglm1) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_intersect_assoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_intersect_assoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: These only output associative arrays (would need to be
+        //        note: all numeric and counting from zero to be numeric)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'green', 0: 'yellow', 1: 'red'}
+        //   example 1: array_intersect_assoc($array1, $array2)
+        //   returns 1: {a: 'green'}
+
+        var retArr = {},
+            argl = arguments.length,
+            arglm1 = argl - 1,
+            k1 = '',
+            arr = {},
+            i = 0,
+            k = '';
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < argl; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (arr[k] === arr1[k1] && k === k1) {
+                        if (i === arglm1) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_intersect_key: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_intersect_key/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: These only output associative arrays (would need to be
+        //        note: all numeric and counting from zero to be numeric)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'green', 0: 'yellow', 1: 'red'}
+        //   example 1: array_intersect_key($array1, $array2)
+        //   returns 1: {0: 'red', a: 'green'}
+
+        var retArr = {},
+            argl = arguments.length,
+            arglm1 = argl - 1,
+            k1 = '',
+            arr = {},
+            i = 0,
+            k = '';
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < argl; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (k === k1) {
+                        if (i === arglm1) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_intersect_uassoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_intersect_uassoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_intersect_uassoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {b: 'brown'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            arglm2 = arglm1 - 1,
+            cb = arguments[arglm1],
+            k1 = '',
+            i = 1,
+            arr = {},
+            k = '';
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (arr[k] === arr1[k1] && cb(k, k1) === 0) {
+                        if (i === arglm2) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_intersect_ukey: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_intersect_ukey/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {blue: 1, red: 2, green: 3, purple: 4}
+        //   example 1: $array2 = {green: 5, blue: 6, yellow: 7, cyan: 8}
+        //   example 1: array_intersect_ukey ($array1, $array2, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
+        //   returns 1: {blue: 1, green: 3}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            arglm2 = arglm1 - 1,
+            cb = arguments[arglm1],
+            k1 = '',
+            i = 1,
+            arr = {},
+            k = '';
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb(k, k1) === 0) {
+                        if (i === arglm2) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_key_exists: function (key, search) {
+        //  discuss at: http://phpjs.org/functions/array_key_exists/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Felix Geisendoerfer (http://www.debuggable.com/felix)
+        //   example 1: array_key_exists('kevin', {'kevin': 'van Zonneveld'});
+        //   returns 1: true
+
+        if (!search || (search.constructor !== Array && search.constructor !== Object)) {
+            return false;
+        }
+
+        return key in search;
+    }, array_keys: function (input, search_value, argStrict) {
+        //  discuss at: http://phpjs.org/functions/array_keys/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        //    input by: P
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        // improved by: jd
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_keys( {firstname: 'Kevin', surname: 'van Zonneveld'} );
+        //   returns 1: {0: 'firstname', 1: 'surname'}
+
+        var search = typeof search_value !== 'undefined',
+            tmp_arr = [],
+            strict = !!argStrict,
+            include = true,
+            key = '';
+
+        if (input && typeof input === 'object' && input.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
+            return input.keys(search_value, argStrict);
+        }
+
+        for (key in input) {
+            if (input.hasOwnProperty(key)) {
+                include = true;
+                if (search) {
+                    if (strict && input[key] !== search_value) {
+                        include = false;
+                    } else if (input[key] != search_value) {
+                        include = false;
+                    }
+                }
+
+                if (include) {
+                    tmp_arr[tmp_arr.length] = key;
+                }
+            }
+        }
+
+        return tmp_arr;
+    }, array_map: function (callback) {
+        //  discuss at: http://phpjs.org/functions/array_map/
+        // original by: Andrea Giammarchi (http://webreflection.blogspot.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //    input by: thekid
+        //        note: If the callback is a string (or object, if an array is supplied), it can only work if the function name is in the global context
+        //   example 1: array_map( function (a){return (a * a * a)}, [1, 2, 3, 4, 5] );
+        //   returns 1: [ 1, 8, 27, 64, 125 ]
+
+        var argc = arguments.length,
+            argv = arguments,
+            glbl = this.window,
+            obj = null,
+            cb = callback,
+            j = argv[1].length,
+            i = 0,
+            k = 1,
+            m = 0,
+            tmp = [],
+            tmp_ar = [];
+
+        while (i < j) {
+            while (k < argc) {
+                tmp[m++] = argv[k++][i];
+            }
+
+            m = 0;
+            k = 1;
+
+            if (callback) {
+                if (typeof callback === 'string') {
+                    cb = glbl[callback];
+                } else if (typeof callback === 'object' && callback.length) {
+                    obj = typeof callback[0] === 'string' ? glbl[callback[0]] : callback[0];
+                    if (typeof obj === 'undefined') {
+                        throw 'Object not found: ' + callback[0];
+                    }
+                    cb = typeof callback[1] === 'string' ? obj[callback[1]] : callback[1];
+                }
+                tmp_ar[i++] = cb.apply(obj, tmp);
+            } else {
+                tmp_ar[i++] = tmp;
+            }
+
+            tmp = [];
+        }
+
+        return tmp_ar;
+    }, array_merge: function () {
+        //  discuss at: http://phpjs.org/functions/array_merge/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Nate
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //    input by: josh
+        //   example 1: arr1 = {"color": "red", 0: 2, 1: 4}
+        //   example 1: arr2 = {0: "a", 1: "b", "color": "green", "shape": "trapezoid", 2: 4}
+        //   example 1: array_merge(arr1, arr2)
+        //   returns 1: {"color": "green", 0: 2, 1: 4, 2: "a", 3: "b", "shape": "trapezoid", 4: 4}
+        //   example 2: arr1 = []
+        //   example 2: arr2 = {1: "data"}
+        //   example 2: array_merge(arr1, arr2)
+        //   returns 2: {0: "data"}
+
+        var args = Array.prototype.slice.call(arguments),
+            argl = args.length,
+            arg,
+            retObj = {},
+            k = '',
+            argil = 0,
+            j = 0,
+            i = 0,
+            ct = 0,
+            toStr = Object.prototype.toString,
+            retArr = true;
+
+        for (i = 0; i < argl; i++) {
+            if (toStr.call(args[i]) !== '[object Array]') {
+                retArr = false;
+                break;
+            }
+        }
+
+        if (retArr) {
+            retArr = [];
+            for (i = 0; i < argl; i++) {
+                retArr = retArr.concat(args[i]);
+            }
+            return retArr;
+        }
+
+        for (i = 0, ct = 0; i < argl; i++) {
+            arg = args[i];
+            if (toStr.call(arg) === '[object Array]') {
+                for (j = 0, argil = arg.length; j < argil; j++) {
+                    retObj[ct++] = arg[j];
+                }
+            } else {
+                for (k in arg) {
+                    if (arg.hasOwnProperty(k)) {
+                        if (parseInt(k, 10) + '' === k) {
+                            retObj[ct++] = arg[k];
+                        } else {
+                            retObj[k] = arg[k];
+                        }
+                    }
+                }
+            }
+        }
+        return retObj;
+    }, array_merge_recursive: function (arr1, arr2) {
+        //  discuss at: http://phpjs.org/functions/array_merge_recursive/
+        // original by: Subhasis Deb
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //  depends on: array_merge
+        //   example 1: arr1 = {'color': {'favourite': 'read'}, 0: 5}
+        //   example 1: arr2 = {0: 10, 'color': {'favorite': 'green', 0: 'blue'}}
+        //   example 1: array_merge_recursive(arr1, arr2)
+        //   returns 1: {'color': {'favorite': {0: 'red', 1: 'green'}, 0: 'blue'}, 1: 5, 1: 10}
+
+        var idx = '';
+
+        if (arr1 && Object.prototype.toString.call(arr1) === '[object Array]' &&
+            arr2 && Object.prototype.toString.call(arr2) === '[object Array]') {
+            for (idx in arr2) {
+                arr1.push(arr2[idx]);
+            }
+        } else if ((arr1 && (arr1 instanceof Object)) && (arr2 && (arr2 instanceof Object))) {
+            for (idx in arr2) {
+                if (idx in arr1) {
+                    if (typeof arr1[idx] === 'object' && typeof arr2 === 'object') {
+                        arr1[idx] = this.array_merge(arr1[idx], arr2[idx]);
+                    } else {
+                        arr1[idx] = arr2[idx];
+                    }
+                } else {
+                    arr1[idx] = arr2[idx];
+                }
+            }
+        }
+
+        return arr1;
+    }, array_multisort: function (arr) {
+        //  discuss at: http://phpjs.org/functions/array_multisort/
+        // original by: Theriault
+        //   example 1: array_multisort([1, 2, 1, 2, 1, 2], [1, 2, 3, 4, 5, 6]);
+        //   returns 1: true
+        //   example 2: characters = {A: 'Edward', B: 'Locke', C: 'Sabin', D: 'Terra', E: 'Edward'};
+        //   example 2: jobs = {A: 'Warrior', B: 'Thief', C: 'Monk', D: 'Mage', E: 'Knight'};
+        //   example 2: array_multisort(characters, 'SORT_DESC', 'SORT_STRING', jobs, 'SORT_ASC', 'SORT_STRING');
+        //   returns 2: true
+        //   example 3: lastnames = [ 'Carter','Adams','Monroe','Tyler','Madison','Kennedy','Adams'];
+        //   example 3: firstnames = ['James', 'John' ,'James', 'John', 'James',  'John',   'John'];
+        //   example 3: president = [ 39,      6,      5,       10,     4,       35,        2    ];
+        //   example 3: array_multisort(firstnames, 'SORT_DESC', 'SORT_STRING', lastnames, 'SORT_ASC', 'SORT_STRING', president, 'SORT_NUMERIC');
+        //   returns 3: true
+        //       flags: Translation table for sort arguments. Each argument turns on certain bits in the flag byte through addition.
+        //        bits: HGFE DCBA
+        //        args: Holds pointer to arguments for reassignment
+
+        var g, i, j, k, l, sal, vkey, elIndex, lastSorts, tmpArray, zlast;
+
+        var sortFlag = [0];
+        var thingsToSort = [];
+        var nLastSort = [];
+        var lastSort = [];
+        var args = arguments; // possibly redundant
+
+        var flags = {
+            'SORT_REGULAR': 16,
+            'SORT_NUMERIC': 17,
+            'SORT_STRING': 18,
+            'SORT_ASC': 32,
+            'SORT_DESC': 40
+        };
+
+        var sortDuplicator = function (a, b) {
+            return nLastSort.shift();
+        };
+
+        var sortFunctions = [
+            [
+                function (a, b) {
+                    lastSort.push(a > b ? 1 : (a < b ? -1 : 0));
+                    return a > b ? 1 : (a < b ? -1 : 0);
+                },
+                function (a, b) {
+                    lastSort.push(b > a ? 1 : (b < a ? -1 : 0));
+                    return b > a ? 1 : (b < a ? -1 : 0);
+                }
             ],
-            ini = (this.php_js && this.php_js.ini) || {},
-            mode = (ini['phpjs.parse_url.mode'] &&
-                ini['phpjs.parse_url.mode'].local_value) || 'php',
-            parser = {
-                php: /^(?:([^:\/?#]+):)?(?:\/\/()(?:(?:()(?:([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?))?()(?:(()(?:(?:[^?#\/]*\/)*)()(?:[^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
-                strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
-                loose: /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/\/?)?((?:(([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/ // Added one optional slash to post-scheme to catch file:/// (should restrict this)
+            [
+                function (a, b) {
+                    lastSort.push(a - b);
+                    return a - b;
+                },
+                function (a, b) {
+                    lastSort.push(b - a);
+                    return b - a;
+                }
+            ],
+            [
+                function (a, b) {
+                    lastSort.push((a + '') > (b + '') ? 1 : ((a + '') < (b + '') ? -1 : 0));
+                    return (a + '') > (b + '') ? 1 : ((a + '') < (b + '') ? -1 : 0);
+                },
+                function (a, b) {
+                    lastSort.push((b + '') > (a + '') ? 1 : ((b + '') < (a + '') ? -1 : 0));
+                    return (b + '') > (a + '') ? 1 : ((b + '') < (a + '') ? -1 : 0);
+                }
+            ]
+        ];
+
+        var sortArrs = [
+            []
+        ];
+
+        var sortKeys = [
+            []
+        ];
+
+        // Store first argument into sortArrs and sortKeys if an Object.
+        // First Argument should be either a Javascript Array or an Object, otherwise function would return FALSE like in PHP
+        if (Object.prototype.toString.call(arr) === '[object Array]') {
+            sortArrs[0] = arr;
+        } else if (arr && typeof arr === 'object') {
+            for (i in arr) {
+                if (arr.hasOwnProperty(i)) {
+                    sortKeys[0].push(i);
+                    sortArrs[0].push(arr[i]);
+                }
+            }
+        } else {
+            return false;
+        }
+
+        // arrMainLength: Holds the length of the first array. All other arrays must be of equal length, otherwise function would return FALSE like in PHP
+        //
+        // sortComponents: Holds 2 indexes per every section of the array that can be sorted. As this is the start, the whole array can be sorted.
+        var arrMainLength = sortArrs[0].length;
+        var sortComponents = [0, arrMainLength];
+
+        // Loop through all other arguments, checking lengths and sort flags of arrays and adding them to the above variables.
+        var argl = arguments.length;
+        for (j = 1; j < argl; j++) {
+            if (Object.prototype.toString.call(arguments[j]) === '[object Array]') {
+                sortArrs[j] = arguments[j];
+                sortFlag[j] = 0;
+                if (arguments[j].length !== arrMainLength) {
+                    return false;
+                }
+            } else if (arguments[j] && typeof arguments[j] === 'object') {
+                sortKeys[j] = [];
+                sortArrs[j] = [];
+                sortFlag[j] = 0;
+                for (i in arguments[j]) {
+                    if (arguments[j].hasOwnProperty(i)) {
+                        sortKeys[j].push(i);
+                        sortArrs[j].push(arguments[j][i]);
+                    }
+                }
+                if (sortArrs[j].length !== arrMainLength) {
+                    return false;
+                }
+            } else if (typeof arguments[j] === 'string') {
+                var lFlag = sortFlag.pop();
+                // Keep extra parentheses around latter flags check to avoid minimization leading to CDATA closer
+                if (typeof flags[arguments[j]] === 'undefined' || ((((flags[arguments[j]]) >>> 4) & (lFlag >>> 4)) > 0)) {
+                    return false;
+                }
+                sortFlag.push(lFlag + flags[arguments[j]]);
+            } else {
+                return false;
+            }
+        }
+
+        for (i = 0; i !== arrMainLength; i++) {
+            thingsToSort.push(true);
+        }
+
+        // Sort all the arrays....
+        for (i in sortArrs) {
+            if (sortArrs.hasOwnProperty(i)) {
+                lastSorts = [];
+                tmpArray = [];
+                elIndex = 0;
+                nLastSort = [];
+                lastSort = [];
+
+                // If there are no sortComponents, then no more sorting is neeeded. Copy the array back to the argument.
+                if (sortComponents.length === 0) {
+                    if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
+                        args[i] = sortArrs[i];
+                    } else {
+                        for (k in arguments[i]) {
+                            if (arguments[i].hasOwnProperty(k)) {
+                                delete arguments[i][k];
+                            }
+                        }
+                        sal = sortArrs[i].length;
+                        for (j = 0, vkey = 0; j < sal; j++) {
+                            vkey = sortKeys[i][j];
+                            args[i][vkey] = sortArrs[i][j];
+                        }
+                    }
+                    delete sortArrs[i];
+                    delete sortKeys[i];
+                    continue;
+                }
+
+                // Sort function for sorting. Either sorts asc or desc, regular/string or numeric.
+                var sFunction = sortFunctions[(sortFlag[i] & 3)][((sortFlag[i] & 8) > 0) ? 1 : 0];
+
+                // Sort current array.
+                for (l = 0; l !== sortComponents.length; l += 2) {
+                    tmpArray = sortArrs[i].slice(sortComponents[l], sortComponents[l + 1] + 1);
+                    tmpArray.sort(sFunction);
+                    lastSorts[l] = [].concat(lastSort); // Is there a better way to copy an array in Javascript?
+                    elIndex = sortComponents[l];
+                    for (g in tmpArray) {
+                        if (tmpArray.hasOwnProperty(g)) {
+                            sortArrs[i][elIndex] = tmpArray[g];
+                            elIndex++;
+                        }
+                    }
+                }
+
+                // Duplicate the sorting of the current array on future arrays.
+                sFunction = sortDuplicator;
+                for (j in sortArrs) {
+                    if (sortArrs.hasOwnProperty(j)) {
+                        if (sortArrs[j] === sortArrs[i]) {
+                            continue;
+                        }
+                        for (l = 0; l !== sortComponents.length; l += 2) {
+                            tmpArray = sortArrs[j].slice(sortComponents[l], sortComponents[l + 1] + 1);
+                            nLastSort = [].concat(lastSorts[l]); // alert(l + ':' + nLastSort);
+                            tmpArray.sort(sFunction);
+                            elIndex = sortComponents[l];
+                            for (g in tmpArray) {
+                                if (tmpArray.hasOwnProperty(g)) {
+                                    sortArrs[j][elIndex] = tmpArray[g];
+                                    elIndex++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Duplicate the sorting of the current array on array keys
+                for (j in sortKeys) {
+                    if (sortKeys.hasOwnProperty(j)) {
+                        for (l = 0; l !== sortComponents.length; l += 2) {
+                            tmpArray = sortKeys[j].slice(sortComponents[l], sortComponents[l + 1] + 1);
+                            nLastSort = [].concat(lastSorts[l]);
+                            tmpArray.sort(sFunction);
+                            elIndex = sortComponents[l];
+                            for (g in tmpArray) {
+                                if (tmpArray.hasOwnProperty(g)) {
+                                    sortKeys[j][elIndex] = tmpArray[g];
+                                    elIndex++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Generate the next sortComponents
+                zlast = null;
+                sortComponents = [];
+                for (j in sortArrs[i]) {
+                    if (sortArrs[i].hasOwnProperty(j)) {
+                        if (!thingsToSort[j]) {
+                            if ((sortComponents.length & 1)) {
+                                sortComponents.push(j - 1);
+                            }
+                            zlast = null;
+                            continue;
+                        }
+                        if (!(sortComponents.length & 1)) {
+                            if (zlast !== null) {
+                                if (sortArrs[i][j] === zlast) {
+                                    sortComponents.push(j - 1);
+                                } else {
+                                    thingsToSort[j] = false;
+                                }
+                            }
+                            zlast = sortArrs[i][j];
+                        } else {
+                            if (sortArrs[i][j] !== zlast) {
+                                sortComponents.push(j - 1);
+                                zlast = sortArrs[i][j];
+                            }
+                        }
+                    }
+                }
+
+                if (sortComponents.length & 1) {
+                    sortComponents.push(j);
+                }
+                if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
+                    args[i] = sortArrs[i];
+                } else {
+                    for (j in arguments[i]) {
+                        if (arguments[i].hasOwnProperty(j)) {
+                            delete arguments[i][j];
+                        }
+                    }
+
+                    sal = sortArrs[i].length;
+                    for (j = 0, vkey = 0; j < sal; j++) {
+                        vkey = sortKeys[i][j];
+                        args[i][vkey] = sortArrs[i][j];
+                    }
+
+                }
+                delete sortArrs[i];
+                delete sortKeys[i];
+            }
+        }
+        return true;
+    }, array_pad: function (input, pad_size, pad_value) {
+        //  discuss at: http://phpjs.org/functions/array_pad/
+        // original by: Waldo Malqui Silva
+        //   example 1: array_pad([ 7, 8, 9 ], 2, 'a');
+        //   returns 1: [ 7, 8, 9]
+        //   example 2: array_pad([ 7, 8, 9 ], 5, 'a');
+        //   returns 2: [ 7, 8, 9, 'a', 'a']
+        //   example 3: array_pad([ 7, 8, 9 ], 5, 2);
+        //   returns 3: [ 7, 8, 9, 2, 2]
+        //   example 4: array_pad([ 7, 8, 9 ], -5, 'a');
+        //   returns 4: [ 'a', 'a', 7, 8, 9 ]
+
+        var pad = [],
+            newArray = [],
+            newLength,
+            diff = 0,
+            i = 0;
+
+        if (Object.prototype.toString.call(input) === '[object Array]' && !isNaN(pad_size)) {
+            newLength = ((pad_size < 0) ? (pad_size * -1) : pad_size);
+            diff = newLength - input.length;
+
+            if (diff > 0) {
+                for (i = 0; i < diff; i++) {
+                    newArray[i] = pad_value;
+                }
+                pad = ((pad_size < 0) ? newArray.concat(input) : input.concat(newArray));
+            } else {
+                pad = input;
+            }
+        }
+
+        return pad;
+    }, array_pop: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/array_pop/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Theriault
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //        note: While IE (and other browsers) support iterating an object's
+        //        note: own properties in order, if one attempts to add back properties
+        //        note: in IE, they may end up in their former position due to their position
+        //        note: being retained. So use of this function with "associative arrays"
+        //        note: (objects) may lead to unexpected behavior in an IE environment if
+        //        note: you add back properties with the same keys that you removed
+        //   example 1: array_pop([0,1,2]);
+        //   returns 1: 2
+        //   example 2: data = {firstName: 'Kevin', surName: 'van Zonneveld'};
+        //   example 2: lastElem = array_pop(data);
+        //   example 2: $result = data
+        //   returns 2: {firstName: 'Kevin'}
+
+        var key = '',
+            lastKey = '';
+
+        if (inputArr.hasOwnProperty('length')) {
+            // Indexed
+            if (!inputArr.length) {
+                // Done popping, are we?
+                return null;
+            }
+            return inputArr.pop();
+        } else {
+            // Associative
+            for (key in inputArr) {
+                if (inputArr.hasOwnProperty(key)) {
+                    lastKey = key;
+                }
+            }
+            if (lastKey) {
+                var tmp = inputArr[lastKey];
+                delete (inputArr[lastKey]);
+                return tmp;
+            } else {
+                return null;
+            }
+        }
+    }, array_product: function (input) {
+        //  discuss at: http://phpjs.org/functions/array_product/
+        // original by: Waldo Malqui Silva
+        //   example 1: array_product([ 2, 4, 6, 8 ]);
+        //   returns 1: 384
+
+        var idx = 0,
+            product = 1,
+            il = 0;
+
+        if (Object.prototype.toString.call(input) !== '[object Array]') {
+            return null;
+        }
+
+        il = input.length;
+        while (idx < il) {
+            product *= (!isNaN(input[idx]) ? input[idx] : 0);
+            idx++;
+        }
+        return product;
+    }, array_push: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/array_push/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: Note also that IE retains information about property position even
+        //        note: after being supposedly deleted, so if you delete properties and then
+        //        note: add back properties with the same keys (including numeric) that had
+        //        note: been deleted, the order will be as before; thus, this function is not
+        //        note: really recommended with associative arrays (objects) in IE environments
+        //   example 1: array_push(['kevin','van'], 'zonneveld');
+        //   returns 1: 3
+
+        var i = 0,
+            pr = '',
+            argv = arguments,
+            argc = argv.length,
+            allDigits = /^\d$/,
+            size = 0,
+            highestIdx = 0,
+            len = 0;
+        if (inputArr.hasOwnProperty('length')) {
+            for (i = 1; i < argc; i++) {
+                inputArr[inputArr.length] = argv[i];
+            }
+            return inputArr.length;
+        }
+
+        // Associative (object)
+        for (pr in inputArr) {
+            if (inputArr.hasOwnProperty(pr)) {
+                ++len;
+                if (pr.search(allDigits) !== -1) {
+                    size = parseInt(pr, 10);
+                    highestIdx = size > highestIdx ? size : highestIdx;
+                }
+            }
+        }
+        for (i = 1; i < argc; i++) {
+            inputArr[++highestIdx] = argv[i];
+        }
+        return len + i - 1;
+    }, array_rand: function (input, num_req) {
+        //  discuss at: http://phpjs.org/functions/array_rand/
+        // original by: Waldo Malqui Silva
+        //   example 1: array_rand( ['Kevin'], 1 );
+        //   returns 1: 0
+
+        var indexes = [];
+        var ticks = num_req || 1;
+        var checkDuplicate = function (input, value) {
+            var exist = false,
+                index = 0,
+                il = input.length;
+            while (index < il) {
+                if (input[index] === value) {
+                    exist = true;
+                    break;
+                }
+                index++;
+            }
+            return exist;
+        };
+
+        if (Object.prototype.toString.call(input) === '[object Array]' && ticks <= input.length) {
+            while (true) {
+                var rand = Math.floor((Math.random() * input.length));
+                if (indexes.length === ticks) {
+                    break;
+                }
+                if (!checkDuplicate(indexes, rand)) {
+                    indexes.push(rand);
+                }
+            }
+        } else {
+            indexes = null;
+        }
+
+        return ((ticks == 1) ? indexes.join() : indexes);
+    }, array_reduce: function (a_input, callback) {
+        //  discuss at: http://phpjs.org/functions/array_reduce/
+        // original by: Alfonso Jimenez (http://www.alfonsojimenez.com)
+        //        note: Takes a function as an argument, not a function's name
+        //   example 1: array_reduce([1, 2, 3, 4, 5], function (v, w){v += w;return v;});
+        //   returns 1: 15
+
+        var lon = a_input.length;
+        var res = 0,
+            i = 0;
+        var tmp = [];
+
+        for (i = 0; i < lon; i += 2) {
+            tmp[0] = a_input[i];
+            if (a_input[(i + 1)]) {
+                tmp[1] = a_input[(i + 1)];
+            } else {
+                tmp[1] = 0;
+            }
+            res += callback.apply(null, tmp);
+            tmp = [];
+        }
+
+        return res;
+    }, array_replace: function (arr) {
+        //  discuss at: http://phpjs.org/functions/array_replace/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_replace(["orange", "banana", "apple", "raspberry"], {0 : "pineapple", 4 : "cherry"}, {0:"grape"});
+        //   returns 1: {0: 'grape', 1: 'banana', 2: 'apple', 3: 'raspberry', 4: 'cherry'}
+
+        var retObj = {},
+            i = 0,
+            p = '',
+            argl = arguments.length;
+
+        if (argl < 2) {
+            throw new Error('There should be at least 2 arguments passed to array_replace()');
+        }
+
+        // Although docs state that the arguments are passed in by reference, it seems they are not altered, but rather the copy that is returned (just guessing), so we make a copy here, instead of acting on arr itself
+        for (p in arr) {
+            retObj[p] = arr[p];
+        }
+
+        for (i = 1; i < argl; i++) {
+            for (p in arguments[i]) {
+                retObj[p] = arguments[i][p];
+            }
+        }
+        return retObj;
+    }, array_replace_recursive: function (arr) {
+        //  discuss at: http://phpjs.org/functions/array_replace_recursive/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_replace_recursive({'citrus' : ["orange"], 'berries' : ["blackberry", "raspberry"]}, {'citrus' : ['pineapple'], 'berries' : ['blueberry']});
+        //   returns 1: {citrus : ['pineapple'], berries : ['blueberry', 'raspberry']}
+
+        var retObj = {},
+            i = 0,
+            p = '',
+            argl = arguments.length;
+
+        if (argl < 2) {
+            throw new Error('There should be at least 2 arguments passed to array_replace_recursive()');
+        }
+
+        // Although docs state that the arguments are passed in by reference, it seems they are not altered, but rather the copy that is returned (just guessing), so we make a copy here, instead of acting on arr itself
+        for (p in arr) {
+            retObj[p] = arr[p];
+        }
+
+        for (i = 1; i < argl; i++) {
+            for (p in arguments[i]) {
+                if (retObj[p] && typeof retObj[p] === 'object') {
+                    retObj[p] = this.array_replace_recursive(retObj[p], arguments[i][p]);
+                } else {
+                    retObj[p] = arguments[i][p];
+                }
+            }
+        }
+        return retObj;
+    }, array_reverse: function (array, preserve_keys) {
+        //  discuss at: http://phpjs.org/functions/array_reverse/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Karol Kowalski
+        //   example 1: array_reverse( [ 'php', '4.0', ['green', 'red'] ], true);
+        //   returns 1: { 2: ['green', 'red'], 1: 4, 0: 'php'}
+
+        var isArray = Object.prototype.toString.call(array) === '[object Array]',
+            tmp_arr = preserve_keys ? {} : [],
+            key;
+
+        if (isArray && !preserve_keys) {
+            return array.slice(0)
+                .reverse();
+        }
+
+        if (preserve_keys) {
+            var keys = [];
+            for (key in array) {
+                // if (array.hasOwnProperty(key)) {
+                keys.push(key);
+                // }
+            }
+
+            var i = keys.length;
+            while (i--) {
+                key = keys[i];
+                // FIXME: don't rely on browsers keeping keys in insertion order
+                // it's implementation specific
+                // eg. the result will differ from expected in Google Chrome
+                tmp_arr[key] = array[key];
+            }
+        } else {
+            for (key in array) {
+                // if (array.hasOwnProperty(key)) {
+                tmp_arr.unshift(array[key]);
+                // }
+            }
+        }
+
+        return tmp_arr;
+    }, array_search: function (needle, haystack, argStrict) {
+        //  discuss at: http://phpjs.org/functions/array_search/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //  depends on: array
+        //        test: skip
+        //   example 1: array_search('zonneveld', {firstname: 'kevin', middle: 'van', surname: 'zonneveld'});
+        //   returns 1: 'surname'
+        //   example 2: ini_set('phpjs.return_phpjs_arrays', 'on');
+        //   example 2: var ordered_arr = array({3:'value'}, {2:'value'}, {'a':'value'}, {'b':'value'});
+        //   example 2: var key = array_search(/val/g, ordered_arr); // or var key = ordered_arr.search(/val/g);
+        //   returns 2: '3'
+
+        var strict = !!argStrict,
+            key = '';
+
+        if (haystack && typeof haystack === 'object' && haystack.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
+            return haystack.search(needle, argStrict);
+        }
+        if (typeof needle === 'object' && needle.exec) { // Duck-type for RegExp
+            if (!strict) { // Let's consider case sensitive searches as strict
+                var flags = 'i' + (needle.global ? 'g' : '') +
+                    (needle.multiline ? 'm' : '') +
+                    (needle.sticky ? 'y' : ''); // sticky is FF only
+                needle = new RegExp(needle.source, flags);
+            }
+            for (key in haystack) {
+                if (needle.test(haystack[key])) {
+                    return key;
+                }
+            }
+            return false;
+        }
+
+        for (key in haystack) {
+            if ((strict && haystack[key] === needle) || (!strict && haystack[key] == needle)) {
+                return key;
+            }
+        }
+
+        return false;
+    }, array_shift: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/array_shift/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Martijn Wieringa
+        //        note: Currently does not handle objects
+        //   example 1: array_shift(['Kevin', 'van', 'Zonneveld']);
+        //   returns 1: 'Kevin'
+
+        var props = false,
+            shift = undefined,
+            pr = '',
+            allDigits = /^\d$/,
+            int_ct = -1,
+            _checkToUpIndices = function (arr, ct, key) {
+                // Deal with situation, e.g., if encounter index 4 and try to set it to 0, but 0 exists later in loop (need to
+                // increment all subsequent (skipping current key, since we need its value below) until find unused)
+                if (arr[ct] !== undefined) {
+                    var tmp = ct;
+                    ct += 1;
+                    if (ct === key) {
+                        ct += 1;
+                    }
+                    ct = _checkToUpIndices(arr, ct, key);
+                    arr[ct] = arr[tmp];
+                    delete arr[tmp];
+                }
+                return ct;
             };
 
-        var m = parser[mode].exec(str),
-            uri = {},
-            i = 14;
-        while (i--) {
-            if (m[i]) {
-                uri[key[i]] = m[i];
+        if (inputArr.length === 0) {
+            return null;
+        }
+        if (inputArr.length > 0) {
+            return inputArr.shift();
+        }
+
+        /*
+  UNFINISHED FOR HANDLING OBJECTS
+  for (pr in inputArr) {
+    if (inputArr.hasOwnProperty(pr)) {
+      props = true;
+      shift = inputArr[pr];
+      delete inputArr[pr];
+      break;
+    }
+  }
+  for (pr in inputArr) {
+    if (inputArr.hasOwnProperty(pr)) {
+      if (pr.search(allDigits) !== -1) {
+        int_ct += 1;
+        if (parseInt(pr, 10) === int_ct) { // Key is already numbered ok, so don't need to change key for value
+          continue;
+        }
+        _checkToUpIndices(inputArr, int_ct, pr);
+        arr[int_ct] = arr[pr];
+        delete arr[pr];
+      }
+    }
+  }
+  if (!props) {
+    return null;
+  }
+  return shift;
+  */
+    }, array_slice: function (arr, offst, lgth, preserve_keys) {
+        //  discuss at: http://phpjs.org/functions/array_slice/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: is_int
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //        note: Relies on is_int because !isNaN accepts floats
+        //   example 1: array_slice(["a", "b", "c", "d", "e"], 2, -1);
+        //   returns 1: {0: 'c', 1: 'd'}
+        //   example 2: array_slice(["a", "b", "c", "d", "e"], 2, -1, true);
+        //   returns 2: {2: 'c', 3: 'd'}
+
+        /*
+  if ('callee' in arr && 'length' in arr) {
+    arr = Array.prototype.slice.call(arr);
+  }
+  */
+
+        var key = '';
+
+        if (Object.prototype.toString.call(arr) !== '[object Array]' ||
+            (preserve_keys && offst !== 0)) { // Assoc. array as input or if required as output
+            var lgt = 0,
+                newAssoc = {};
+            for (key in arr) {
+                //if (key !== 'length') {
+                lgt += 1;
+                newAssoc[key] = arr[key];
+                //}
+            }
+            arr = newAssoc;
+
+            offst = (offst < 0) ? lgt + offst : offst;
+            lgth = lgth === undefined ? lgt : (lgth < 0) ? lgt + lgth - offst : lgth;
+
+            var assoc = {};
+            var start = false,
+                it = -1,
+                arrlgth = 0,
+                no_pk_idx = 0;
+            for (key in arr) {
+                ++it;
+                if (arrlgth >= lgth) {
+                    break;
+                }
+                if (it == offst) {
+                    start = true;
+                }
+                if (!start) {
+                    continue;
+                }
+                ++arrlgth;
+                if (this.is_int(key) && !preserve_keys) {
+                    assoc[no_pk_idx++] = arr[key];
+                } else {
+                    assoc[key] = arr[key];
+                }
+            }
+            //assoc.length = arrlgth; // Make as array-like object (though length will not be dynamic)
+            return assoc;
+        }
+
+        if (lgth === undefined) {
+            return arr.slice(offst);
+        } else if (lgth >= 0) {
+            return arr.slice(offst, offst + lgth);
+        } else {
+            return arr.slice(offst, lgth);
+        }
+    }, array_splice: function (arr, offst, lgth, replacement) {
+        //  discuss at: http://phpjs.org/functions/array_splice/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Theriault
+        //        note: Order does get shifted in associative array input with numeric indices,
+        //        note: since PHP behavior doesn't preserve keys, but I understand order is
+        //        note: not reliable anyways
+        //        note: Note also that IE retains information about property position even
+        //        note: after being supposedly deleted, so use of this function may produce
+        //        note: unexpected results in IE if you later attempt to add back properties
+        //        note: with the same keys that had been deleted
+        //  depends on: is_int
+        //   example 1: input = {4: "red", 'abc': "green", 2: "blue", 'dud': "yellow"};
+        //   example 1: array_splice(input, 2);
+        //   returns 1: {0: "blue", 'dud': "yellow"}
+        //   example 2: input = ["red", "green", "blue", "yellow"];
+        //   example 2: array_splice(input, 3, 0, "purple");
+        //   returns 2: []
+        //   example 3: input = ["red", "green", "blue", "yellow"]
+        //   example 3: array_splice(input, -1, 1, ["black", "maroon"]);
+        //   returns 3: ["yellow"]
+
+        var _checkToUpIndices = function (arr, ct, key) {
+            // Deal with situation, e.g., if encounter index 4 and try to set it to 0, but 0 exists later in loop (need to
+            // increment all subsequent (skipping current key, since we need its value below) until find unused)
+            if (arr[ct] !== undefined) {
+                var tmp = ct;
+                ct += 1;
+                if (ct === key) {
+                    ct += 1;
+                }
+                ct = _checkToUpIndices(arr, ct, key);
+                arr[ct] = arr[tmp];
+                delete arr[tmp];
+            }
+            return ct;
+        };
+
+        if (replacement && typeof replacement !== 'object') {
+            replacement = [replacement];
+        }
+        if (lgth === undefined) {
+            lgth = offst >= 0 ? arr.length - offst : -offst;
+        } else if (lgth < 0) {
+            lgth = (offst >= 0 ? arr.length - offst : -offst) + lgth;
+        }
+
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            /*if (arr.length !== undefined) { // Deal with array-like objects as input
+    delete arr.length;
+    }*/
+            var lgt = 0,
+                ct = -1,
+                rmvd = [],
+                rmvdObj = {},
+                repl_ct = -1,
+                int_ct = -1;
+            var returnArr = true,
+                rmvd_ct = 0,
+                rmvd_lgth = 0,
+                key = '';
+            // rmvdObj.length = 0;
+            for (key in arr) { // Can do arr.__count__ in some browsers
+                lgt += 1;
+            }
+            offst = (offst >= 0) ? offst : lgt + offst;
+            for (key in arr) {
+                ct += 1;
+                if (ct < offst) {
+                    if (this.is_int(key)) {
+                        int_ct += 1;
+                        if (parseInt(key, 10) === int_ct) { // Key is already numbered ok, so don't need to change key for value
+                            continue;
+                        }
+                        _checkToUpIndices(arr, int_ct, key); // Deal with situation, e.g.,
+                        // if encounter index 4 and try to set it to 0, but 0 exists later in loop
+                        arr[int_ct] = arr[key];
+                        delete arr[key];
+                    }
+                    continue;
+                }
+                if (returnArr && this.is_int(key)) {
+                    rmvd.push(arr[key]);
+                    rmvdObj[rmvd_ct++] = arr[key]; // PHP starts over here too
+                } else {
+                    rmvdObj[key] = arr[key];
+                    returnArr = false;
+                }
+                rmvd_lgth += 1;
+                // rmvdObj.length += 1;
+                if (replacement && replacement[++repl_ct]) {
+                    arr[key] = replacement[repl_ct];
+                } else {
+                    delete arr[key];
+                }
+            }
+            // arr.length = lgt - rmvd_lgth + (replacement ? replacement.length : 0); // Make (back) into an array-like object
+            return returnArr ? rmvd : rmvdObj;
+        }
+
+        if (replacement) {
+            replacement.unshift(offst, lgth);
+            return Array.prototype.splice.apply(arr, replacement);
+        }
+        return arr.splice(offst, lgth);
+    }, array_sum: function (array) {
+        //  discuss at: http://phpjs.org/functions/array_sum/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Nate
+        // bugfixed by: Gilbert
+        // improved by: David Pilia (http://www.beteck.it/)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_sum([4, 9, 182.6]);
+        //   returns 1: 195.6
+        //   example 2: total = []; index = 0.1; for (y=0; y < 12; y++){total[y] = y + index;}
+        //   example 2: array_sum(total);
+        //   returns 2: 67.2
+
+        var key, sum = 0;
+
+        if (array && typeof array === 'object' && array.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
+            return array.sum.apply(array, Array.prototype.slice.call(arguments, 0));
+        }
+
+        // input sanitation
+        if (typeof array !== 'object') {
+            return null;
+        }
+
+        for (key in array) {
+            if (!isNaN(parseFloat(array[key]))) {
+                sum += parseFloat(array[key]);
             }
         }
 
-        if (component) {
-            return uri[component.replace('PHP_URL_', '')
-                .toLowerCase()];
-        }
-        if (mode !== 'php') {
-            var name = (ini['phpjs.parse_url.queryKey'] &&
-                ini['phpjs.parse_url.queryKey'].local_value) || 'queryKey';
-            parser = /(?:^|&)([^&=]*)=?([^&]*)/g;
-            uri[name] = {};
-            query = uri[key[12]] || '';
-            query.replace(parser, function ($0, $1, $2) {
-                if ($1) {
-                    uri[name][$1] = $2;
+        return sum;
+    }, array_udiff: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_udiff/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_udiff($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {c: 'blue'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            cb = arguments[arglm1],
+            arr = '',
+            i = 1,
+            k1 = '',
+            k = '';
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb(arr[k], arr1[k1]) === 0) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
                 }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_udiff_assoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_udiff_assoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_udiff_assoc({0: 'kevin', 1: 'van', 2: 'Zonneveld'}, {0: 'Kevin', 4: 'van', 5: 'Zonneveld'}, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {1: 'van', 2: 'Zonneveld'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            cb = arguments[arglm1],
+            arr = {},
+            i = 1,
+            k1 = '',
+            k = '';
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb(arr[k], arr1[k1]) === 0 && k === k1) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_udiff_uassoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_udiff_uassoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_udiff_uassoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;}, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {0: 'red', c: 'blue'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            arglm2 = arglm1 - 1,
+            cb = arguments[arglm1],
+            cb0 = arguments[arglm2],
+            k1 = '',
+            i = 1,
+            k = '',
+            arr = {};
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+        cb0 = (typeof cb0 === 'string') ? this.window[cb0] : (Object.prototype.toString.call(cb0) === '[object Array]') ?
+            this.window[cb0[0]][cb0[1]] : cb0;
+
+        arr1keys: for (k1 in arr1) {
+            for (i = 1; i < arglm2; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb0(arr[k], arr1[k1]) === 0 && cb(k, k1) === 0) {
+                        // If it reaches here, it was found in at least one array, so try next value
+                        continue arr1keys;
+                    }
+                }
+                retArr[k1] = arr1[k1];
+            }
+        }
+
+        return retArr;
+    }, array_uintersect: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_uintersect/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Demosthenes Koptsis
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_uintersect($array1, $array2, function( f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {a: 'green', b: 'brown', 0: 'red'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            arglm2 = arglm1 - 1,
+            cb = arguments[arglm1],
+            k1 = '',
+            i = 1,
+            arr = {},
+            k = '';
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb(arr[k], arr1[k1]) === 0) {
+                        if (i === arglm2) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_uintersect_assoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_uintersect_assoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_uintersect_assoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {a: 'green', b: 'brown'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            arglm2 = arglm1 - 2,
+            cb = arguments[arglm1],
+            k1 = '',
+            i = 1,
+            arr = {},
+            k = '';
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < arglm1; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (k === k1 && cb(arr[k], arr1[k1]) === 0) {
+                        if (i === arglm2) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                        continue arrs;
+                    }
+                }
+                // If it reaches here, it wasn't found in at least one array, so try next value
+                continue arr1keys;
+            }
+        }
+
+        return retArr;
+    }, array_uintersect_uassoc: function (arr1) {
+        //  discuss at: http://phpjs.org/functions/array_uintersect_uassoc/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: $array1 = {a: 'green', b: 'brown', c: 'blue', 0: 'red'}
+        //   example 1: $array2 = {a: 'GREEN', B: 'brown', 0: 'yellow', 1: 'red'}
+        //   example 1: array_uintersect_uassoc($array1, $array2, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;}, function (f_string1, f_string2){var string1 = (f_string1+'').toLowerCase(); var string2 = (f_string2+'').toLowerCase(); if (string1 > string2) return 1; if (string1 == string2) return 0; return -1;});
+        //   returns 1: {a: 'green', b: 'brown'}
+
+        var retArr = {},
+            arglm1 = arguments.length - 1,
+            arglm2 = arglm1 - 1,
+            cb = arguments[arglm1],
+            cb0 = arguments[arglm2],
+            k1 = '',
+            i = 1,
+            k = '',
+            arr = {};
+
+        cb = (typeof cb === 'string') ? this.window[cb] : (Object.prototype.toString.call(cb) === '[object Array]') ? this.window[
+            cb[0]][cb[1]] : cb;
+        cb0 = (typeof cb0 === 'string') ? this.window[cb0] : (Object.prototype.toString.call(cb0) === '[object Array]') ?
+            this.window[cb0[0]][cb0[1]] : cb0;
+
+        arr1keys: for (k1 in arr1) {
+            arrs: for (i = 1; i < arglm2; i++) {
+                arr = arguments[i];
+                for (k in arr) {
+                    if (cb0(arr[k], arr1[k1]) === 0 && cb(k, k1) === 0) {
+                        if (i === arguments.length - 3) {
+                            retArr[k1] = arr1[k1];
+                        }
+                        continue arrs; // If the innermost loop always leads at least once to an equal value, continue the loop until done
+                    }
+                }
+                continue arr1keys; // If it reaches here, it wasn't found in at least one array, so try next value
+            }
+        }
+
+        return retArr;
+    }, array_unique: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/array_unique/
+        // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
+        //    input by: duncan
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Nate
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Michael Grier
+        //        note: The second argument, sort_flags is not implemented;
+        //        note: also should be sorted (asort?) first according to docs
+        //   example 1: array_unique(['Kevin','Kevin','van','Zonneveld','Kevin']);
+        //   returns 1: {0: 'Kevin', 2: 'van', 3: 'Zonneveld'}
+        //   example 2: array_unique({'a': 'green', 0: 'red', 'b': 'green', 1: 'blue', 2: 'red'});
+        //   returns 2: {a: 'green', 0: 'red', 1: 'blue'}
+
+        var key = '',
+            tmp_arr2 = {},
+            val = '';
+
+        var __array_search = function (needle, haystack) {
+            var fkey = '';
+            for (fkey in haystack) {
+                if (haystack.hasOwnProperty(fkey)) {
+                    if ((haystack[fkey] + '') === (needle + '')) {
+                        return fkey;
+                    }
+                }
+            }
+            return false;
+        };
+
+        for (key in inputArr) {
+            if (inputArr.hasOwnProperty(key)) {
+                val = inputArr[key];
+                if (false === __array_search(val, tmp_arr2)) {
+                    tmp_arr2[key] = val;
+                }
+            }
+        }
+
+        return tmp_arr2;
+    }, array_unshift: function (array) {
+        //  discuss at: http://phpjs.org/functions/array_unshift/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Martijn Wieringa
+        // improved by: jmweb
+        //        note: Currently does not handle objects
+        //   example 1: array_unshift(['van', 'Zonneveld'], 'Kevin');
+        //   returns 1: 3
+
+        var i = arguments.length;
+
+        while (--i !== 0) {
+            arguments[0].unshift(arguments[i]);
+        }
+
+        return arguments[0].length;
+    }, array_values: function (input) {
+        //  discuss at: http://phpjs.org/functions/array_values/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: array_values( {firstname: 'Kevin', surname: 'van Zonneveld'} );
+        //   returns 1: {0: 'Kevin', 1: 'van Zonneveld'}
+
+        var tmp_arr = [],
+            key = '';
+
+        if (input && typeof input === 'object' && input.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
+            return input.values();
+        }
+
+        for (key in input) {
+            tmp_arr[tmp_arr.length] = input[key];
+        }
+
+        return tmp_arr;
+    }, array_walk: function (array, funcname, userdata) {
+        //  discuss at: http://phpjs.org/functions/array_walk/
+        // original by: Johnny Mast (http://www.phpvrouwen.nl)
+        // bugfixed by: David
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: array
+        //        note: Using ini_set('phpjs.no-eval', true) will only work with
+        //        note: user-defined string functions, not built-in functions like void()
+        //        test: skip
+        //   example 1: array_walk ({'a':'b'}, 'void', 'userdata');
+        //   returns 1: true
+        //   example 2: array_walk ('a', 'void', 'userdata');
+        //   returns 2: false
+        //   example 3: array_walk ([3, 4], function () {}, 'userdata');
+        //   returns 3: true
+        //   example 4: array_walk ({40: 'My age', 50: 'My IQ'}, [window, 'prompt']);
+        //   returns 4: true
+        //   example 5: ini_set('phpjs.return_phpjs_arrays', 'on');
+        //   example 5: var arr = array({40: 'My age'}, {50: 'My IQ'});
+        //   example 5: array_walk(arr, [window, 'prompt']);
+        //   returns 5: '[object Object]'
+
+        var key, value, ini;
+
+        if (!array || typeof array !== 'object') {
+            return false;
+        }
+        if (typeof array === 'object' && array.change_key_case) { // Duck-type check for our own array()-created PHPJS_Array
+            if (arguments.length > 2) {
+                return array.walk(funcname, userdata);
+            } else {
+                return array.walk(funcname);
+            }
+        }
+
+        try {
+            if (typeof funcname === 'function') {
+                for (key in array) {
+                    if (arguments.length > 2) {
+                        funcname(array[key], key, userdata);
+                    } else {
+                        funcname(array[key], key);
+                    }
+                }
+            } else if (typeof funcname === 'string') {
+                this.php_js = this.php_js || {};
+                this.php_js.ini = this.php_js.ini || {};
+                ini = this.php_js.ini['phpjs.no-eval'];
+                if (ini && (
+                    parseInt(ini.local_value, 10) !== 0 && (!ini.local_value.toLowerCase || ini.local_value.toLowerCase() !==
+                        'off')
+                )) {
+                    if (arguments.length > 2) {
+                        for (key in array) {
+                            this.window[funcname](array[key], key, userdata);
+                        }
+                    } else {
+                        for (key in array) {
+                            this.window[funcname](array[key], key);
+                        }
+                    }
+                } else {
+                    if (arguments.length > 2) {
+                        for (key in array) {
+                            eval(funcname + '(array[key], key, userdata)');
+                        }
+                    } else {
+                        for (key in array) {
+                            eval(funcname + '(array[key], key)');
+                        }
+                    }
+                }
+            } else if (funcname && typeof funcname === 'object' && funcname.length === 2) {
+                var obj = funcname[0],
+                    func = funcname[1];
+                if (arguments.length > 2) {
+                    for (key in array) {
+                        obj[func](array[key], key, userdata);
+                    }
+                } else {
+                    for (key in array) {
+                        obj[func](array[key], key);
+                    }
+                }
+            } else {
+                return false;
+            }
+        } catch (e) {
+            return false;
+        }
+
+        return true;
+    }, array_walk_recursive: function (array, funcname, userdata) {
+        //  discuss at: http://phpjs.org/functions/array_walk_recursive/
+        // original by: Johnny Mast (http://www.phpvrouwen.nl)
+        //   example 1: array_walk_recursive ({'a': 'b', 'c': {'d': 'e'}}, 'void', 'userdata');
+        //   returns 1: true
+        //   example 2: array_walk_recursive ('a', 'void', 'userdata');
+        //   returns 2: false
+
+        var key;
+
+        if (typeof array !== 'object') {
+            return false;
+        }
+
+        for (key in array) {
+            if (typeof array[key] === 'object') {
+                return this.array_walk_recursive(array[key], funcname, userdata);
+            }
+
+            if (typeof userdata !== 'undefined') {
+                eval(funcname + '( array [key] , key , userdata  )');
+            } else {
+                eval(funcname + '(  userdata ) ');
+            }
+        }
+
+        return true;
+    }, arsort: function (inputArr, sort_flags) {
+        //  discuss at: http://phpjs.org/functions/arsort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
+        //        note: integrated into all of these functions by adapting the code at
+        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
+        //        note: The examples are correct, this is a new way
+        //        note: Credits to: http://javascript.internet.com/math-related/bubble-sort.html
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: Since JS objects' keys are always strings, and (the
+        //        note: default) SORT_REGULAR flag distinguishes by key type,
+        //        note: if the content is a numeric string, we treat the
+        //        note: "original type" as numeric.
+        //  depends on: i18n_loc_get_default
+        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 1: data = arsort(data);
+        //   returns 1: data == {a: 'orange', d: 'lemon', b: 'banana', c: 'apple'}
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 2: arsort(data);
+        //   example 2: $result = data;
+        //   returns 2: {a: 'orange', d: 'lemon', b: 'banana', c: 'apple'}
+
+        var valArr = [],
+            valArrLen = 0,
+            k, i, ret, sorter, that = this,
+            strictForIn = false,
+            populateArr = {};
+
+        switch (sort_flags) {
+            case 'SORT_STRING':
+                // compare items as strings
+                sorter = function (a, b) {
+                    return that.strnatcmp(b, a);
+                };
+                break;
+            case 'SORT_LOCALE_STRING':
+                // compare items as strings, original by the current locale (set with i18n_loc_set_default() as of PHP6)
+                var loc = this.i18n_loc_get_default();
+                sorter = this.php_js.i18nLocales[loc].sorting;
+                break;
+            case 'SORT_NUMERIC':
+                // compare items numerically
+                sorter = function (a, b) {
+                    return (a - b);
+                };
+                break;
+            case 'SORT_REGULAR':
+            // compare items normally (don't change types)
+            default:
+                sorter = function (b, a) {
+                    var aFloat = parseFloat(a),
+                        bFloat = parseFloat(b),
+                        aNumeric = aFloat + '' === a,
+                        bNumeric = bFloat + '' === b;
+                    if (aNumeric && bNumeric) {
+                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
+                    } else if (aNumeric && !bNumeric) {
+                        return 1;
+                    } else if (!aNumeric && bNumeric) {
+                        return -1;
+                    }
+                    return a > b ? 1 : a < b ? -1 : 0;
+                };
+                break;
+        }
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Get key and value arrays
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push([k, inputArr[k]]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+        valArr.sort(function (a, b) {
+            return sorter(a[1], b[1]);
+        });
+
+        // Repopulate the old array
+        for (i = 0, valArrLen = valArr.length; i < valArrLen; i++) {
+            populateArr[valArr[i][0]] = valArr[i][1];
+        }
+
+        return strictForIn || populateArr;
+    }, asort: function (inputArr, sort_flags) {
+        //  discuss at: http://phpjs.org/functions/asort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        //    input by: paulo kuong
+        // bugfixed by: Adam Wallner (http://web2.bitbaro.hu/)
+        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
+        //        note: integrated into all of these functions by adapting the code at
+        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
+        //        note: The examples are correct, this is a new way
+        //        note: Credits to: http://javascript.internet.com/math-related/bubble-sort.html
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: Since JS objects' keys are always strings, and (the
+        //        note: default) SORT_REGULAR flag distinguishes by key type,
+        //        note: if the content is a numeric string, we treat the
+        //        note: "original type" as numeric.
+        //  depends on: strnatcmp
+        //  depends on: i18n_loc_get_default
+        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 1: data = asort(data);
+        //   example 1: $result = data
+        //   returns 1: {c: 'apple', b: 'banana', d: 'lemon', a: 'orange'}
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 2: asort(data);
+        //   example 2: $result = data
+        //   returns 2: {c: 'apple', b: 'banana', d: 'lemon', a: 'orange'}
+
+        var valArr = [],
+            valArrLen = 0,
+            k, i, ret, sorter, that = this,
+            strictForIn = false,
+            populateArr = {};
+
+        switch (sort_flags) {
+            case 'SORT_STRING':
+                // compare items as strings
+                sorter = function (a, b) {
+                    return that.strnatcmp(a, b);
+                };
+                break;
+            case 'SORT_LOCALE_STRING':
+                // compare items as strings, original by the current locale (set with i18n_loc_set_default() as of PHP6)
+                var loc = this.i18n_loc_get_default();
+                sorter = this.php_js.i18nLocales[loc].sorting;
+                break;
+            case 'SORT_NUMERIC':
+                // compare items numerically
+                sorter = function (a, b) {
+                    return (a - b);
+                };
+                break;
+            case 'SORT_REGULAR':
+            // compare items normally (don't change types)
+            default:
+                sorter = function (a, b) {
+                    var aFloat = parseFloat(a),
+                        bFloat = parseFloat(b),
+                        aNumeric = aFloat + '' === a,
+                        bNumeric = bFloat + '' === b;
+                    if (aNumeric && bNumeric) {
+                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
+                    } else if (aNumeric && !bNumeric) {
+                        return 1;
+                    } else if (!aNumeric && bNumeric) {
+                        return -1;
+                    }
+                    return a > b ? 1 : a < b ? -1 : 0;
+                };
+                break;
+        }
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Get key and value arrays
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push([k, inputArr[k]]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+
+        valArr.sort(function (a, b) {
+            return sorter(a[1], b[1]);
+        });
+
+        // Repopulate the old array
+        for (i = 0, valArrLen = valArr.length; i < valArrLen; i++) {
+            populateArr[valArr[i][0]] = valArr[i][1];
+        }
+
+        return strictForIn || populateArr;
+    }, compact: function () {
+        //  discuss at: http://phpjs.org/functions/compact/
+        // original by: Waldo Malqui Silva
+        // improved by: Jack
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //   example 1: var1 = 'Kevin'; var2 = 'van'; var3 = 'Zonneveld';
+        //   example 1: compact('var1', 'var2', 'var3');
+        //   returns 1: {'var1': 'Kevin', 'var2': 'van', 'var3': 'Zonneveld'}
+
+        var matrix = {},
+            that = this;
+
+        var process = function (value) {
+            var i = 0,
+                l = value.length,
+                key_value = '';
+            for (i = 0; i < l; i++) {
+                key_value = value[i];
+                if (Object.prototype.toString.call(key_value) === '[object Array]') {
+                    process(key_value);
+                } else {
+                    if (typeof that.window[key_value] !== 'undefined') {
+                        matrix[key_value] = that.window[key_value];
+                    }
+                }
+            }
+            return true;
+        };
+
+        process(arguments);
+        return matrix;
+    }, count: function (mixed_var, mode) {
+        //  discuss at: http://phpjs.org/functions/count/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    input by: Waldo Malqui Silva
+        //    input by: merabi
+        // bugfixed by: Soren Hansen
+        // bugfixed by: Olivier Louvignes (http://mg-crea.com/)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: count([[0,0],[0,-4]], 'COUNT_RECURSIVE');
+        //   returns 1: 6
+        //   example 2: count({'one' : [1,2,3,4,5]}, 'COUNT_RECURSIVE');
+        //   returns 2: 6
+
+        var key, cnt = 0;
+
+        if (mixed_var === null || typeof mixed_var === 'undefined') {
+            return 0;
+        } else if (mixed_var.constructor !== Array && mixed_var.constructor !== Object) {
+            return 1;
+        }
+
+        if (mode === 'COUNT_RECURSIVE') {
+            mode = 1;
+        }
+        if (mode != 1) {
+            mode = 0;
+        }
+
+        for (key in mixed_var) {
+            if (mixed_var.hasOwnProperty(key)) {
+                cnt++;
+                if (mode == 1 && mixed_var[key] && (mixed_var[key].constructor === Array || mixed_var[key].constructor ===
+                    Object)) {
+                    cnt += this.count(mixed_var[key], 1);
+                }
+            }
+        }
+
+        return cnt;
+    }, current: function (arr) {
+        //  discuss at: http://phpjs.org/functions/current/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
+        //   example 1: current(transport);
+        //   returns 1: 'foot'
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+        if (pointers.indexOf(arr) === -1) {
+            pointers.push(arr, 0);
+        }
+        var arrpos = pointers.indexOf(arr);
+        var cursor = pointers[arrpos + 1];
+        if (Object.prototype.toString.call(arr) === '[object Array]') {
+            return arr[cursor] || false;
+        }
+        var ct = 0;
+        for (var k in arr) {
+            if (ct === cursor) {
+                return arr[k];
+            }
+            ct++;
+        }
+        return false; // Empty
+    }, each: function (arr) {
+        //  discuss at: http://phpjs.org/functions/each/
+        // original by: Ates Goral (http://magnetiq.com)
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: each({a: "apple", b: "balloon"});
+        //   returns 1: {0: "a", 1: "apple", key: "a", value: "apple"}
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+        if (pointers.indexOf(arr) === -1) {
+            pointers.push(arr, 0);
+        }
+        var arrpos = pointers.indexOf(arr);
+        var cursor = pointers[arrpos + 1];
+        var pos = 0;
+
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            var ct = 0;
+            for (var k in arr) {
+                if (ct === cursor) {
+                    pointers[arrpos + 1] += 1;
+                    if (each.returnArrayOnly) {
+                        return [k, arr[k]];
+                    } else {
+                        return {
+                            1: arr[k],
+                            value: arr[k],
+                            0: k,
+                            key: k
+                        };
+                    }
+                }
+                ct++;
+            }
+            return false; // Empty
+        }
+        if (arr.length === 0 || cursor === arr.length) {
+            return false;
+        }
+        pos = cursor;
+        pointers[arrpos + 1] += 1;
+        if (each.returnArrayOnly) {
+            return [pos, arr[pos]];
+        } else {
+            return {
+                1: arr[pos],
+                value: arr[pos],
+                0: pos,
+                key: pos
+            };
+        }
+    }, end: function (arr) {
+        //  discuss at: http://phpjs.org/functions/end/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Legaev Andrey
+        //  revised by: J A R
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: end({0: 'Kevin', 1: 'van', 2: 'Zonneveld'});
+        //   returns 1: 'Zonneveld'
+        //   example 2: end(['Kevin', 'van', 'Zonneveld']);
+        //   returns 2: 'Zonneveld'
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+        if (pointers.indexOf(arr) === -1) {
+            pointers.push(arr, 0);
+        }
+        var arrpos = pointers.indexOf(arr);
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            var ct = 0;
+            var val;
+            for (var k in arr) {
+                ct++;
+                val = arr[k];
+            }
+            if (ct === 0) {
+                return false; // Empty
+            }
+            pointers[arrpos + 1] = ct - 1;
+            return val;
+        }
+        if (arr.length === 0) {
+            return false;
+        }
+        pointers[arrpos + 1] = arr.length - 1;
+        return arr[pointers[arrpos + 1]];
+    }, foreach: function ($array, $handler) {
+        let i = 0,
+            kl = $array.length,
+            _keys = $array.keys(),
+            _values = $array.values();
+        while (i < kl) {
+            if ($handler.length === 1) {
+                $handler(_keys[i]);
+            } else {
+                $handler(_keys[i], _values[i]);
+            }
+            i++;
+        }
+    }
+    , in_array: function (needle, haystack, argStrict) {
+        //  discuss at: http://phpjs.org/functions/in_array/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: vlado houba
+        // improved by: Jonas Sciangula Street (Joni2Back)
+        //    input by: Billy
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: in_array('van', ['Kevin', 'van', 'Zonneveld']);
+        //   returns 1: true
+        //   example 2: in_array('vlado', {0: 'Kevin', vlado: 'van', 1: 'Zonneveld'});
+        //   returns 2: false
+        //   example 3: in_array(1, ['1', '2', '3']);
+        //   example 3: in_array(1, ['1', '2', '3'], false);
+        //   returns 3: true
+        //   returns 3: true
+        //   example 4: in_array(1, ['1', '2', '3'], true);
+        //   returns 4: false
+
+        var key = '',
+            strict = !!argStrict;
+
+        //we prevent the double check (strict && arr[key] === ndl) || (!strict && arr[key] == ndl)
+        //in just one for, in order to improve the performance
+        //deciding wich type of comparation will do before walk array
+        if (strict) {
+            for (key in haystack) {
+                if (haystack[key] === needle) {
+                    return true;
+                }
+            }
+        } else {
+            for (key in haystack) {
+                if (haystack[key] == needle) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+    , key: function (arr) {
+        //  discuss at: http://phpjs.org/functions/key/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Riddler (http://www.frontierwebdev.com/)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: array = {fruit1: 'apple', 'fruit2': 'orange'}
+        //   example 1: key(array);
+        //   returns 1: 'fruit1'
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+
+        if (pointers.indexOf(arr) === -1) {
+            pointers.push(arr, 0);
+        }
+        var cursor = pointers[pointers.indexOf(arr) + 1];
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            var ct = 0;
+            for (var k in arr) {
+                if (ct === cursor) {
+                    return k;
+                }
+                ct++;
+            }
+            return false; // Empty
+        }
+        if (arr.length === 0) {
+            return false;
+        }
+        return cursor;
+    }, krsort: function (inputArr, sort_flags) {
+        //  discuss at: http://phpjs.org/functions/krsort/
+        // original by: GeekFG (http://geekfg.blogspot.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: The examples are correct, this is a new way
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: Since JS objects' keys are always strings, and (the
+        //        note: default) SORT_REGULAR flag distinguishes by key type,
+        //        note: if the content is a numeric string, we treat the
+        //        note: "original type" as numeric.
+        //  depends on: i18n_loc_get_default
+        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 1: data = krsort(data);
+        //   example 1: $result = data
+        //   returns 1: {d: 'lemon', c: 'apple', b: 'banana', a: 'orange'}
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: data = {2: 'van', 3: 'Zonneveld', 1: 'Kevin'};
+        //   example 2: krsort(data);
+        //   example 2: $result = data
+        //   returns 2: {3: 'Kevin', 2: 'van', 1: 'Zonneveld'}
+
+        var tmp_arr = {},
+            keys = [],
+            sorter, i, k, that = this,
+            strictForIn = false,
+            populateArr = {};
+
+        switch (sort_flags) {
+            case 'SORT_STRING':
+                // compare items as strings
+                sorter = function (a, b) {
+                    return that.strnatcmp(b, a);
+                };
+                break;
+            case 'SORT_LOCALE_STRING':
+                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
+                var loc = this.i18n_loc_get_default();
+                sorter = this.php_js.i18nLocales[loc].sorting;
+                break;
+            case 'SORT_NUMERIC':
+                // compare items numerically
+                sorter = function (a, b) {
+                    return (b - a);
+                };
+                break;
+            case 'SORT_REGULAR':
+            // compare items normally (don't change types)
+            default:
+                sorter = function (b, a) {
+                    var aFloat = parseFloat(a),
+                        bFloat = parseFloat(b),
+                        aNumeric = aFloat + '' === a,
+                        bNumeric = bFloat + '' === b;
+                    if (aNumeric && bNumeric) {
+                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
+                    } else if (aNumeric && !bNumeric) {
+                        return 1;
+                    } else if (!aNumeric && bNumeric) {
+                        return -1;
+                    }
+                    return a > b ? 1 : a < b ? -1 : 0;
+                };
+                break;
+        }
+
+        // Make a list of key names
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                keys.push(k);
+            }
+        }
+        keys.sort(sorter);
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Rebuild array with sorted key names
+        for (i = 0; i < keys.length; i++) {
+            k = keys[i];
+            tmp_arr[k] = inputArr[k];
+            if (strictForIn) {
+                delete inputArr[k];
+            }
+        }
+        for (i in tmp_arr) {
+            if (tmp_arr.hasOwnProperty(i)) {
+                populateArr[i] = tmp_arr[i];
+            }
+        }
+
+        return strictForIn || populateArr;
+    }, ksort: function (inputArr, sort_flags) {
+        //  discuss at: http://phpjs.org/functions/ksort/
+        // original by: GeekFG (http://geekfg.blogspot.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: The examples are correct, this is a new way
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: Since JS objects' keys are always strings, and (the
+        //        note: default) SORT_REGULAR flag distinguishes by key type,
+        //        note: if the content is a numeric string, we treat the
+        //        note: "original type" as numeric.
+        //  depends on: i18n_loc_get_default
+        //  depends on: strnatcmp
+        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 1: data = ksort(data);
+        //   example 1: $result = data
+        //   returns 1: {a: 'orange', b: 'banana', c: 'apple', d: 'lemon'}
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: data = {2: 'van', 3: 'Zonneveld', 1: 'Kevin'};
+        //   example 2: ksort(data);
+        //   example 2: $result = data
+        //   returns 2: {1: 'Kevin', 2: 'van', 3: 'Zonneveld'}
+
+        var tmp_arr = {},
+            keys = [],
+            sorter, i, k, that = this,
+            strictForIn = false,
+            populateArr = {};
+
+        switch (sort_flags) {
+            case 'SORT_STRING':
+                // compare items as strings
+                sorter = function (a, b) {
+                    return that.strnatcmp(a, b);
+                };
+                break;
+            case 'SORT_LOCALE_STRING':
+                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
+                var loc = this.i18n_loc_get_default();
+                sorter = this.php_js.i18nLocales[loc].sorting;
+                break;
+            case 'SORT_NUMERIC':
+                // compare items numerically
+                sorter = function (a, b) {
+                    return ((a + 0) - (b + 0));
+                };
+                break;
+            // case 'SORT_REGULAR': // compare items normally (don't change types)
+            default:
+                sorter = function (a, b) {
+                    var aFloat = parseFloat(a),
+                        bFloat = parseFloat(b),
+                        aNumeric = aFloat + '' === a,
+                        bNumeric = bFloat + '' === b;
+                    if (aNumeric && bNumeric) {
+                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
+                    } else if (aNumeric && !bNumeric) {
+                        return 1;
+                    } else if (!aNumeric && bNumeric) {
+                        return -1;
+                    }
+                    return a > b ? 1 : a < b ? -1 : 0;
+                };
+                break;
+        }
+
+        // Make a list of key names
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                keys.push(k);
+            }
+        }
+        keys.sort(sorter);
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Rebuild array with sorted key names
+        for (i = 0; i < keys.length; i++) {
+            k = keys[i];
+            tmp_arr[k] = inputArr[k];
+            if (strictForIn) {
+                delete inputArr[k];
+            }
+        }
+        for (i in tmp_arr) {
+            if (tmp_arr.hasOwnProperty(i)) {
+                populateArr[i] = tmp_arr[i];
+            }
+        }
+
+        return strictForIn || populateArr;
+    }, natcasesort: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/natcasesort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: We cannot use numbers as keys and have them be reordered since they
+        //        note: adhere to numerical order in some implementations
+        //  depends on: strnatcasecmp
+        //   example 1: $array1 = {a:'IMG0.png', b:'img12.png', c:'img10.png', d:'img2.png', e:'img1.png', f:'IMG3.png'};
+        //   example 1: $array1 = natcasesort($array1);
+        //   returns 1: {a: 'IMG0.png', e: 'img1.png', d: 'img2.png', f: 'IMG3.png', c: 'img10.png', b: 'img12.png'}
+
+        var valArr = [],
+            k, i, ret, that = this,
+            strictForIn = false,
+            populateArr = {};
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Get key and value arrays
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push([k, inputArr[k]]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+        valArr.sort(function (a, b) {
+            return that.strnatcasecmp(a[1], b[1]);
+        });
+
+        // Repopulate the old array
+        for (i = 0; i < valArr.length; i++) {
+            populateArr[valArr[i][0]] = valArr[i][1];
+        }
+
+        return strictForIn || populateArr;
+    }, natsort: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/natsort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //  depends on: strnatcmp
+        //   example 1: $array1 = {a:"img12.png", b:"img10.png", c:"img2.png", d:"img1.png"};
+        //   example 1: $array1 = natsort($array1);
+        //   returns 1: {d: 'img1.png', c: 'img2.png', b: 'img10.png', a: 'img12.png'}
+
+        var valArr = [],
+            k, i, ret, that = this,
+            strictForIn = false,
+            populateArr = {};
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Get key and value arrays
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push([k, inputArr[k]]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+        valArr.sort(function (a, b) {
+            return that.strnatcmp(a[1], b[1]);
+        });
+
+        // Repopulate the old array
+        for (i = 0; i < valArr.length; i++) {
+            populateArr[valArr[i][0]] = valArr[i][1];
+        }
+
+        return strictForIn || populateArr;
+    }, next: function (arr) {
+        //  discuss at: http://phpjs.org/functions/next/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
+        //   example 1: next(transport);
+        //   example 1: next(transport);
+        //   returns 1: 'car'
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+        if (pointers.indexOf(arr) === -1) {
+            pointers.push(arr, 0);
+        }
+        var arrpos = pointers.indexOf(arr);
+        var cursor = pointers[arrpos + 1];
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            var ct = 0;
+            for (var k in arr) {
+                if (ct === cursor + 1) {
+                    pointers[arrpos + 1] += 1;
+                    return arr[k];
+                }
+                ct++;
+            }
+            return false; // End
+        }
+        if (arr.length === 0 || cursor === (arr.length - 1)) {
+            return false;
+        }
+        pointers[arrpos + 1] += 1;
+        return arr[pointers[arrpos + 1]];
+    }, pos: function (arr) {
+        //  discuss at: http://phpjs.org/functions/pos/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //  depends on: current
+        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
+        //   example 1: pos(transport);
+        //   returns 1: 'foot'
+
+        return this.current(arr);
+    }, prev: function (arr) {
+        //  discuss at: http://phpjs.org/functions/prev/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: transport = ['foot', 'bike', 'car', 'plane'];
+        //   example 1: prev(transport);
+        //   returns 1: false
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+        var arrpos = pointers.indexOf(arr);
+        var cursor = pointers[arrpos + 1];
+        if (pointers.indexOf(arr) === -1 || cursor === 0) {
+            return false;
+        }
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            var ct = 0;
+            for (var k in arr) {
+                if (ct === cursor - 1) {
+                    pointers[arrpos + 1] -= 1;
+                    return arr[k];
+                }
+                ct++;
+            }
+            // Shouldn't reach here
+        }
+        if (arr.length === 0) {
+            return false;
+        }
+        pointers[arrpos + 1] -= 1;
+        return arr[pointers[arrpos + 1]];
+    }, range: function (low, high, step) {
+        //  discuss at: http://phpjs.org/functions/range/
+        // original by: Waldo Malqui Silva
+        //   example 1: range ( 0, 12 );
+        //   returns 1: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        //   example 2: range( 0, 100, 10 );
+        //   returns 2: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+        //   example 3: range( 'a', 'i' );
+        //   returns 3: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
+        //   example 4: range( 'c', 'a' );
+        //   returns 4: ['c', 'b', 'a']
+
+        var matrix = [];
+        var inival, endval, plus;
+        var walker = step || 1;
+        var chars = false;
+
+        if (!isNaN(low) && !isNaN(high)) {
+            inival = low;
+            endval = high;
+        } else if (isNaN(low) && isNaN(high)) {
+            chars = true;
+            inival = low.charCodeAt(0);
+            endval = high.charCodeAt(0);
+        } else {
+            inival = (isNaN(low) ? 0 : low);
+            endval = (isNaN(high) ? 0 : high);
+        }
+
+        plus = ((inival > endval) ? false : true);
+        if (plus) {
+            while (inival <= endval) {
+                matrix.push(((chars) ? String.fromCharCode(inival) : inival));
+                inival += walker;
+            }
+        } else {
+            while (inival >= endval) {
+                matrix.push(((chars) ? String.fromCharCode(inival) : inival));
+                inival -= walker;
+            }
+        }
+
+        return matrix;
+    }, reset: function (arr) {
+        //  discuss at: http://phpjs.org/functions/reset/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Legaev Andrey
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        //        note: Uses global: php_js to store the array pointer
+        //   example 1: reset({0: 'Kevin', 1: 'van', 2: 'Zonneveld'});
+        //   returns 1: 'Kevin'
+
+        this.php_js = this.php_js || {};
+        this.php_js.pointers = this.php_js.pointers || [];
+        var indexOf = function (value) {
+            for (var i = 0, length = this.length; i < length; i++) {
+                if (this[i] === value) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        // END REDUNDANT
+        var pointers = this.php_js.pointers;
+        if (!pointers.indexOf) {
+            pointers.indexOf = indexOf;
+        }
+        if (pointers.indexOf(arr) === -1) {
+            pointers.push(arr, 0);
+        }
+        var arrpos = pointers.indexOf(arr);
+        if (Object.prototype.toString.call(arr) !== '[object Array]') {
+            for (var k in arr) {
+                if (pointers.indexOf(arr) === -1) {
+                    pointers.push(arr, 0);
+                } else {
+                    pointers[arrpos + 1] = 0;
+                }
+                return arr[k];
+            }
+            return false; // Empty
+        }
+        if (arr.length === 0) {
+            return false;
+        }
+        pointers[arrpos + 1] = 0;
+        return arr[pointers[arrpos + 1]];
+    }, rsort: function (inputArr, sort_flags) {
+        //  discuss at: http://phpjs.org/functions/rsort/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
+        //        note: integrated into all of these functions by adapting the code at
+        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: Since JS objects' keys are always strings, and (the
+        //        note: default) SORT_REGULAR flag distinguishes by key type,
+        //        note: if the content is a numeric string, we treat the
+        //        note: "original type" as numeric.
+        //  depends on: i18n_loc_get_default
+        //   example 1: $arr = ['Kevin', 'van', 'Zonneveld'];
+        //   example 1: rsort($arr);
+        //   example 1: $results = $arr;
+        //   returns 1: ['van', 'Zonneveld', 'Kevin']
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: fruits = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 2: rsort(fruits);
+        //   example 2: $result = fruits;
+        //   returns 2: {0: 'orange', 1: 'lemon', 2: 'banana', 3: 'apple'}
+
+        var valArr = [],
+            k = '',
+            i = 0,
+            sorter = false,
+            that = this,
+            strictForIn = false,
+            populateArr = [];
+
+        switch (sort_flags) {
+            case 'SORT_STRING':
+                // compare items as strings
+                sorter = function (a, b) {
+                    return that.strnatcmp(b, a);
+                };
+                break;
+            case 'SORT_LOCALE_STRING':
+                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
+                var loc = this.i18n_loc_get_default();
+                sorter = this.php_js.i18nLocales[loc].sorting;
+                break;
+            case 'SORT_NUMERIC':
+                // compare items numerically
+                sorter = function (a, b) {
+                    return (b - a);
+                };
+                break;
+            case 'SORT_REGULAR':
+            // compare items normally (don't change types)
+            default:
+                sorter = function (b, a) {
+                    var aFloat = parseFloat(a),
+                        bFloat = parseFloat(b),
+                        aNumeric = aFloat + '' === a,
+                        bNumeric = bFloat + '' === b;
+                    if (aNumeric && bNumeric) {
+                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
+                    } else if (aNumeric && !bNumeric) {
+                        return 1;
+                    } else if (!aNumeric && bNumeric) {
+                        return -1;
+                    }
+                    return a > b ? 1 : a < b ? -1 : 0;
+                };
+                break;
+        }
+
+        // BEGIN REDUNDANT
+        try {
+            this.php_js = this.php_js || {};
+        } catch (e) {
+            this.php_js = {};
+        }
+
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        for (k in inputArr) { // Get key and value arrays
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push(inputArr[k]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+
+        valArr.sort(sorter);
+
+        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
+            populateArr[i] = valArr[i];
+        }
+        return strictForIn || populateArr;
+    }
+    , shuffle: function (inputArr) {
+        //  discuss at: http://phpjs.org/functions/shuffle/
+        // original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
+        //  revised by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        test: skip
+        //   example 1: ini_set('phpjs.strictForIn', true);
+        //   example 1: shuffle(data);
+        //   example 1: $result = data;
+        //   returns 1: {5:'a', 4:5, 'q':5, 3:'c', 2:'3'}
+        //   example 2: var data = {5:'a', 2:'3', 3:'c', 4:5, 'q':5};
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: var data = {5:'a', 2:'3', 3:'c', 4:5, 'q':5};
+        //   example 2: shuffle(data);
+        //   example 2: $result = data;
+        //   returns 2: {5:'a', 'q':5, 3:'c', 2:'3', 4:5}
+
+        var valArr = [],
+            k = '',
+            i = 0,
+            strictForIn = false,
+            populateArr = [];
+
+        for (k in inputArr) { // Get key and value arrays
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push(inputArr[k]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+        valArr.sort(function () {
+            return 0.5 - Math.random();
+        });
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
+            populateArr[i] = valArr[i];
+        }
+
+        return strictForIn || populateArr;
+    }, sizeof: function (mixed_var, mode) {
+        //  discuss at: http://phpjs.org/functions/sizeof/
+        // original by: Philip Peterson
+        //  depends on: count
+        //   example 1: sizeof([[0,0],[0,-4]], 'COUNT_RECURSIVE');
+        //   returns 1: 6
+        //   example 2: sizeof({'one' : [1,2,3,4,5]}, 'COUNT_RECURSIVE');
+        //   returns 2: 6
+
+        return this.count(mixed_var, mode);
+    }, sort: function (inputArr, sort_flags) {
+        //  discuss at: http://phpjs.org/functions/sort/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //  revised by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: SORT_STRING (as well as natsort and natcasesort) might also be
+        //        note: integrated into all of these functions by adapting the code at
+        //        note: http://sourcefrog.net/projects/natsort/natcompare.js
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //        note: Since JS objects' keys are always strings, and (the
+        //        note: default) SORT_REGULAR flag distinguishes by key type,
+        //        note: if the content is a numeric string, we treat the
+        //        note: "original type" as numeric.
+        //  depends on: i18n_loc_get_default
+        //   example 1: var arr = ['Kevin', 'van', 'Zonneveld']
+        //   example 1: sort(arr);
+        //   example 1: $result = arr;
+        //   returns 1: ['Kevin', 'Zonneveld', 'van']
+        //   example 2: ini_set('phpjs.strictForIn', true);
+        //   example 2: fruits = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 2: sort(fruits);
+        //   example 2: $result = fruits;
+        //   returns 2: {0: 'apple', 1: 'banana', 2: 'lemon', 3: 'orange'}
+
+        var valArr = [],
+            keyArr = [],
+            k = '',
+            i = 0,
+            sorter = false,
+            that = this,
+            strictForIn = false,
+            populateArr = [];
+
+        switch (sort_flags) {
+            case 'SORT_STRING':
+                // compare items as strings
+                sorter = function (a, b) {
+                    return that.strnatcmp(a, b);
+                };
+                break;
+            case 'SORT_LOCALE_STRING':
+                // compare items as strings, original by the current locale (set with  i18n_loc_set_default() as of PHP6)
+                var loc = this.i18n_loc_get_default();
+                sorter = this.php_js.i18nLocales[loc].sorting;
+                break;
+            case 'SORT_NUMERIC':
+                // compare items numerically
+                sorter = function (a, b) {
+                    return (a - b);
+                };
+                break;
+            case 'SORT_REGULAR':
+            // compare items normally (don't change types)
+            default:
+                sorter = function (a, b) {
+                    var aFloat = parseFloat(a),
+                        bFloat = parseFloat(b),
+                        aNumeric = aFloat + '' === a,
+                        bNumeric = bFloat + '' === b;
+                    if (aNumeric && bNumeric) {
+                        return aFloat > bFloat ? 1 : aFloat < bFloat ? -1 : 0;
+                    } else if (aNumeric && !bNumeric) {
+                        return 1;
+                    } else if (!aNumeric && bNumeric) {
+                        return -1;
+                    }
+                    return a > b ? 1 : a < b ? -1 : 0;
+                };
+                break;
+        }
+
+        // BEGIN REDUNDANT
+        try {
+            this.php_js = this.php_js || {};
+        } catch (e) {
+            this.php_js = {};
+        }
+
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        for (k in inputArr) { // Get key and value arrays
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push(inputArr[k]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+
+        valArr.sort(sorter);
+
+        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
+            populateArr[i] = valArr[i];
+        }
+        return strictForIn || populateArr;
+    }, uasort: function (inputArr, sorter) {
+        //  discuss at: http://phpjs.org/functions/uasort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //   example 1: fruits = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 1: fruits = uasort(fruits, function (a, b) { if (a > b) {return 1;}if (a < b) {return -1;} return 0;});
+        //   example 1: $result = fruits;
+        //   returns 1: {c: 'apple', b: 'banana', d: 'lemon', a: 'orange'}
+
+        var valArr = [],
+            tempKeyVal, tempValue, ret, k = '',
+            i = 0,
+            strictForIn = false,
+            populateArr = {};
+
+        if (typeof sorter === 'string') {
+            sorter = this[sorter];
+        } else if (Object.prototype.toString.call(sorter) === '[object Array]') {
+            sorter = this[sorter[0]][sorter[1]];
+        }
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        for (k in inputArr) { // Get key and value arrays
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push([k, inputArr[k]]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+        valArr.sort(function (a, b) {
+            return sorter(a[1], b[1]);
+        });
+
+        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
+            populateArr[valArr[i][0]] = valArr[i][1];
+        }
+
+        return strictForIn || populateArr;
+    }, uksort: function (inputArr, sorter) {
+        //  discuss at: http://phpjs.org/functions/uksort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: The examples are correct, this is a new way
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //   example 1: data = {d: 'lemon', a: 'orange', b: 'banana', c: 'apple'};
+        //   example 1: data = uksort(data, function (key1, key2){ return (key1 == key2 ? 0 : (key1 > key2 ? 1 : -1)); });
+        //   example 1: $result = data
+        //   returns 1: {a: 'orange', b: 'banana', c: 'apple', d: 'lemon'}
+
+        var tmp_arr = {},
+            keys = [],
+            i = 0,
+            k = '',
+            strictForIn = false,
+            populateArr = {};
+
+        if (typeof sorter === 'string') {
+            sorter = this.window[sorter];
+        }
+
+        // Make a list of key names
+        for (k in inputArr) {
+            if (inputArr.hasOwnProperty(k)) {
+                keys.push(k);
+            }
+        }
+
+        // Sort key names
+        try {
+            if (sorter) {
+                keys.sort(sorter);
+            } else {
+                keys.sort();
+            }
+        } catch (e) {
+            return false;
+        }
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        // Rebuild array with sorted key names
+        for (i = 0; i < keys.length; i++) {
+            k = keys[i];
+            tmp_arr[k] = inputArr[k];
+            if (strictForIn) {
+                delete inputArr[k];
+            }
+        }
+        for (i in tmp_arr) {
+            if (tmp_arr.hasOwnProperty(i)) {
+                populateArr[i] = tmp_arr[i];
+            }
+        }
+        return strictForIn || populateArr;
+    }, usort: function (inputArr, sorter) {
+        //  discuss at: http://phpjs.org/functions/usort/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: This function deviates from PHP in returning a copy of the array instead
+        //        note: of acting by reference and returning true; this was necessary because
+        //        note: IE does not allow deleting and re-adding of properties without caching
+        //        note: of property position; you can set the ini of "phpjs.strictForIn" to true to
+        //        note: get the PHP behavior, but use this only if you are in an environment
+        //        note: such as Firefox extensions where for-in iteration order is fixed and true
+        //        note: property deletion is supported. Note that we intend to implement the PHP
+        //        note: behavior by default if IE ever does allow it; only gives shallow copy since
+        //        note: is by reference in PHP anyways
+        //   example 1: stuff = {d: '3', a: '1', b: '11', c: '4'};
+        //   example 1: stuff = usort(stuff, function (a, b) {return(a-b);});
+        //   example 1: $result = stuff;
+        //   returns 1: {0: '1', 1: '3', 2: '4', 3: '11'};
+
+        var valArr = [],
+            k = '',
+            i = 0,
+            strictForIn = false,
+            populateArr = {};
+
+        if (typeof sorter === 'string') {
+            sorter = this[sorter];
+        } else if (Object.prototype.toString.call(sorter) === '[object Array]') {
+            sorter = this[sorter[0]][sorter[1]];
+        }
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        strictForIn = this.php_js.ini['phpjs.strictForIn'] && this.php_js.ini['phpjs.strictForIn'].local_value && this.php_js
+            .ini['phpjs.strictForIn'].local_value !== 'off';
+        populateArr = strictForIn ? inputArr : populateArr;
+
+        for (k in inputArr) { // Get key and value arrays
+            if (inputArr.hasOwnProperty(k)) {
+                valArr.push(inputArr[k]);
+                if (strictForIn) {
+                    delete inputArr[k];
+                }
+            }
+        }
+        try {
+            valArr.sort(sorter);
+        } catch (e) {
+            return false;
+        }
+        for (i = 0; i < valArr.length; i++) { // Repopulate the old array
+            populateArr[i] = valArr[i];
+        }
+
+        return strictForIn || populateArr;
+    }, checkdate: function (m, d, y) {
+        //  discuss at: http://phpjs.org/functions/checkdate/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Pyerre
+        // improved by: Theriault
+        //   example 1: checkdate(12, 31, 2000);
+        //   returns 1: true
+        //   example 2: checkdate(2, 29, 2001);
+        //   returns 2: false
+        //   example 3: checkdate(3, 31, 2008);
+        //   returns 3: true
+        //   example 4: checkdate(1, 390, 2000);
+        //   returns 4: false
+
+        return m > 0 && m < 13 && y > 0 && y < 32768 && d > 0 && d <= (new Date(y, m, 0))
+            .getDate();
+    }, date: function (format, timestamp) {
+        //  discuss at: http://phpjs.org/functions/date/
+        // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
+        // original by: gettimeofday
+        //    parts by: Peter-Paul Koch (http://www.quirksmode.org/js/beat.html)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: MeEtc (http://yass.meetcweb.com)
+        // improved by: Brad Touesnard
+        // improved by: Tim Wiel
+        // improved by: Bryan Elliott
+        // improved by: David Randall
+        // improved by: Theriault
+        // improved by: Theriault
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        // improved by: Thomas Beaucourt (http://www.webapp.fr)
+        // improved by: JT
+        // improved by: Theriault
+        // improved by: Rafał Kukawski (http://blog.kukawski.pl)
+        // improved by: Theriault
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        //    input by: majak
+        //    input by: Alex
+        //    input by: Martin
+        //    input by: Alex Wilson
+        //    input by: Haravikk
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: majak
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: omid (http://phpjs.org/functions/380:380#comment_137122)
+        // bugfixed by: Chris (http://www.devotis.nl/)
+        //        note: Uses global: php_js to store the default timezone
+        //        note: Although the function potentially allows timezone info (see notes), it currently does not set
+        //        note: per a timezone specified by date_default_timezone_set(). Implementers might use
+        //        note: this.php_js.currentTimezoneOffset and this.php_js.currentTimezoneDST set by that function
+        //        note: in order to adjust the dates in this function (or our other date functions!) accordingly
+        //   example 1: date('H:m:s \\m \\i\\s \\m\\o\\n\\t\\h', 1062402400);
+        //   returns 1: '09:09:40 m is month'
+        //   example 2: date('F j, Y, g:i a', 1062462400);
+        //   returns 2: 'September 2, 2003, 2:26 am'
+        //   example 3: date('Y W o', 1062462400);
+        //   returns 3: '2003 36 2003'
+        //   example 4: x = date('Y m d', (new Date()).getTime()/1000);
+        //   example 4: (x+'').length == 10 // 2009 01 09
+        //   returns 4: true
+        //   example 5: date('W', 1104534000);
+        //   returns 5: '53'
+        //   example 6: date('B t', 1104534000);
+        //   returns 6: '999 31'
+        //   example 7: date('W U', 1293750000.82); // 2010-12-31
+        //   returns 7: '52 1293750000'
+        //   example 8: date('W', 1293836400); // 2011-01-01
+        //   returns 8: '52'
+        //   example 9: date('W Y-m-d', 1293974054); // 2011-01-02
+        //   returns 9: '52 2011-01-02'
+
+        var that = this;
+        var jsdate, f;
+        // Keep this here (works, but for code commented-out below for file size reasons)
+        // var tal= [];
+        var txt_words = [
+            'Sun', 'Mon', 'Tues', 'Wednes', 'Thurs', 'Fri', 'Satur',
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        // trailing backslash -> (dropped)
+        // a backslash followed by any character (including backslash) -> the character
+        // empty string -> empty string
+        var formatChr = /\\?(.?)/gi;
+        var formatChrCb = function (t, s) {
+            return f[t] ? f[t]() : s;
+        };
+        var _pad = function (n, c) {
+            n = String(n);
+            while (n.length < c) {
+                n = '0' + n;
+            }
+            return n;
+        };
+        f = {
+            // Day
+            d: function () { // Day of month w/leading 0; 01..31
+                return _pad(f.j(), 2);
+            },
+            D: function () { // Shorthand day name; Mon...Sun
+                return f.l()
+                    .slice(0, 3);
+            },
+            j: function () { // Day of month; 1..31
+                return jsdate.getDate();
+            },
+            l: function () { // Full day name; Monday...Sunday
+                return txt_words[f.w()] + 'day';
+            },
+            N: function () { // ISO-8601 day of week; 1[Mon]..7[Sun]
+                return f.w() || 7;
+            },
+            S: function () { // Ordinal suffix for day of month; st, nd, rd, th
+                var j = f.j();
+                var i = j % 10;
+                if (i <= 3 && parseInt((j % 100) / 10, 10) == 1) {
+                    i = 0;
+                }
+                return ['st', 'nd', 'rd'][i - 1] || 'th';
+            },
+            w: function () { // Day of week; 0[Sun]..6[Sat]
+                return jsdate.getDay();
+            },
+            z: function () { // Day of year; 0..365
+                var a = new Date(f.Y(), f.n() - 1, f.j());
+                var b = new Date(f.Y(), 0, 1);
+                return Math.round((a - b) / 864e5);
+            },
+
+            // Week
+            W: function () { // ISO-8601 week number
+                var a = new Date(f.Y(), f.n() - 1, f.j() - f.N() + 3);
+                var b = new Date(a.getFullYear(), 0, 4);
+                return _pad(1 + Math.round((a - b) / 864e5 / 7), 2);
+            },
+
+            // Month
+            F: function () { // Full month name; January...December
+                return txt_words[6 + f.n()];
+            },
+            m: function () { // Month w/leading 0; 01...12
+                return _pad(f.n(), 2);
+            },
+            M: function () { // Shorthand month name; Jan...Dec
+                return f.F()
+                    .slice(0, 3);
+            },
+            n: function () { // Month; 1...12
+                return jsdate.getMonth() + 1;
+            },
+            t: function () { // Days in month; 28...31
+                return (new Date(f.Y(), f.n(), 0))
+                    .getDate();
+            },
+
+            // Year
+            L: function () { // Is leap year?; 0 or 1
+                var j = f.Y();
+                return j % 4 === 0 & j % 100 !== 0 | j % 400 === 0;
+            },
+            o: function () { // ISO-8601 year
+                var n = f.n();
+                var W = f.W();
+                var Y = f.Y();
+                return Y + (n === 12 && W < 9 ? 1 : n === 1 && W > 9 ? -1 : 0);
+            },
+            Y: function () { // Full year; e.g. 1980...2010
+                return jsdate.getFullYear();
+            },
+            y: function () { // Last two digits of year; 00...99
+                return f.Y()
+                    .toString()
+                    .slice(-2);
+            },
+
+            // Time
+            a: function () { // am or pm
+                return jsdate.getHours() > 11 ? 'pm' : 'am';
+            },
+            A: function () { // AM or PM
+                return f.a()
+                    .toUpperCase();
+            },
+            B: function () { // Swatch Internet time; 000..999
+                var H = jsdate.getUTCHours() * 36e2;
+                // Hours
+                var i = jsdate.getUTCMinutes() * 60;
+                // Minutes
+                var s = jsdate.getUTCSeconds(); // Seconds
+                return _pad(Math.floor((H + i + s + 36e2) / 86.4) % 1e3, 3);
+            },
+            g: function () { // 12-Hours; 1..12
+                return f.G() % 12 || 12;
+            },
+            G: function () { // 24-Hours; 0..23
+                return jsdate.getHours();
+            },
+            h: function () { // 12-Hours w/leading 0; 01..12
+                return _pad(f.g(), 2);
+            },
+            H: function () { // 24-Hours w/leading 0; 00..23
+                return _pad(f.G(), 2);
+            },
+            i: function () { // Minutes w/leading 0; 00..59
+                return _pad(jsdate.getMinutes(), 2);
+            },
+            s: function () { // Seconds w/leading 0; 00..59
+                return _pad(jsdate.getSeconds(), 2);
+            },
+            u: function () { // Microseconds; 000000-999000
+                return _pad(jsdate.getMilliseconds() * 1000, 6);
+            },
+
+            // Timezone
+            e: function () { // Timezone identifier; e.g. Atlantic/Azores, ...
+                // The following works, but requires inclusion of the very large
+                // timezone_abbreviations_list() function.
+                /*              return that.date_default_timezone_get();
+       */
+                throw 'Not supported (see source code of date() for timezone on how to add support)';
+            },
+            I: function () { // DST observed?; 0 or 1
+                // Compares Jan 1 minus Jan 1 UTC to Jul 1 minus Jul 1 UTC.
+                // If they are not equal, then DST is observed.
+                var a = new Date(f.Y(), 0);
+                // Jan 1
+                var c = Date.UTC(f.Y(), 0);
+                // Jan 1 UTC
+                var b = new Date(f.Y(), 6);
+                // Jul 1
+                var d = Date.UTC(f.Y(), 6); // Jul 1 UTC
+                return ((a - c) !== (b - d)) ? 1 : 0;
+            },
+            O: function () { // Difference to GMT in hour format; e.g. +0200
+                var tzo = jsdate.getTimezoneOffset();
+                var a = Math.abs(tzo);
+                return (tzo > 0 ? '-' : '+') + _pad(Math.floor(a / 60) * 100 + a % 60, 4);
+            },
+            P: function () { // Difference to GMT w/colon; e.g. +02:00
+                var O = f.O();
+                return (O.substr(0, 3) + ':' + O.substr(3, 2));
+            },
+            T: function () { // Timezone abbreviation; e.g. EST, MDT, ...
+                // The following works, but requires inclusion of the very
+                // large timezone_abbreviations_list() function.
+                /*              var abbr, i, os, _default;
+      if (!tal.length) {
+        tal = that.timezone_abbreviations_list();
+      }
+      if (that.php_js && that.php_js.default_timezone) {
+        _default = that.php_js.default_timezone;
+        for (abbr in tal) {
+          for (i = 0; i < tal[abbr].length; i++) {
+            if (tal[abbr][i].timezone_id === _default) {
+              return abbr.toUpperCase();
+            }
+          }
+        }
+      }
+      for (abbr in tal) {
+        for (i = 0; i < tal[abbr].length; i++) {
+          os = -jsdate.getTimezoneOffset() * 60;
+          if (tal[abbr][i].offset === os) {
+            return abbr.toUpperCase();
+          }
+        }
+      }
+      */
+                return 'UTC';
+            },
+            Z: function () { // Timezone offset in seconds (-43200...50400)
+                return -jsdate.getTimezoneOffset() * 60;
+            },
+
+            // Full Date/Time
+            c: function () { // ISO-8601 date.
+                return 'Y-m-d\\TH:i:sP'.replace(formatChr, formatChrCb);
+            },
+            r: function () { // RFC 2822
+                return 'D, d M Y H:i:s O'.replace(formatChr, formatChrCb);
+            },
+            U: function () { // Seconds since UNIX epoch
+                return jsdate / 1000 | 0;
+            }
+        };
+        this.date = function (format, timestamp) {
+            that = this;
+            jsdate = (timestamp === undefined ? new Date() : // Not provided
+                    (timestamp instanceof Date) ? new Date(timestamp) : // JS Date()
+                        new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
+            );
+            return format.replace(formatChr, formatChrCb);
+        };
+        return this.date(format, timestamp);
+    }, date_parse: function (date) {
+        //  discuss at: http://phpjs.org/functions/date_parse/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: strtotime
+        //   example 1: date_parse('2006-12-12 10:00:00.5');
+        //   returns 1: {year : 2006, month: 12, day: 12, hour: 10, minute: 0, second: 0, fraction: 0.5, warning_count: 0, warnings: [], error_count: 0, errors: [], is_localtime: false}
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        // END REDUNDANT
+
+        var ts,
+            warningsOffset = this.php_js.warnings ? this.php_js.warnings.length : null,
+            errorsOffset = this.php_js.errors ? this.php_js.errors.length : null;
+
+        try {
+            this.php_js.date_parse_state = true; // Allow strtotime to return a decimal (which it normally does not)
+            ts = this.strtotime(date);
+            this.php_js.date_parse_state = false;
+        } finally {
+            if (!ts) {
+                return false;
+            }
+        }
+
+        var dt = new Date(ts * 1000);
+
+        var retObj = { // Grab any new warnings or errors added (not implemented yet in strtotime()); throwing warnings, notices, or errors could also be easily monitored by using 'watch' on this.php_js.latestWarning, etc. and/or calling any defined error handlers
+            warning_count: warningsOffset !== null ? this.php_js.warnings.slice(warningsOffset)
+                .length : 0,
+            warnings: warningsOffset !== null ? this.php_js.warnings.slice(warningsOffset) : [],
+            error_count: errorsOffset !== null ? this.php_js.errors.slice(errorsOffset)
+                .length : 0,
+            errors: errorsOffset !== null ? this.php_js.errors.slice(errorsOffset) : []
+        };
+        retObj.year = dt.getFullYear();
+        retObj.month = dt.getMonth() + 1;
+        retObj.day = dt.getDate();
+        retObj.hour = dt.getHours();
+        retObj.minute = dt.getMinutes();
+        retObj.second = dt.getSeconds();
+        retObj.fraction = parseFloat('0.' + dt.getMilliseconds());
+        retObj.is_localtime = dt.getTimezoneOffset() !== 0;
+
+        return retObj;
+    }, getdate: function (timestamp) {
+        //  discuss at: http://phpjs.org/functions/getdate/
+        // original by: Paulo Freitas
+        //    input by: Alex
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: getdate(1055901520);
+        //   returns 1: {'seconds': 40, 'minutes': 58, 'hours': 21, 'mday': 17, 'wday': 2, 'mon': 6, 'year': 2003, 'yday': 167, 'weekday': 'Tuesday', 'month': 'June', '0': 1055901520}
+
+        var _w = ['Sun', 'Mon', 'Tues', 'Wednes', 'Thurs', 'Fri', 'Satur'];
+        var _m = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+            'November', 'December'
+        ];
+        var d = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
+                (typeof timestamp === 'object') ? new Date(timestamp) : // Javascript Date()
+                    new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
+        );
+        var w = d.getDay();
+        var m = d.getMonth();
+        var y = d.getFullYear();
+        var r = {};
+
+        r.seconds = d.getSeconds();
+        r.minutes = d.getMinutes();
+        r.hours = d.getHours();
+        r.mday = d.getDate();
+        r.wday = w;
+        r.mon = m + 1;
+        r.year = y;
+        r.yday = Math.floor((d - (new Date(y, 0, 1))) / 86400000);
+        r.weekday = _w[w] + 'day';
+        r.month = _m[m];
+        r['0'] = parseInt(d.getTime() / 1000, 10);
+
+        return r;
+    }, gettimeofday: function (return_float) {
+        //  discuss at: http://phpjs.org/functions/gettimeofday/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // original by: Josh Fraser (http://onlineaspect.com/2007/06/08/auto-detect-a-time-zone-with-javascript/)
+        //    parts by: Breaking Par Consulting Inc (http://www.breakingpar.com/bkp/home.nsf/0/87256B280015193F87256CFB006C45F7)
+        //  revised by: Theriault
+        //   example 1: gettimeofday();
+        //   returns 1: {sec: 12, usec: 153000, minuteswest: -480, dsttime: 0}
+        //   example 2: gettimeofday(true);
+        //   returns 2: 1238748978.49
+
+        var t = new Date(),
+            y = 0;
+
+        if (return_float) {
+            return t.getTime() / 1000;
+        }
+
+        y = t.getFullYear(); // Store current year.
+        return {
+            sec: t.getUTCSeconds(),
+            usec: t.getUTCMilliseconds() * 1000,
+            minuteswest: t.getTimezoneOffset(),
+            // Compare Jan 1 minus Jan 1 UTC to Jul 1 minus Jul 1 UTC to see if DST is observed.
+            dsttime: 0 + (((new Date(y, 0)) - Date.UTC(y, 0)) !== ((new Date(y, 6)) - Date.UTC(y, 6)))
+        };
+    }, gmdate: function (format, timestamp) {
+        //  discuss at: http://phpjs.org/functions/gmdate/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Alex
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: date
+        //   example 1: gmdate('H:m:s \\m \\i\\s \\m\\o\\n\\t\\h', 1062402400); // Return will depend on your timezone
+        //   returns 1: '07:09:40 m is month'
+
+        var dt = typeof timestamp === 'undefined' ? new Date() : // Not provided
+            typeof timestamp === 'object' ? new Date(timestamp) : // Javascript Date()
+                new Date(timestamp * 1000); // UNIX timestamp (auto-convert to int)
+        timestamp = Date.parse(dt.toUTCString()
+            .slice(0, -4)) / 1000;
+        return this.date(format, timestamp);
+    }, gmmktime: function () {
+        //  discuss at: http://phpjs.org/functions/gmmktime/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // original by: mktime
+        //   example 1: gmmktime(14, 10, 2, 2, 1, 2008);
+        //   returns 1: 1201875002
+        //   example 2: gmmktime(0, 0, -1, 1, 1, 1970);
+        //   returns 2: -1
+
+        var d = new Date(),
+            r = arguments,
+            i = 0,
+            e = ['Hours', 'Minutes', 'Seconds', 'Month', 'Date', 'FullYear'];
+
+        for (i = 0; i < e.length; i++) {
+            if (typeof r[i] === 'undefined') {
+                r[i] = d['getUTC' + e[i]]();
+                r[i] += (i === 3); // +1 to fix JS months.
+            } else {
+                r[i] = parseInt(r[i], 10);
+                if (isNaN(r[i])) {
+                    return false;
+                }
+            }
+        }
+
+        // Map years 0-69 to 2000-2069 and years 70-100 to 1970-2000.
+        r[5] += (r[5] >= 0 ? (r[5] <= 69 ? 2e3 : (r[5] <= 100 ? 1900 : 0)) : 0);
+
+        // Set year, month (-1 to fix JS months), and date.
+        // !This must come before the call to setHours!
+        d.setUTCFullYear(r[5], r[3] - 1, r[4]);
+
+        // Set hours, minutes, and seconds.
+        d.setUTCHours(r[0], r[1], r[2]);
+
+        // Divide milliseconds by 1000 to return seconds and drop decimal.
+        // Add 1 second if negative or it'll be off from PHP by 1 second.
+        return (d.getTime() / 1e3 >> 0) - (d.getTime() < 0);
+    }, gmstrftime: function (format, timestamp) {
+        //  discuss at: http://phpjs.org/functions/gmstrftime/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Alex
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: strftime
+        //   example 1: gmstrftime("%A", 1062462400);
+        //   returns 1: 'Tuesday'
+
+        var dt = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
+                (typeof timestamp === 'object') ? new Date(timestamp) : // Javascript Date()
+                    new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
+        );
+        timestamp = Date.parse(dt.toUTCString()
+            .slice(0, -4)) / 1000;
+        return this.strftime(format, timestamp);
+    }, idate: function (format, timestamp) {
+        //  discuss at: http://phpjs.org/functions/idate/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // original by: date
+        // original by: gettimeofday
+        //    input by: Alex
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Theriault
+        //   example 1: idate('y', 1255633200);
+        //   returns 1: 9
+
+        if (format === undefined) {
+            throw 'idate() expects at least 1 parameter, 0 given';
+        }
+        if (!format.length || format.length > 1) {
+            throw 'idate format is one char';
+        }
+
+        // Fix: Need to allow date_default_timezone_set() (check for this.php_js.default_timezone and use)
+        var date = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
+                    (timestamp instanceof Date) ? new Date(timestamp) : // Javascript Date()
+                        new Date(timestamp * 1000) // UNIX timestamp (auto-convert to int)
+            ),
+            a;
+
+        switch (format) {
+            case 'B':
+                return Math.floor(((date.getUTCHours() * 36e2) + (date.getUTCMinutes() * 60) + date.getUTCSeconds() + 36e2) /
+                    86.4) % 1e3;
+            case 'd':
+                return date.getDate();
+            case 'h':
+                return date.getHours() % 12 || 12;
+            case 'H':
+                return date.getHours();
+            case 'i':
+                return date.getMinutes();
+            case 'I':
+                // capital 'i'
+                // Logic original by getimeofday().
+                // Compares Jan 1 minus Jan 1 UTC to Jul 1 minus Jul 1 UTC.
+                // If they are not equal, then DST is observed.
+                a = date.getFullYear();
+                return 0 + (((new Date(a, 0)) - Date.UTC(a, 0)) !== ((new Date(a, 6)) - Date.UTC(a, 6)));
+            case 'L':
+                a = date.getFullYear();
+                return (!(a & 3) && (a % 1e2 || !(a % 4e2))) ? 1 : 0;
+            case 'm':
+                return date.getMonth() + 1;
+            case 's':
+                return date.getSeconds();
+            case 't':
+                return (new Date(date.getFullYear(), date.getMonth() + 1, 0))
+                    .getDate();
+            case 'U':
+                return Math.round(date.getTime() / 1000);
+            case 'w':
+                return date.getDay();
+            case 'W':
+                a = new Date(date.getFullYear(), date.getMonth(), date.getDate() - (date.getDay() || 7) + 3);
+                return 1 + Math.round((a - (new Date(a.getFullYear(), 0, 4))) / 864e5 / 7);
+            case 'y':
+                return parseInt((date.getFullYear() + '')
+                    .slice(2), 10); // This function returns an integer, unlike date()
+            case 'Y':
+                return date.getFullYear();
+            case 'z':
+                return Math.floor((date - new Date(date.getFullYear(), 0, 1)) / 864e5);
+            case 'Z':
+                return -date.getTimezoneOffset() * 60;
+            default:
+                throw 'Unrecognized date format token';
+        }
+    }, microtime: function (get_as_float) {
+        //  discuss at: http://phpjs.org/functions/microtime/
+        // original by: Paulo Freitas
+        //   example 1: timeStamp = microtime(true);
+        //   example 1: timeStamp > 1000000000 && timeStamp < 2000000000
+        //   returns 1: true
+
+        var now = new Date()
+            .getTime() / 1000;
+        var s = parseInt(now, 10);
+
+        return (get_as_float) ? now : (Math.round((now - s) * 1000) / 1000) + ' ' + s;
+    }, mktime: function () {
+        //  discuss at: http://phpjs.org/functions/mktime/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: baris ozdil
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: FGFEmperor
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //    input by: gabriel paderni
+        //    input by: Yannoo
+        //    input by: jakes
+        //    input by: 3D-GRAF
+        //    input by: Chris
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // bugfixed by: Marc Palau
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //  revised by: Theriault
+        //        note: The return values of the following examples are
+        //        note: received only if your system's timezone is UTC.
+        //   example 1: mktime(14, 10, 2, 2, 1, 2008);
+        //   returns 1: 1201875002
+        //   example 2: mktime(0, 0, 0, 0, 1, 2008);
+        //   returns 2: 1196467200
+        //   example 3: make = mktime();
+        //   example 3: td = new Date();
+        //   example 3: real = Math.floor(td.getTime() / 1000);
+        //   example 3: diff = (real - make);
+        //   example 3: diff < 5
+        //   returns 3: true
+        //   example 4: mktime(0, 0, 0, 13, 1, 1997)
+        //   returns 4: 883612800
+        //   example 5: mktime(0, 0, 0, 1, 1, 1998)
+        //   returns 5: 883612800
+        //   example 6: mktime(0, 0, 0, 1, 1, 98)
+        //   returns 6: 883612800
+        //   example 7: mktime(23, 59, 59, 13, 0, 2010)
+        //   returns 7: 1293839999
+        //   example 8: mktime(0, 0, -1, 1, 1, 1970)
+        //   returns 8: -1
+
+        var d = new Date(),
+            r = arguments,
+            i = 0,
+            e = ['Hours', 'Minutes', 'Seconds', 'Month', 'Date', 'FullYear'];
+
+        for (i = 0; i < e.length; i++) {
+            if (typeof r[i] === 'undefined') {
+                r[i] = d['get' + e[i]]();
+                r[i] += (i === 3); // +1 to fix JS months.
+            } else {
+                r[i] = parseInt(r[i], 10);
+                if (isNaN(r[i])) {
+                    return false;
+                }
+            }
+        }
+
+        // Map years 0-69 to 2000-2069 and years 70-100 to 1970-2000.
+        r[5] += (r[5] >= 0 ? (r[5] <= 69 ? 2e3 : (r[5] <= 100 ? 1900 : 0)) : 0);
+
+        // Set year, month (-1 to fix JS months), and date.
+        // !This must come before the call to setHours!
+        d.setFullYear(r[5], r[3] - 1, r[4]);
+
+        // Set hours, minutes, and seconds.
+        d.setHours(r[0], r[1], r[2]);
+
+        // Divide milliseconds by 1000 to return seconds and drop decimal.
+        // Add 1 second if negative or it'll be off from PHP by 1 second.
+        return (d.getTime() / 1e3 >> 0) - (d.getTime() < 0);
+    }, strftime: function (fmt, timestamp) {
+        //       discuss at: http://phpjs.org/functions/strftime/
+        //      original by: Blues (http://tech.bluesmoon.info/)
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //         input by: Alex
+        //      bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //       depends on: setlocale
+        //             note: Uses global: php_js to store locale info
+        //        example 1: strftime("%A", 1062462400); // Return value will depend on date and locale
+        //        returns 1: 'Tuesday'
+
+        this.php_js = this.php_js || {};
+        this.setlocale('LC_ALL', 0); // ensure setup of localization variables takes place
+        // END REDUNDANT
+        var phpjs = this.php_js;
+
+        // BEGIN STATIC
+        var _xPad = function (x, pad, r) {
+            if (typeof r === 'undefined') {
+                r = 10;
+            }
+            for (; parseInt(x, 10) < r && r > 1; r /= 10) {
+                x = pad.toString() + x;
+            }
+            return x.toString();
+        };
+
+        var locale = phpjs.localeCategories.LC_TIME;
+        var locales = phpjs.locales;
+        var lc_time = locales[locale].LC_TIME;
+
+        var _formats = {
+            a: function (d) {
+                return lc_time.a[d.getDay()];
+            },
+            A: function (d) {
+                return lc_time.A[d.getDay()];
+            },
+            b: function (d) {
+                return lc_time.b[d.getMonth()];
+            },
+            B: function (d) {
+                return lc_time.B[d.getMonth()];
+            },
+            C: function (d) {
+                return _xPad(parseInt(d.getFullYear() / 100, 10), 0);
+            },
+            d: ['getDate', '0'],
+            e: ['getDate', ' '],
+            g: function (d) {
+                return _xPad(parseInt(this.G(d) / 100, 10), 0);
+            },
+            G: function (d) {
+                var y = d.getFullYear();
+                var V = parseInt(_formats.V(d), 10);
+                var W = parseInt(_formats.W(d), 10);
+
+                if (W > V) {
+                    y++;
+                } else if (W === 0 && V >= 52) {
+                    y--;
+                }
+
+                return y;
+            },
+            H: ['getHours', '0'],
+            I: function (d) {
+                var I = d.getHours() % 12;
+                return _xPad(I === 0 ? 12 : I, 0);
+            },
+            j: function (d) {
+                var ms = d - new Date('' + d.getFullYear() + '/1/1 GMT');
+                ms += d.getTimezoneOffset() * 60000; // Line differs from Yahoo implementation which would be equivalent to replacing it here with:
+                // ms = new Date('' + d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate() + ' GMT') - ms;
+                var doy = parseInt(ms / 60000 / 60 / 24, 10) + 1;
+                return _xPad(doy, 0, 100);
+            },
+            k: ['getHours', '0'],
+            // not in PHP, but implemented here (as in Yahoo)
+            l: function (d) {
+                var l = d.getHours() % 12;
+                return _xPad(l === 0 ? 12 : l, ' ');
+            },
+            m: function (d) {
+                return _xPad(d.getMonth() + 1, 0);
+            },
+            M: ['getMinutes', '0'],
+            p: function (d) {
+                return lc_time.p[d.getHours() >= 12 ? 1 : 0];
+            },
+            P: function (d) {
+                return lc_time.P[d.getHours() >= 12 ? 1 : 0];
+            },
+            s: function (d) { // Yahoo uses return parseInt(d.getTime()/1000, 10);
+                return Date.parse(d) / 1000;
+            },
+            S: ['getSeconds', '0'],
+            u: function (d) {
+                var dow = d.getDay();
+                return ((dow === 0) ? 7 : dow);
+            },
+            U: function (d) {
+                var doy = parseInt(_formats.j(d), 10);
+                var rdow = 6 - d.getDay();
+                var woy = parseInt((doy + rdow) / 7, 10);
+                return _xPad(woy, 0);
+            },
+            V: function (d) {
+                var woy = parseInt(_formats.W(d), 10);
+                var dow1_1 = (new Date('' + d.getFullYear() + '/1/1'))
+                    .getDay();
+                // First week is 01 and not 00 as in the case of %U and %W,
+                // so we add 1 to the final result except if day 1 of the year
+                // is a Monday (then %W returns 01).
+                // We also need to subtract 1 if the day 1 of the year is
+                // Friday-Sunday, so the resulting equation becomes:
+                var idow = woy + (dow1_1 > 4 || dow1_1 <= 1 ? 0 : 1);
+                if (idow === 53 && (new Date('' + d.getFullYear() + '/12/31'))
+                    .getDay() < 4) {
+                    idow = 1;
+                } else if (idow === 0) {
+                    idow = _formats.V(new Date('' + (d.getFullYear() - 1) + '/12/31'));
+                }
+                return _xPad(idow, 0);
+            },
+            w: 'getDay',
+            W: function (d) {
+                var doy = parseInt(_formats.j(d), 10);
+                var rdow = 7 - _formats.u(d);
+                var woy = parseInt((doy + rdow) / 7, 10);
+                return _xPad(woy, 0, 10);
+            },
+            y: function (d) {
+                return _xPad(d.getFullYear() % 100, 0);
+            },
+            Y: 'getFullYear',
+            z: function (d) {
+                var o = d.getTimezoneOffset();
+                var H = _xPad(parseInt(Math.abs(o / 60), 10), 0);
+                var M = _xPad(o % 60, 0);
+                return (o > 0 ? '-' : '+') + H + M;
+            },
+            Z: function (d) {
+                return d.toString()
+                    .replace(/^.*\(([^)]+)\)$/, '$1');
+                /*
+      // Yahoo's: Better?
+      var tz = d.toString().replace(/^.*:\d\d( GMT[+-]\d+)? \(?([A-Za-z ]+)\)?\d*$/, '$2').replace(/[a-z ]/g, '');
+      if(tz.length > 4) {
+        tz = Dt.formats.z(d);
+      }
+      return tz;
+      */
+            },
+            '%': function (d) {
+                return '%';
+            }
+        };
+        // END STATIC
+        /* Fix: Locale alternatives are supported though not documented in PHP; see http://linux.die.net/man/3/strptime
+Ec
+EC
+Ex
+EX
+Ey
+EY
+Od or Oe
+OH
+OI
+Om
+OM
+OS
+OU
+Ow
+OW
+Oy
+  */
+
+        var _date = ((typeof timestamp === 'undefined') ? new Date() : // Not provided
+                (typeof timestamp === 'object') ? new Date(timestamp) : // Javascript Date()
+                    new Date(timestamp * 1000) // PHP API expects UNIX timestamp (auto-convert to int)
+        );
+
+        var _aggregates = {
+            c: 'locale',
+            D: '%m/%d/%y',
+            F: '%y-%m-%d',
+            h: '%b',
+            n: '\n',
+            r: 'locale',
+            R: '%H:%M',
+            t: '\t',
+            T: '%H:%M:%S',
+            x: 'locale',
+            X: 'locale'
+        };
+
+        // First replace aggregates (run in a loop because an agg may be made up of other aggs)
+        while (fmt.match(/%[cDFhnrRtTxX]/)) {
+            fmt = fmt.replace(/%([cDFhnrRtTxX])/g, function (m0, m1) {
+                var f = _aggregates[m1];
+                return (f === 'locale' ? lc_time[m1] : f);
             });
         }
-        delete uri.source;
-        return uri;
-    }, rawurldecode: function (str) {
-        //       discuss at: http://phpjs.org/functions/rawurldecode/
-        //      original by: Brett Zamir (http://brett-zamir.me)
-        //         input by: travc
-        //         input by: Brett Zamir (http://brett-zamir.me)
-        //         input by: Ratheous
-        //         input by: lovio
-        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //             note: Please be aware that this function expects to decode from UTF-8 encoded strings, as found on
-        //             note: pages served as UTF-8
-        //        example 1: rawurldecode('Kevin+van+Zonneveld%21');
-        //        returns 1: 'Kevin+van+Zonneveld!'
-        //        example 2: rawurldecode('http%3A%2F%2Fkevin.vanzonneveld.net%2F');
-        //        returns 2: 'http://kevin.vanzonneveld.net/'
-        //        example 3: rawurldecode('http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a');
-        //        returns 3: 'http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a'
 
-        return decodeURIComponent((str + '')
-            .replace(/%(?![\da-f]{2})/gi, function () {
-                // PHP tolerates poorly formed escape sequences
-                return '%25';
-            }));
-    }, rawurlencode: function (str) {
-        //       discuss at: http://phpjs.org/functions/rawurlencode/
-        //      original by: Brett Zamir (http://brett-zamir.me)
-        //         input by: travc
-        //         input by: Brett Zamir (http://brett-zamir.me)
-        //         input by: Michael Grier
-        //         input by: Ratheous
-        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      bugfixed by: Brett Zamir (http://brett-zamir.me)
-        //      bugfixed by: Joris
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //             note: This reflects PHP 5.3/6.0+ behavior
-        //             note: Please be aware that this function expects to encode into UTF-8 encoded strings, as found on
-        //             note: pages served as UTF-8
-        //        example 1: rawurlencode('Kevin van Zonneveld!');
-        //        returns 1: 'Kevin%20van%20Zonneveld%21'
-        //        example 2: rawurlencode('http://kevin.vanzonneveld.net/');
-        //        returns 2: 'http%3A%2F%2Fkevin.vanzonneveld.net%2F'
-        //        example 3: rawurlencode('http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a');
-        //        returns 3: 'http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a'
+        // Now replace formats - we need a closure so that the date object gets passed through
+        var str = fmt.replace(/%([aAbBCdegGHIjklmMpPsSuUVwWyYzZ%])/g, function (m0, m1) {
+            var f = _formats[m1];
+            if (typeof f === 'string') {
+                return _date[f]();
+            } else if (typeof f === 'function') {
+                return f(_date);
+            } else if (typeof f === 'object' && typeof f[0] === 'string') {
+                return _xPad(_date[f[0]](), f[1]);
+            } else { // Shouldn't reach here
+                return m1;
+            }
+        });
+        return str;
+    }, strptime: function (dateStr, format) {
+        //  discuss at: http://phpjs.org/functions/strptime/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // original by: strftime
+        //  depends on: setlocale
+        //  depends on: array_map
+        //        test: skip
+        //   example 1: strptime('20091112222135', '%Y%m%d%H%M%S'); // Return value will depend on date and locale
+        //   example 1: strptime('2009extra', '%Y');
+        //   returns 1: {tm_sec: 35, tm_min: 21, tm_hour: 22, tm_mday: 12, tm_mon: 10, tm_year: 109, tm_wday: 4, tm_yday: 315, unparsed: ''}
+        //   returns 1: {tm_sec:0, tm_min:0, tm_hour:0, tm_mday:0, tm_mon:0, tm_year:109, tm_wday:3, tm_yday: -1, unparsed: 'extra'}
 
-        str = (str + '')
-            .toString();
+        // tm_isdst is in other docs; why not PHP?
 
-        // Tilde should be allowed unescaped in future versions of PHP (as reflected below), but if you want to reflect current
-        // PHP behavior, you would need to add ".replace(/~/g, '%7E');" to the following.
-        return encodeURIComponent(str)
-            .replace(/!/g, '%21')
-            .replace(/'/g, '%27')
-            .replace(/\(/g, '%28')
-            .replace(/\)/g, '%29')
-            .replace(/\*/g, '%2A');
-    }, urldecode: function (str) {
-        //       discuss at: http://phpjs.org/functions/urldecode/
-        //      original by: Philip Peterson
-        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //      improved by: Lars Fischer
-        //      improved by: Orlando
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //         input by: AJ
-        //         input by: travc
-        //         input by: Brett Zamir (http://brett-zamir.me)
-        //         input by: Ratheous
-        //         input by: e-mike
-        //         input by: lovio
-        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      bugfixed by: Rob
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //             note: info on what encoding functions to use from: http://xkr.us/articles/javascript/encode-compare/
-        //             note: Please be aware that this function expects to decode from UTF-8 encoded strings, as found on
-        //             note: pages served as UTF-8
-        //        example 1: urldecode('Kevin+van+Zonneveld%21');
-        //        returns 1: 'Kevin van Zonneveld!'
-        //        example 2: urldecode('http%3A%2F%2Fkevin.vanzonneveld.net%2F');
-        //        returns 2: 'http://kevin.vanzonneveld.net/'
-        //        example 3: urldecode('http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a');
-        //        returns 3: 'http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a'
-        //        example 4: urldecode('%E5%A5%BD%3_4');
-        //        returns 4: '\u597d%3_4'
+        // Needs more thorough testing and examples
 
-        return decodeURIComponent((str + '')
-            .replace(/%(?![\da-f]{2})/gi, function () {
-                // PHP tolerates poorly formed escape sequences
-                return '%25';
-            })
-            .replace(/\+/g, '%20'));
-    }, urlencode: function (str) {
-        //       discuss at: http://phpjs.org/functions/urlencode/
-        //      original by: Philip Peterson
-        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      improved by: Brett Zamir (http://brett-zamir.me)
-        //      improved by: Lars Fischer
-        //         input by: AJ
-        //         input by: travc
-        //         input by: Brett Zamir (http://brett-zamir.me)
-        //         input by: Ratheous
-        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-        //      bugfixed by: Joris
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        // reimplemented by: Brett Zamir (http://brett-zamir.me)
-        //             note: This reflects PHP 5.3/6.0+ behavior
-        //             note: Please be aware that this function expects to encode into UTF-8 encoded strings, as found on
-        //             note: pages served as UTF-8
-        //        example 1: urlencode('Kevin van Zonneveld!');
-        //        returns 1: 'Kevin+van+Zonneveld%21'
-        //        example 2: urlencode('http://kevin.vanzonneveld.net/');
-        //        returns 2: 'http%3A%2F%2Fkevin.vanzonneveld.net%2F'
-        //        example 3: urlencode('http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a');
-        //        returns 3: 'http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a'
+        var retObj = {
+                tm_sec: 0,
+                tm_min: 0,
+                tm_hour: 0,
+                tm_mday: 0,
+                tm_mon: 0,
+                tm_year: 0,
+                tm_wday: 0,
+                tm_yday: 0,
+                unparsed: ''
+            },
+            i = 0,
+            that = this,
+            amPmOffset = 0,
+            prevHour = false,
+            _reset = function (dateObj, realMday) {
+                // realMday is to allow for a value of 0 in return results (but without
+                // messing up the Date() object)
+                var jan1,
+                    o = retObj,
+                    d = dateObj;
+                o.tm_sec = d.getUTCSeconds();
+                o.tm_min = d.getUTCMinutes();
+                o.tm_hour = d.getUTCHours();
+                o.tm_mday = realMday === 0 ? realMday : d.getUTCDate();
+                o.tm_mon = d.getUTCMonth();
+                o.tm_year = d.getUTCFullYear() - 1900;
+                o.tm_wday = realMday === 0 ? (d.getUTCDay() > 0 ? d.getUTCDay() - 1 : 6) : d.getUTCDay();
+                jan1 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                o.tm_yday = Math.ceil((d - jan1) / (1000 * 60 * 60 * 24));
+            },
+            _date = function () {
+                var o = retObj;
+                // We set date to at least 1 to ensure year or month doesn't go backwards
+                return _reset(new Date(Date.UTC(o.tm_year + 1900, o.tm_mon, o.tm_mday || 1, o.tm_hour, o.tm_min, o.tm_sec)),
+                    o.tm_mday);
+            };
 
-        str = (str + '')
-            .toString();
+        // BEGIN STATIC
+        var _NWS = /\S/,
+            _WS = /\s/;
 
-        // Tilde should be allowed unescaped in future versions of PHP (as reflected below), but if you want to reflect current
-        // PHP behavior, you would need to add ".replace(/~/g, '%7E');" to the following.
-        return encodeURIComponent(str)
-            .replace(/!/g, '%21')
-            .replace(/'/g, '%27')
-            .replace(/\(/g, '%28')
-            .replace(/\)/g, '%29')
-            .replace(/\*/g, '%2A')
-            .replace(/%20/g, '+');
+        var _aggregates = {
+            c: 'locale',
+            D: '%m/%d/%y',
+            F: '%y-%m-%d',
+            r: 'locale',
+            R: '%H:%M',
+            T: '%H:%M:%S',
+            x: 'locale',
+            X: 'locale'
+        };
+
+        /* Fix: Locale alternatives are supported though not documented in PHP; see http://linux.die.net/man/3/strptime
+Ec
+EC
+Ex
+EX
+Ey
+EY
+Od or Oe
+OH
+OI
+Om
+OM
+OS
+OU
+Ow
+OW
+Oy
+  */
+        var _preg_quote = function (str) {
+            return (str + '')
+                .replace(/([\\\.\+\*\?\[\^\]\$\(\)\{\}\=\!<>\|\:])/g, '\\$1');
+        };
+        // END STATIC
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.setlocale('LC_ALL', 0); // ensure setup of localization variables takes place
+        // END REDUNDANT
+
+        var phpjs = this.php_js;
+        var locale = phpjs.localeCategories.LC_TIME;
+        var locales = phpjs.locales;
+        var lc_time = locales[locale].LC_TIME;
+
+        // First replace aggregates (run in a loop because an agg may be made up of other aggs)
+        while (format.match(/%[cDFhnrRtTxX]/)) {
+            format = format.replace(/%([cDFhnrRtTxX])/g, function (m0, m1) {
+                var f = _aggregates[m1];
+                return (f === 'locale' ? lc_time[m1] : f);
+            });
+        }
+
+        var _addNext = function (j, regex, cb) {
+            if (typeof regex === 'string') {
+                regex = new RegExp('^' + regex, 'i');
+            }
+            var check = dateStr.slice(j);
+            var match = regex.exec(check);
+            // Even if the callback returns null after assigning to the return object, the object won't be saved anyways
+            var testNull = match ? cb.apply(null, match) : null;
+            if (testNull === null) {
+                throw 'No match in string';
+            }
+            return j + match[0].length;
+        };
+
+        var _addLocalized = function (j, formatChar, category) {
+            return _addNext(j, that.array_map(
+                    _preg_quote, lc_time[formatChar])
+                    .join('|'), // Could make each parenthesized instead and pass index to callback
+
+                function (m) {
+                    var match = lc_time[formatChar].search(new RegExp('^' + _preg_quote(m) + '$', 'i'));
+                    if (match) {
+                        retObj[category] = match[0];
+                    }
+                });
+        };
+
+        // BEGIN PROCESSING CHARACTERS
+        for (i = 0, j = 0; i < format.length; i++) {
+            if (format.charAt(i) === '%') {
+                var literalPos = ['%', 'n', 't'].indexOf(format.charAt(i + 1));
+                if (literalPos !== -1) {
+                    if (['%', '\n', '\t'].indexOf(dateStr.charAt(j)) === literalPos) { // a matched literal
+                        ++i;
+                        ++j; // skip beyond
+                        continue;
+                    }
+                    // Format indicated a percent literal, but not actually present
+                    return false;
+                }
+                var formatChar = format.charAt(i + 1);
+                try {
+                    switch (formatChar) {
+                        case 'a':
+                        // Fall-through // Sun-Sat
+                        case 'A':
+                            // Sunday-Saturday
+                            j = _addLocalized(j, formatChar, 'tm_wday'); // Changes nothing else
+                            break;
+                        case 'h':
+                        // Fall-through (alias of 'b');
+                        case 'b':
+                            // Jan-Dec
+                            j = _addLocalized(j, 'b', 'tm_mon');
+                            _date(); // Also changes wday, yday
+                            break;
+                        case 'B':
+                            // January-December
+                            j = _addLocalized(j, formatChar, 'tm_mon');
+                            _date(); // Also changes wday, yday
+                            break;
+                        case 'C':
+                            // 0+; century (19 for 20th)
+                            j = _addNext(j, /^\d?\d/, // PHP docs say two-digit, but accepts one-digit (two-digit max)
+
+                                function (d) {
+                                    var year = (parseInt(d, 10) - 19) * 100;
+                                    retObj.tm_year = year;
+                                    _date();
+                                    if (!retObj.tm_yday) {
+                                        retObj.tm_yday = -1;
+                                    }
+                                    // Also changes wday; and sets yday to -1 (always?)
+                                });
+                            break;
+                        case 'd':
+                        // Fall-through  01-31 day
+                        case 'e':
+                            // 1-31 day
+                            j = _addNext(j, formatChar === 'd' ? /^(0[1-9]|[1-2]\d|3[0-1])/ : /^([1-2]\d|3[0-1]|[1-9])/,
+                                function (d) {
+                                    var dayMonth = parseInt(d, 10);
+                                    retObj.tm_mday = dayMonth;
+                                    _date(); // Also changes w_day, y_day
+                                });
+                            break;
+                        case 'g':
+                            // No apparent effect; 2-digit year (see 'V')
+                            break;
+                        case 'G':
+                            // No apparent effect; 4-digit year (see 'V')'
+                            break;
+                        case 'H':
+                            // 00-23 hours
+                            j = _addNext(j, /^([0-1]\d|2[0-3])/, function (d) {
+                                var hour = parseInt(d, 10);
+                                retObj.tm_hour = hour;
+                                // Changes nothing else
+                            });
+                            break;
+                        case 'l':
+                        // Fall-through of lower-case 'L'; 1-12 hours
+                        case 'I':
+                            // 01-12 hours
+                            j = _addNext(j, formatChar === 'l' ? /^([1-9]|1[0-2])/ : /^(0[1-9]|1[0-2])/, function (d) {
+                                var hour = parseInt(d, 10) - 1 + amPmOffset;
+                                retObj.tm_hour = hour;
+                                prevHour = true; // Used for coordinating with am-pm
+                                // Changes nothing else, but affected by prior 'p/P'
+                            });
+                            break;
+                        case 'j':
+                            // 001-366 day of year
+                            j = _addNext(j, /^(00[1-9]|0[1-9]\d|[1-2]\d\d|3[0-6][0-6])/, function (d) {
+                                var dayYear = parseInt(d, 10) - 1;
+                                retObj.tm_yday = dayYear;
+                                // Changes nothing else (oddly, since if original by a given year, could calculate other fields)
+                            });
+                            break;
+                        case 'm':
+                            // 01-12 month
+                            j = _addNext(j, /^(0[1-9]|1[0-2])/, function (d) {
+                                var month = parseInt(d, 10) - 1;
+                                retObj.tm_mon = month;
+                                _date(); // Also sets wday and yday
+                            });
+                            break;
+                        case 'M':
+                            // 00-59 minutes
+                            j = _addNext(j, /^[0-5]\d/, function (d) {
+                                var minute = parseInt(d, 10);
+                                retObj.tm_min = minute;
+                                // Changes nothing else
+                            });
+                            break;
+                        case 'P':
+                            // Seems not to work; AM-PM
+                            return false; // Could make fall-through instead since supposed to be a synonym despite PHP docs
+                        case 'p':
+                            // am-pm
+                            j = _addNext(j, /^(am|pm)/i, function (d) {
+                                // No effect on 'H' since already 24 hours but
+                                //   works before or after setting of l/I hour
+                                amPmOffset = (/a/)
+                                    .test(d) ? 0 : 12;
+                                if (prevHour) {
+                                    retObj.tm_hour += amPmOffset;
+                                }
+                            });
+                            break;
+                        case 's':
+                            // Unix timestamp (in seconds)
+                            j = _addNext(j, /^\d+/, function (d) {
+                                var timestamp = parseInt(d, 10);
+                                var date = new Date(Date.UTC(timestamp * 1000));
+                                _reset(date);
+                                // Affects all fields, but can't be negative (and initial + not allowed)
+                            });
+                            break;
+                        case 'S':
+                            // 00-59 seconds
+                            j = _addNext(j, /^[0-5]\d/, // strptime also accepts 60-61 for some reason
+
+                                function (d) {
+                                    var second = parseInt(d, 10);
+                                    retObj.tm_sec = second;
+                                    // Changes nothing else
+                                });
+                            break;
+                        case 'u':
+                        // Fall-through; 1 (Monday)-7(Sunday)
+                        case 'w':
+                            // 0 (Sunday)-6(Saturday)
+                            j = _addNext(j, /^\d/, function (d) {
+                                retObj.tm_wday = d - (formatChar === 'u');
+                                // Changes nothing else apparently
+                            });
+                            break;
+                        case 'U':
+                        // Fall-through (week of year, from 1st Sunday)
+                        case 'V':
+                        // Fall-through (ISO-8601:1988 week number; from first 4-weekday week, starting with Monday)
+                        case 'W':
+                            // Apparently ignored (week of year, from 1st Monday)
+                            break;
+                        case 'y':
+                            // 69 (or higher) for 1969+, 68 (or lower) for 2068-
+                            j = _addNext(j, /^\d?\d/, // PHP docs say two-digit, but accepts one-digit (two-digit max)
+
+                                function (d) {
+                                    d = parseInt(d, 10);
+                                    var year = d >= 69 ? d : d + 100;
+                                    retObj.tm_year = year;
+                                    _date();
+                                    if (!retObj.tm_yday) {
+                                        retObj.tm_yday = -1;
+                                    }
+                                    // Also changes wday; and sets yday to -1 (always?)
+                                });
+                            break;
+                        case 'Y':
+                            // 2010 (4-digit year)
+                            j = _addNext(j, /^\d{1,4}/, // PHP docs say four-digit, but accepts one-digit (four-digit max)
+
+                                function (d) {
+                                    var year = (parseInt(d, 10)) - 1900;
+                                    retObj.tm_year = year;
+                                    _date();
+                                    if (!retObj.tm_yday) {
+                                        retObj.tm_yday = -1;
+                                    }
+                                    // Also changes wday; and sets yday to -1 (always?)
+                                });
+                            break;
+                        case 'z':
+                            // Timezone; on my system, strftime gives -0800, but strptime seems not to alter hour setting
+                            break;
+                        case 'Z':
+                            // Timezone; on my system, strftime gives PST, but strptime treats text as unparsed
+                            break;
+                        default:
+                            throw 'Unrecognized formatting character in strptime()';
+                    }
+                } catch (e) {
+                    if (e === 'No match in string') { // Allow us to exit
+                        return false; // There was supposed to be a matching format but there wasn't
+                    }
+                }
+                ++i; // Calculate skipping beyond initial percent too
+            } else if (format.charAt(i) !== dateStr.charAt(j)) {
+                // If extra whitespace at beginning or end of either, or between formats, no problem
+                // (just a problem when between % and format specifier)
+
+                // If the string has white-space, it is ok to ignore
+                if (dateStr.charAt(j)
+                    .search(_WS) !== -1) {
+                    j++;
+                    i--; // Let the next iteration try again with the same format character
+                } else if (format.charAt(i)
+                    .search(_NWS) !== -1) { // Any extra formatting characters besides white-space causes
+                    // problems (do check after WS though, as may just be WS in string before next character)
+                    return false;
+                }
+                // Extra WS in format
+                // Adjust strings when encounter non-matching whitespace, so they align in future checks above
+                // Will check on next iteration (against same (non-WS) string character)
+            } else {
+                j++;
+            }
+        }
+
+        // POST-PROCESSING
+        retObj.unparsed = dateStr.slice(j); // Will also get extra whitespace; empty string if none
+        return retObj;
+    }
+    , strtotime: function (text, now) {
+        //  discuss at: http://phpjs.org/functions/strtotime/
+        //     version: 1109.2016
+        // original by: Caio Ariede (http://caioariede.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Caio Ariede (http://caioariede.com)
+        // improved by: A. Matías Quezada (http://amatiasq.com)
+        // improved by: preuter
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Mirko Faber
+        //    input by: David
+        // bugfixed by: Wagner B. Soares
+        // bugfixed by: Artur Tchernychev
+        //        note: Examples all have a fixed timestamp to prevent tests to fail because of variable time(zones)
+        //   example 1: strtotime('+1 day', 1129633200);
+        //   returns 1: 1129719600
+        //   example 2: strtotime('+1 week 2 days 4 hours 2 seconds', 1129633200);
+        //   returns 2: 1130425202
+        //   example 3: strtotime('last month', 1129633200);
+        //   returns 3: 1127041200
+        //   example 4: strtotime('2009-05-04 08:30:00 GMT');
+        //   returns 4: 1241425800
+
+        var parsed, match, today, year, date, days, ranges, len, times, regex, i, fail = false;
+
+        if (!text) {
+            return fail;
+        }
+
+        // Unecessary spaces
+        text = text.replace(/^\s+|\s+$/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/[\t\r\n]/g, '')
+            .toLowerCase();
+
+        // in contrast to php, js Date.parse function interprets:
+        // dates given as yyyy-mm-dd as in timezone: UTC,
+        // dates with "." or "-" as MDY instead of DMY
+        // dates with two-digit years differently
+        // etc...etc...
+        // ...therefore we manually parse lots of common date formats
+        match = text.match(
+            /^(\d{1,4})([\-\.\/\:])(\d{1,2})([\-\.\/\:])(\d{1,4})(?:\s(\d{1,2}):(\d{2})?:?(\d{2})?)?(?:\s([A-Z]+)?)?$/);
+
+        if (match && match[2] === match[4]) {
+            if (match[1] > 1901) {
+                switch (match[2]) {
+                    case '-': { // YYYY-M-D
+                        if (match[3] > 12 || match[5] > 31) {
+                            return fail;
+                        }
+
+                        return new Date(match[1], parseInt(match[3], 10) - 1, match[5],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                    case '.': { // YYYY.M.D is not parsed by strtotime()
+                        return fail;
+                    }
+                    case '/': { // YYYY/M/D
+                        if (match[3] > 12 || match[5] > 31) {
+                            return fail;
+                        }
+
+                        return new Date(match[1], parseInt(match[3], 10) - 1, match[5],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                }
+            } else if (match[5] > 1901) {
+                switch (match[2]) {
+                    case '-': { // D-M-YYYY
+                        if (match[3] > 12 || match[1] > 31) {
+                            return fail;
+                        }
+
+                        return new Date(match[5], parseInt(match[3], 10) - 1, match[1],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                    case '.': { // D.M.YYYY
+                        if (match[3] > 12 || match[1] > 31) {
+                            return fail;
+                        }
+
+                        return new Date(match[5], parseInt(match[3], 10) - 1, match[1],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                    case '/': { // M/D/YYYY
+                        if (match[1] > 12 || match[3] > 31) {
+                            return fail;
+                        }
+
+                        return new Date(match[5], parseInt(match[1], 10) - 1, match[3],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                }
+            } else {
+                switch (match[2]) {
+                    case '-': { // YY-M-D
+                        if (match[3] > 12 || match[5] > 31 || (match[1] < 70 && match[1] > 38)) {
+                            return fail;
+                        }
+
+                        year = match[1] >= 0 && match[1] <= 38 ? +match[1] + 2000 : match[1];
+                        return new Date(year, parseInt(match[3], 10) - 1, match[5],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                    case '.': { // D.M.YY or H.MM.SS
+                        if (match[5] >= 70) { // D.M.YY
+                            if (match[3] > 12 || match[1] > 31) {
+                                return fail;
+                            }
+
+                            return new Date(match[5], parseInt(match[3], 10) - 1, match[1],
+                                match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                        }
+                        if (match[5] < 60 && !match[6]) { // H.MM.SS
+                            if (match[1] > 23 || match[3] > 59) {
+                                return fail;
+                            }
+
+                            today = new Date();
+                            return new Date(today.getFullYear(), today.getMonth(), today.getDate(),
+                                match[1] || 0, match[3] || 0, match[5] || 0, match[9] || 0) / 1000;
+                        }
+
+                        return fail; // invalid format, cannot be parsed
+                    }
+                    case '/': { // M/D/YY
+                        if (match[1] > 12 || match[3] > 31 || (match[5] < 70 && match[5] > 38)) {
+                            return fail;
+                        }
+
+                        year = match[5] >= 0 && match[5] <= 38 ? +match[5] + 2000 : match[5];
+                        return new Date(year, parseInt(match[1], 10) - 1, match[3],
+                            match[6] || 0, match[7] || 0, match[8] || 0, match[9] || 0) / 1000;
+                    }
+                    case ':': { // HH:MM:SS
+                        if (match[1] > 23 || match[3] > 59 || match[5] > 59) {
+                            return fail;
+                        }
+
+                        today = new Date();
+                        return new Date(today.getFullYear(), today.getMonth(), today.getDate(),
+                            match[1] || 0, match[3] || 0, match[5] || 0) / 1000;
+                    }
+                }
+            }
+        }
+
+        // other formats and "now" should be parsed by Date.parse()
+        if (text === 'now') {
+            return now === null || isNaN(now) ? new Date()
+                .getTime() / 1000 | 0 : now | 0;
+        }
+        if (!isNaN(parsed = Date.parse(text))) {
+            return parsed / 1000 | 0;
+        }
+
+        date = now ? new Date(now * 1000) : new Date();
+        days = {
+            'sun': 0,
+            'mon': 1,
+            'tue': 2,
+            'wed': 3,
+            'thu': 4,
+            'fri': 5,
+            'sat': 6
+        };
+        ranges = {
+            'yea': 'FullYear',
+            'mon': 'Month',
+            'day': 'Date',
+            'hou': 'Hours',
+            'min': 'Minutes',
+            'sec': 'Seconds'
+        };
+
+        function lastNext(type, range, modifier) {
+            var diff, day = days[range];
+
+            if (typeof day !== 'undefined') {
+                diff = day - date.getDay();
+
+                if (diff === 0) {
+                    diff = 7 * modifier;
+                } else if (diff > 0 && type === 'last') {
+                    diff -= 7;
+                } else if (diff < 0 && type === 'next') {
+                    diff += 7;
+                }
+
+                date.setDate(date.getDate() + diff);
+            }
+        }
+
+        function process(val) {
+            var splt = val.split(' '), // Todo: Reconcile this with regex using \s, taking into account browser issues with split and regexes
+                type = splt[0],
+                range = splt[1].substring(0, 3),
+                typeIsNumber = /\d+/.test(type),
+                ago = splt[2] === 'ago',
+                num = (type === 'last' ? -1 : 1) * (ago ? -1 : 1);
+
+            if (typeIsNumber) {
+                num *= parseInt(type, 10);
+            }
+
+            if (ranges.hasOwnProperty(range) && !splt[1].match(/^mon(day|\.)?$/i)) {
+                return date['set' + ranges[range]](date['get' + ranges[range]]() + num);
+            }
+
+            if (range === 'wee') {
+                return date.setDate(date.getDate() + (num * 7));
+            }
+
+            if (type === 'next' || type === 'last') {
+                lastNext(type, range, num);
+            } else if (!typeIsNumber) {
+                return false;
+            }
+
+            return true;
+        }
+
+        times = '(years?|months?|weeks?|days?|hours?|minutes?|min|seconds?|sec' +
+            '|sunday|sun\\.?|monday|mon\\.?|tuesday|tue\\.?|wednesday|wed\\.?' +
+            '|thursday|thu\\.?|friday|fri\\.?|saturday|sat\\.?)';
+        regex = '([+-]?\\d+\\s' + times + '|' + '(last|next)\\s' + times + ')(\\sago)?';
+
+        match = text.match(new RegExp(regex, 'gi'));
+        if (!match) {
+            return fail;
+        }
+
+        for (i = 0, len = match.length; i < len; i++) {
+            if (!process(match[i])) {
+                return fail;
+            }
+        }
+
+        // ECMAScript 5 only
+        // if (!match.every(process))
+        //    return false;
+
+        return (date.getTime() / 1000);
+    }, time: function () {
+        //  discuss at: http://phpjs.org/functions/time/
+        // original by: GeekFG (http://geekfg.blogspot.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: metjay
+        // improved by: HKM
+        //   example 1: timeStamp = time();
+        //   example 1: timeStamp > 1000000000 && timeStamp < 2000000000
+        //   returns 1: true
+
+        return Math.floor(new Date()
+            .getTime() / 1000);
+    }, inet_ntop: function (a) {
+        //  discuss at: http://phpjs.org/functions/inet_ntop/
+        // original by: Theriault
+        //   example 1: inet_ntop('\x7F\x00\x00\x01');
+        //   returns 1: '127.0.0.1'
+        //   example 2: inet_ntop('\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1');
+        //   returns 2: '::1'
+
+        var i = 0,
+            m = '',
+            c = [];
+        a += '';
+        if (a.length === 4) { // IPv4
+            return [
+                a.charCodeAt(0), a.charCodeAt(1), a.charCodeAt(2), a.charCodeAt(3)].join('.');
+        } else if (a.length === 16) { // IPv6
+            for (i = 0; i < 16; i++) {
+                c.push(((a.charCodeAt(i++) << 8) + a.charCodeAt(i))
+                    .toString(16));
+            }
+            return c.join(':')
+                .replace(/((^|:)0(?=:|$))+:?/g, function (t) {
+                    m = (t.length > m.length) ? t : m;
+                    return t;
+                })
+                .replace(m || ' ', '::');
+        } else { // Invalid length
+            return false;
+        }
+    }, inet_pton: function (a) {
+        //  discuss at: http://phpjs.org/functions/inet_pton/
+        // original by: Theriault
+        //   example 1: inet_pton('::');
+        //   returns 1: '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0'
+        //   example 2: inet_pton('127.0.0.1');
+        //   returns 2: '\x7F\x00\x00\x01'
+
+        var r, m, x, i, j, f = String.fromCharCode;
+        m = a.match(/^(?:\d{1,3}(?:\.|$)){4}/); // IPv4
+        if (m) {
+            m = m[0].split('.');
+            m = f(m[0]) + f(m[1]) + f(m[2]) + f(m[3]);
+            // Return if 4 bytes, otherwise false.
+            return m.length === 4 ? m : false;
+        }
+        r = /^((?:[\da-f]{1,4}(?::|)){0,8})(::)?((?:[\da-f]{1,4}(?::|)){0,8})$/;
+        m = a.match(r); // IPv6
+        if (m) {
+            // Translate each hexadecimal value.
+            for (j = 1; j < 4; j++) {
+                // Indice 2 is :: and if no length, continue.
+                if (j === 2 || m[j].length === 0) {
+                    continue;
+                }
+                m[j] = m[j].split(':');
+                for (i = 0; i < m[j].length; i++) {
+                    m[j][i] = parseInt(m[j][i], 16);
+                    // Would be NaN if it was blank, return false.
+                    if (isNaN(m[j][i])) {
+                        return false; // Invalid IP.
+                    }
+                    m[j][i] = f(m[j][i] >> 8) + f(m[j][i] & 0xFF);
+                }
+                m[j] = m[j].join('');
+            }
+            x = m[1].length + m[3].length;
+            if (x === 16) {
+                return m[1] + m[3];
+            } else if (x < 16 && m[2].length > 0) {
+                return m[1] + (new Array(16 - x + 1))
+                    .join('\x00') + m[3];
+            }
+        }
+        return false; // Invalid IP.
+    }, ip2long: function (IP) {
+        //  discuss at: http://phpjs.org/functions/ip2long/
+        // original by: Waldo Malqui Silva
+        // improved by: Victor
+        //  revised by: fearphage (http://http/my.opera.com/fearphage/)
+        //  revised by: Theriault
+        //   example 1: ip2long('192.0.34.166');
+        //   returns 1: 3221234342
+        //   example 2: ip2long('0.0xABCDEF');
+        //   returns 2: 11259375
+        //   example 3: ip2long('255.255.255.256');
+        //   returns 3: false
+
+        var i = 0;
+        // PHP allows decimal, octal, and hexadecimal IP components.
+        // PHP allows between 1 (e.g. 127) to 4 (e.g 127.0.0.1) components.
+        IP = IP.match(
+            /^([1-9]\d*|0[0-7]*|0x[\da-f]+)(?:\.([1-9]\d*|0[0-7]*|0x[\da-f]+))?(?:\.([1-9]\d*|0[0-7]*|0x[\da-f]+))?(?:\.([1-9]\d*|0[0-7]*|0x[\da-f]+))?$/i
+        ); // Verify IP format.
+        if (!IP) {
+            return false; // Invalid format.
+        }
+        // Reuse IP variable for component counter.
+        IP[0] = 0;
+        for (i = 1; i < 5; i += 1) {
+            IP[0] += !!((IP[i] || '')
+                .length);
+            IP[i] = parseInt(IP[i]) || 0;
+        }
+        // Continue to use IP for overflow values.
+        // PHP does not allow any component to overflow.
+        IP.push(256, 256, 256, 256);
+        // Recalculate overflow of last component supplied to make up for missing components.
+        IP[4 + IP[0]] *= Math.pow(256, 4 - IP[0]);
+        if (IP[1] >= IP[5] || IP[2] >= IP[6] || IP[3] >= IP[7] || IP[4] >= IP[8]) {
+            return false;
+        }
+        return IP[1] * (IP[0] === 1 || 16777216) + IP[2] * (IP[0] <= 2 || 65536) + IP[3] * (IP[0] <= 3 || 256) + IP[4] * 1;
+    }, long2ip: function (ip) {
+        //  discuss at: http://phpjs.org/functions/long2ip/
+        // original by: Waldo Malqui Silva
+        //   example 1: long2ip( 3221234342 );
+        //   returns 1: '192.0.34.166'
+
+        if (!isFinite(ip))
+            return false;
+
+        return [ip >>> 24, ip >>> 16 & 0xFF, ip >>> 8 & 0xFF, ip & 0xFF].join('.');
+    }, setcookie: function (name, value, expires, path, domain, secure) {
+        //  discuss at: http://phpjs.org/functions/setcookie/
+        // original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
+        // bugfixed by: Andreas
+        // bugfixed by: Onno Marsman
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //  depends on: setrawcookie
+        //   example 1: setcookie('author_name', 'Kevin van Zonneveld');
+        //   returns 1: true
+
+        return this.setrawcookie(name, encodeURIComponent(value), expires, path, domain, secure);
+    }, setrawcookie: function (name, value, expires, path, domain, secure) {
+        //  discuss at: http://phpjs.org/functions/setrawcookie/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // original by: setcookie
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    input by: Michael
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: setrawcookie('author_name', 'Kevin van Zonneveld');
+        //   returns 1: true
+
+        if (typeof expires === 'string' && (/^\d+$/)
+            .test(expires)) {
+            expires = parseInt(expires, 10);
+        }
+
+        if (expires instanceof Date) {
+            expires = expires.toGMTString();
+        } else if (typeof expires === 'number') {
+            expires = (new Date(expires * 1e3))
+                .toGMTString();
+        }
+
+        var r = [name + '=' + value],
+            s = {},
+            i = '';
+        s = {
+            expires: expires,
+            path: path,
+            domain: domain
+        };
+        for (i in s) {
+            if (s.hasOwnProperty(i)) { // Exclude items on Object.prototype
+                s[i] && r.push(i + '=' + s[i]);
+            }
+        }
+
+        return secure && r.push('secure'), this.window.document.cookie = r.join(';'), true;
     }, doubleval: function (mixed_var) {
         //  discuss at: http://phpjs.org/functions/doubleval/
         // original by: Brett Zamir (http://brett-zamir.me)
@@ -14357,7 +12407,7 @@ php = {
         if (s === 'object') {
             if (mixed_var !== null) { // From: http://javascript.crockford.com/remedial.html
                 if (typeof mixed_var.length === 'number' && !(mixed_var.propertyIsEnumerable('length')) && typeof mixed_var
-                        .splice === 'function') {
+                    .splice === 'function') {
                     s = 'array';
                 } else if (mixed_var.constructor && getFuncName(mixed_var.constructor)) {
                     name = getFuncName(mixed_var.constructor);
@@ -14484,7 +12534,7 @@ php = {
             // ini_set('phpjs.objectsAsArrays', 0) to disallow objects as arrays
             ((!ini || ( // if it's not set to 0 and it's not 'off', check for objects as arrays
                 (parseInt(ini.local_value, 10) !== 0 && (!ini.local_value.toLowerCase || ini.local_value.toLowerCase() !==
-                'off')))) && (
+                    'off')))) && (
                 Object.prototype.toString.call(mixed_var) === '[object Object]' && _getFuncName(mixed_var.constructor) ===
                 'Object' // Most likely a literal and intended as assoc. array
             ));
@@ -14663,7 +12713,7 @@ php = {
         var whitespace =
             " \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000";
         return (typeof mixed_var === 'number' || (typeof mixed_var === 'string' && whitespace.indexOf(mixed_var.slice(-1)) === -
-                1)) && mixed_var !== '' && !isNaN(mixed_var);
+            1)) && mixed_var !== '' && !isNaN(mixed_var);
     }, is_object: function (mixed_var) {
         //  discuss at: http://phpjs.org/functions/is_object/
         // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
@@ -14706,7 +12756,7 @@ php = {
             return name[1];
         };
         return !(!handle || typeof handle !== 'object' || !handle.constructor || getFuncName(handle.constructor) !==
-        'PHPJS_Resource');
+            'PHPJS_Resource');
     }, is_scalar: function (mixed_var) {
         //  discuss at: http://phpjs.org/functions/is_scalar/
         // original by: Paulo Freitas
@@ -14947,15 +12997,15 @@ php = {
             case 'object':
                 val = 'a';
                 /*
-                 if (type === 'object') {
-                 var objname = mixed_value.constructor.toString().match(/(\w+)\(\)/);
-                 if (objname == undefined) {
-                 return;
-                 }
-                 objname[1] = this.serialize(objname[1]);
-                 val = 'O' + objname[1].substring(1, objname[1].length - 1);
-                 }
-                 */
+        if (type === 'object') {
+          var objname = mixed_value.constructor.toString().match(/(\w+)\(\)/);
+          if (objname == undefined) {
+            return;
+          }
+          objname[1] = this.serialize(objname[1]);
+          val = 'O' + objname[1].substring(1, objname[1].length - 1);
+        }
+        */
 
                 for (key in mixed_value) {
                     if (mixed_value.hasOwnProperty(key)) {
@@ -15440,9 +13490,9 @@ php = {
                 for (var key in obj) {
                     var objVal = obj[key];
                     if (typeof objVal === 'object' && objVal !== null && !(objVal instanceof Date) && !(objVal instanceof RegExp) && !
-                            objVal.nodeName) {
+                        objVal.nodeName) {
                         str += thick_pad + '[' + key + '] =>\n' + thick_pad + _formatArray(objVal, cur_depth + 1, pad_val,
-                                pad_char);
+                            pad_char);
                     } else {
                         val = _getInnerVal(objVal, thick_pad);
                         str += thick_pad + '[' + key + '] =>\n' + thick_pad + val + '\n';
@@ -15596,606 +13646,1733 @@ php = {
         }
 
         return retstr;
-    }, xdiff_string_diff: function (old_data, new_data, context_lines, minimal) {
-        //  discuss at: http://phpjs.org/functions/xdiff_string_diff
-        // original by: Brett Zamir (http://brett-zamir.me)
-        //    based on: Imgen Tata (http://www.myipdf.com/)
-        // bugfixed by: Imgen Tata (http://www.myipdf.com/)
+    }, basename: function (path, suffix) {
+        //  discuss at: http://phpjs.org/functions/basename/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Ash Searle (http://hexmen.com/blog/)
+        // improved by: Lincoln Ramsay
+        // improved by: djmix
+        // improved by: Dmitry Gorelenkov
+        //   example 1: basename('/www/site/home.htm', '.htm');
+        //   returns 1: 'home'
+        //   example 2: basename('ecra.php?p=1');
+        //   returns 2: 'ecra.php?p=1'
+        //   example 3: basename('/some/path/');
+        //   returns 3: 'path'
+        //   example 4: basename('/some/path_ext.ext/','.ext');
+        //   returns 4: 'path_ext'
+
+        var b = path;
+        var lastChar = b.charAt(b.length - 1);
+
+        if (lastChar === '/' || lastChar === '\\') {
+            b = b.slice(0, -1);
+        }
+
+        b = b.replace(/^.*[\/\\]/g, '');
+
+        if (typeof suffix === 'string' && b.substr(b.length - suffix.length) == suffix) {
+            b = b.substr(0, b.length - suffix.length);
+        }
+
+        return b;
+    }, dirname: function (path) {
+        //  discuss at: http://phpjs.org/functions/dirname/
+        //        http: //kevin.vanzonneveld.net
+        // original by: Ozh
+        // improved by: XoraX (http://www.xorax.info)
+        //   example 1: dirname('/etc/passwd');
+        //   returns 1: '/etc'
+        //   example 2: dirname('c:/Temp/x');
+        //   returns 2: 'c:/Temp'
+        //   example 3: dirname('/dir/test/');
+        //   returns 3: '/dir'
+
+        return path.replace(/\\/g, '/')
+            .replace(/\/[^\/]*\/?$/, '');
+    }, file_get_contents: function (url, flags, context, offset, maxLen) {
+        //  discuss at: http://phpjs.org/functions/file_get_contents/
+        // original by: Legaev Andrey
+        //    input by: Jani Hartikainen
+        //    input by: Raphael (Ao) RUDLER
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
         // improved by: Brett Zamir (http://brett-zamir.me)
-        //        note: The minimal argument is not currently supported
-        //   example 1: xdiff_string_diff('', 'Hello world!');
-        //   returns 1: '@@ -0,0 +1,1 @@\n+Hello world!'
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //        note: This function uses XmlHttpRequest and cannot retrieve resource from different domain without modifications.
+        //        note: Synchronous by default (as in PHP) so may lock up browser. Can
+        //        note: get async by setting a custom "phpjs.async" property to true and "notification" for an
+        //        note: optional callback (both as context params, with responseText, and other JS-specific
+        //        note: request properties available via 'this'). Note that file_get_contents() will not return the text
+        //        note: in such a case (use this.responseText within the callback). Or, consider using
+        //        note: jQuery's: $('#divId').load('http://url') instead.
+        //        note: The context argument is only implemented for http, and only partially (see below for
+        //        note: "Presently unimplemented HTTP context options"); also the arguments passed to
+        //        note: notification are incomplete
+        //        test: skip
+        //   example 1: var buf file_get_contents('http://google.com');
+        //   example 1: buf.indexOf('Google') !== -1
+        //   returns 1: true
 
-        // (This code was done by Imgen Tata; I have only reformatted for use in php.js)
-
-        // See http://en.wikipedia.org/wiki/Diff#Unified_format
-        var i = 0,
-            j = 0,
+        var tmp, headers = [],
+            newTmp = [],
             k = 0,
-            ori_hunk_start, new_hunk_start, ori_hunk_end, new_hunk_end, ori_hunk_line_no, new_hunk_line_no,
-            ori_hunk_size,
-            new_hunk_size,
-            // Potential configuration
-            MAX_CONTEXT_LINES = Number.POSITIVE_INFINITY,
-            MIN_CONTEXT_LINES = 0,
-            DEFAULT_CONTEXT_LINES = 3,
-            //
-            HEADER_PREFIX = '@@ ',
-            HEADER_SUFFIX = ' @@',
-            ORIGINAL_INDICATOR = '-',
-            NEW_INDICATOR = '+',
-            RANGE_SEPARATOR = ',',
-            CONTEXT_INDICATOR = ' ',
-            DELETION_INDICATOR = '-',
-            ADDITION_INDICATOR = '+',
-            ori_lines, new_lines, NEW_LINE = '\n',
-            /**
-             * Trims string
-             */
-            trim = function (text) {
-                if (typeof text !== 'string') {
-                    throw new Error('String parameter required');
-                }
-
-                return text.replace(/(^\s*)|(\s*$)/g, '');
-            },
-            /**
-             * Verifies type of arguments
-             */
-            verify_type = function (type) {
-                var args = arguments,
-                    args_len = arguments.length,
-                    basic_types = ['number', 'boolean', 'string', 'function', 'object', 'undefined'],
-                    basic_type, i, j, type_of_type = typeof type;
-                if (type_of_type !== 'string' && type_of_type !== 'function') {
-                    throw new Error('Bad type parameter');
-                }
-
-                if (args_len < 2) {
-                    throw new Error('Too few arguments');
-                }
-
-                if (type_of_type === 'string') {
-                    type = trim(type);
-
-                    if (type === '') {
-                        throw new Error('Bad type parameter');
-                    }
-
-                    for (j = 0; j < basic_types.length; j++) {
-                        basic_type = basic_types[j];
-
-                        if (basic_type == type) {
-                            for (i = 1; i < args_len; i++) {
-                                if (typeof args[i] !== type) {
-                                    throw new Error('Bad type');
-                                }
-                            }
-
-                            return;
-                        }
-                    }
-
-                    throw new Error('Bad type parameter');
-                }
-
-                // Not basic type. we need to use instanceof operator
-                for (i = 1; i < args_len; i++) {
-                    if (!(args[i] instanceof type)) {
-                        throw new Error('Bad type');
-                    }
-                }
-            },
-            /**
-             * Checks if the specified array contains an element with specified value
-             */
-            has_value = function (array, value) {
-                var i;
-                verify_type(Array, array);
-
-                for (i = 0; i < array.length; i++) {
-                    if (array[i] === value) {
-                        return true;
-                    }
-                }
-
-                return false;
-            },
-            /**
-             * Checks the type of arguments
-             * @param {String | Function} type Specifies the desired type
-             * @return {Boolean} Return true if all arguments after the type argument are of specified type. Else false
-             */
-            are_type_of = function (type) {
-                var args = arguments,
-                    args_len = arguments.length,
-                    basic_types = ['number', 'boolean', 'string', 'function', 'object', 'undefined'],
-                    basic_type, i, j, type_of_type = typeof type;
-                if (type_of_type !== 'string' && type_of_type !== 'function') {
-                    throw new Error('Bad type parameter');
-                }
-
-                if (args_len < 2) {
-                    throw new Error('Too few arguments');
-                }
-
-                if (type_of_type === 'string') {
-                    type = trim(type);
-
-                    if (type === '') {
-                        return false;
-                    }
-
-                    for (j = 0; j < basic_types.length; j++) {
-                        basic_type = basic_types[j];
-
-                        if (basic_type == type) {
-                            for (i = 1; i < args_len; i++) {
-                                if (typeof args[i] != type) {
-                                    return false;
-                                }
-                            }
-
-                            return true;
-                        }
-                    }
-
-                    throw new Error('Bad type parameter');
-                }
-
-                // Not basic type. we need to use instanceof operator
-                for (i = 1; i < args_len; i++) {
-                    if (!(args[i] instanceof type)) {
-                        return false;
-                    }
-                }
-
-                return true;
-            },
-            /*
-             * Initialize and return an array with specified size and initial value
-             */
-            get_initialized_array = function (array_size, init_value) {
-                var array = [],
-                    i;
-                verify_type('number', array_size);
-
-                for (i = 0; i < array_size; i++) {
-                    array.push(init_value);
-                }
-
-                return array;
-            },
-            /**
-             * Splits text into lines and return as a string array
-             */
-            split_into_lines = function (text) {
-                verify_type('string', text);
-
-                if (text === '') {
-                    return [];
-                }
-                return text.split('\n');
-            },
-            is_empty_array = function (obj) {
-                return are_type_of(Array, obj) && obj.length === 0;
-            },
-            /**
-             * Finds longest common sequence between two sequences
-             * @see {@link http://wordaligned.org/articles/longest-common-subsequence}
-             */
-            find_longest_common_sequence = function (seq1, seq2, seq1_is_in_lcs, seq2_is_in_lcs) {
-                if (!are_type_of(Array, seq1, seq2)) {
-                    throw new Error('Array parameters are required');
-                }
-
-                // Deal with edge case
-                if (is_empty_array(seq1) || is_empty_array(seq2)) {
-                    return [];
-                }
-
-                // Function to calculate lcs lengths
-                var lcs_lens = function (xs, ys) {
-                        var i, j, prev,
-                            curr = get_initialized_array(ys.length + 1, 0);
-
-                        for (i = 0; i < xs.length; i++) {
-                            prev = curr.slice(0);
-                            for (j = 0; j < ys.length; j++) {
-                                if (xs[i] === ys[j]) {
-                                    curr[j + 1] = prev[j] + 1;
-                                } else {
-                                    curr[j + 1] = Math.max(curr[j], prev[j + 1]);
-                                }
-                            }
-                        }
-
-                        return curr;
-                    },
-                    // Function to find lcs and fill in the array to indicate the optimal longest common sequence
-                    find_lcs = function (xs, xidx, xs_is_in, ys) {
-                        var i, xb, xe, ll_b, ll_e, pivot, max, yb, ye,
-                            nx = xs.length,
-                            ny = ys.length;
-
-                        if (nx === 0) {
-                            return [];
-                        }
-                        if (nx === 1) {
-                            if (has_value(ys, xs[0])) {
-                                xs_is_in[xidx] = true;
-                                return [xs[0]];
-                            }
-                            return [];
-                        }
-                        i = Math.floor(nx / 2);
-                        xb = xs.slice(0, i);
-                        xe = xs.slice(i);
-                        ll_b = lcs_lens(xb, ys);
-                        ll_e = lcs_lens(xe.slice(0)
-                            .reverse(), ys.slice(0)
-                            .reverse());
-
-                        pivot = 0;
-                        max = 0;
-                        for (j = 0; j <= ny; j++) {
-                            if (ll_b[j] + ll_e[ny - j] > max) {
-                                pivot = j;
-                                max = ll_b[j] + ll_e[ny - j];
-                            }
-                        }
-                        yb = ys.slice(0, pivot);
-                        ye = ys.slice(pivot);
-                        return find_lcs(xb, xidx, xs_is_in, yb)
-                            .concat(find_lcs(xe, xidx + i, xs_is_in, ye));
-                    };
-
-                // Fill in seq1_is_in_lcs to find the optimal longest common subsequence of first sequence
-                find_lcs(seq1, 0, seq1_is_in_lcs, seq2);
-                // Fill in seq2_is_in_lcs to find the optimal longest common subsequence of second sequence and return the result
-                return find_lcs(seq2, 0, seq2_is_in_lcs, seq1);
-            };
-
-        // First, check the parameters
-        if (are_type_of('string', old_data, new_data) === false) {
-            return false;
-        }
-
-        if (old_data == new_data) {
-            return '';
-        }
-
-        if (typeof context_lines !== 'number' || context_lines > MAX_CONTEXT_LINES || context_lines < MIN_CONTEXT_LINES) {
-            context_lines = DEFAULT_CONTEXT_LINES;
-        }
-
-        ori_lines = split_into_lines(old_data);
-        new_lines = split_into_lines(new_data);
-        var ori_len = ori_lines.length,
-            new_len = new_lines.length,
-            ori_is_in_lcs = get_initialized_array(ori_len, false),
-            new_is_in_lcs = get_initialized_array(new_len, false),
-            lcs_len = find_longest_common_sequence(ori_lines, new_lines, ori_is_in_lcs, new_is_in_lcs)
-                .length,
-            unidiff = '';
-
-        if (lcs_len === 0) { // No common sequence
-            unidiff = HEADER_PREFIX + ORIGINAL_INDICATOR + (ori_len > 0 ? '1' : '0') + RANGE_SEPARATOR + ori_len + ' ' +
-                NEW_INDICATOR + (new_len > 0 ? '1' : '0') + RANGE_SEPARATOR + new_len + HEADER_SUFFIX;
-
-            for (i = 0; i < ori_len; i++) {
-                unidiff += NEW_LINE + DELETION_INDICATOR + ori_lines[i];
-            }
-
-            for (j = 0; j < new_len; j++) {
-                unidiff += NEW_LINE + ADDITION_INDICATOR + new_lines[j];
-            }
-
-            return unidiff;
-        }
-
-        var leading_context = [],
-            trailing_context = [],
-            actual_leading_context = [],
-            actual_trailing_context = [],
-
-            // Regularize leading context by the context_lines parameter
-            regularize_leading_context = function (context) {
-                if (context.length === 0 || context_lines === 0) {
-                    return [];
-                }
-
-                var context_start_pos = Math.max(context.length - context_lines, 0);
-
-                return context.slice(context_start_pos);
-            },
-
-            // Regularize trailing context by the context_lines parameter
-            regularize_trailing_context = function (context) {
-                if (context.length === 0 || context_lines === 0) {
-                    return [];
-                }
-
-                return context.slice(0, Math.min(context_lines, context.length));
-            };
-
-        // Skip common lines in the beginning
-        while (i < ori_len && ori_is_in_lcs[i] === true && new_is_in_lcs[i] === true) {
-            leading_context.push(ori_lines[i]);
-            i++;
-        }
-
-        j = i;
-        k = i; // The index in the longest common sequence
-        ori_hunk_start = i;
-        new_hunk_start = j;
-        ori_hunk_end = i;
-        new_hunk_end = j;
-
-        while (i < ori_len || j < new_len) {
-            while (i < ori_len && ori_is_in_lcs[i] === false) {
-                i++;
-            }
-            ori_hunk_end = i;
-
-            while (j < new_len && new_is_in_lcs[j] === false) {
-                j++;
-            }
-            new_hunk_end = j;
-
-            // Find the trailing context
-            trailing_context = [];
-            while (i < ori_len && ori_is_in_lcs[i] === true && j < new_len && new_is_in_lcs[j] === true) {
-                trailing_context.push(ori_lines[i]);
-                k++;
-                i++;
-                j++;
-            }
-
-            if (k >= lcs_len || // No more in longest common lines
-                trailing_context.length >= 2 * context_lines) { // Context break found
-                if (trailing_context.length < 2 * context_lines) { // It must be last block of common lines but not a context break
-                    trailing_context = [];
-
-                    // Force break out
-                    i = ori_len;
-                    j = new_len;
-
-                    // Update hunk ends to force output to the end
-                    ori_hunk_end = ori_len;
-                    new_hunk_end = new_len;
-                }
-
-                // Output the diff hunk
-
-                // Trim the leading and trailing context block
-                actual_leading_context = regularize_leading_context(leading_context);
-                actual_trailing_context = regularize_trailing_context(trailing_context);
-
-                ori_hunk_start -= actual_leading_context.length;
-                new_hunk_start -= actual_leading_context.length;
-                ori_hunk_end += actual_trailing_context.length;
-                new_hunk_end += actual_trailing_context.length;
-
-                ori_hunk_line_no = ori_hunk_start + 1;
-                new_hunk_line_no = new_hunk_start + 1;
-                ori_hunk_size = ori_hunk_end - ori_hunk_start;
-                new_hunk_size = new_hunk_end - new_hunk_start;
-
-                // Build header
-                unidiff += HEADER_PREFIX + ORIGINAL_INDICATOR + ori_hunk_line_no + RANGE_SEPARATOR + ori_hunk_size + ' ' +
-                    NEW_INDICATOR + new_hunk_line_no + RANGE_SEPARATOR + new_hunk_size + HEADER_SUFFIX + NEW_LINE;
-
-                // Build the diff hunk content
-                while (ori_hunk_start < ori_hunk_end || new_hunk_start < new_hunk_end) {
-                    if (ori_hunk_start < ori_hunk_end && ori_is_in_lcs[ori_hunk_start] === true && new_is_in_lcs[
-                            new_hunk_start] === true) { // The context line
-                        unidiff += CONTEXT_INDICATOR + ori_lines[ori_hunk_start] + NEW_LINE;
-                        ori_hunk_start++;
-                        new_hunk_start++;
-                    } else if (ori_hunk_start < ori_hunk_end && ori_is_in_lcs[ori_hunk_start] === false) { // The deletion line
-                        unidiff += DELETION_INDICATOR + ori_lines[ori_hunk_start] + NEW_LINE;
-                        ori_hunk_start++;
-                    } else if (new_hunk_start < new_hunk_end && new_is_in_lcs[new_hunk_start] === false) { // The additional line
-                        unidiff += ADDITION_INDICATOR + new_lines[new_hunk_start] + NEW_LINE;
-                        new_hunk_start++;
-                    }
-                }
-
-                // Update hunk position and leading context
-                ori_hunk_start = i;
-                new_hunk_start = j;
-                leading_context = trailing_context;
-            }
-        }
-
-        // Trim the trailing new line if it exists
-        if (unidiff.length > 0 && unidiff.charAt(unidiff.length) === NEW_LINE) {
-            unidiff = unidiff.slice(0, -1);
-        }
-
-        return unidiff;
-    }, xdiff_string_patch: function (originalStr, patch, flags, error) {
-        //  discuss at: http://phpjs.org/functions/xdiff_string_patch/
-        // original by: Brett Zamir (http://brett-zamir.me)
-        // improved by: Steven Levithan (stevenlevithan.com)
-        //        note: The XDIFF_PATCH_IGNORESPACE flag and the error argument are not currently supported
-        //        note: This has not been widely tested
-        //   example 1: xdiff_string_patch('', '@@ -0,0 +1,1 @@\n+Hello world!');
-        //   returns 1: 'Hello world!'
-
-        // First two functions were adapted from Steven Levithan, also under an MIT license
-        // Adapted from XRegExp 1.5.0
-        // (c) 2007-2010 Steven Levithan
-        // MIT License
-        // <http://xregexp.com>
-        var getNativeFlags = function (regex) {
-                return (regex.global ? 'g' : '') + (regex.ignoreCase ? 'i' : '') + (regex.multiline ? 'm' : '') + (regex.extended ?
-                        'x' : '') + // Proposed for ES4; included in AS3
-                    (regex.sticky ? 'y' : '');
-            },
-            cbSplit = function (string, sep /* separator */) {
-                // If separator `s` is not a regex, use the native `split`
-                if (!(sep instanceof RegExp)) { // Had problems to get it to work here using prototype test
-                    return String.prototype.split.apply(string, arguments);
-                }
-                var str = String(string),
-                    output = [],
-                    lastLastIndex = 0,
-                    match, lastLength, limit = Infinity,
-
-                    // This is required if not `s.global`, and it avoids needing to set `s.lastIndex` to zero
-                    // and restore it to its original value when we're done using the regex
-                    x = sep._xregexp,
-                    s = new RegExp(sep.source, getNativeFlags(sep) + 'g'); // Brett paring down
-                if (x) {
-                    s._xregexp = {
-                        source: x.source,
-                        captureNames: x.captureNames ? x.captureNames.slice(0) : null
-                    };
-                }
-
-                while ((match = s.exec(str))) { // Run the altered `exec` (required for `lastIndex` fix, etc.)
-                    if (s.lastIndex > lastLastIndex) {
-                        output.push(str.slice(lastLastIndex, match.index));
-
-                        if (match.length > 1 && match.index < str.length) {
-                            Array.prototype.push.apply(output, match.slice(1));
-                        }
-
-                        lastLength = match[0].length;
-                        lastLastIndex = s.lastIndex;
-
-                        if (output.length >= limit) {
-                            break;
-                        }
-                    }
-
-                    if (s.lastIndex === match.index) {
-                        s.lastIndex++;
-                    }
-                }
-
-                if (lastLastIndex === str.length) {
-                    if (!s.test('') || lastLength) {
-                        output.push('');
-                    }
-                } else {
-                    output.push(str.slice(lastLastIndex));
-                }
-
-                return output.length > limit ? output.slice(0, limit) : output;
-            },
             i = 0,
-            ll = 0,
-            ranges = [],
-            lastLinePos = 0,
-            firstChar = '',
-            rangeExp = /^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@$/,
-            lineBreaks = /\r?\n/,
-            lines = cbSplit(patch.replace(/(\r?\n)+$/, ''), lineBreaks),
-            origLines = cbSplit(originalStr, lineBreaks),
-            newStrArr = [],
-            linePos = 0,
-            errors = '',
-            // Both string & integer (constant) input is allowed
-            optTemp = 0,
-            OPTS = { // Unsure of actual PHP values, so better to rely on string
-                'XDIFF_PATCH_NORMAL': 1,
-                'XDIFF_PATCH_REVERSE': 2,
-                'XDIFF_PATCH_IGNORESPACE': 4
-            };
+            href = '',
+            pathPos = -1,
+            flagNames = 0,
+            content = null,
+            http_stream = false;
+        var func = function (value) {
+            return value.substring(1) !== '';
+        };
 
-        // Input defaulting & sanitation
-        if (typeof originalStr !== 'string' || !patch) {
-            return false;
-        }
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        // END REDUNDANT
+        var ini = this.php_js.ini;
+        context = context || this.php_js.default_streams_context || null;
+
         if (!flags) {
-            flags = 'XDIFF_PATCH_NORMAL';
+            flags = 0;
         }
-
-        if (typeof flags !== 'number') { // Allow for a single string or an array of string flags
+        var OPTS = {
+            FILE_USE_INCLUDE_PATH: 1,
+            FILE_TEXT: 32,
+            FILE_BINARY: 64
+        };
+        if (typeof flags === 'number') { // Allow for a single string or an array of string flags
+            flagNames = flags;
+        } else {
             flags = [].concat(flags);
             for (i = 0; i < flags.length; i++) {
-                // Resolve string input to bitwise e.g. 'XDIFF_PATCH_NORMAL' becomes 1
                 if (OPTS[flags[i]]) {
-                    optTemp = optTemp | OPTS[flags[i]];
+                    flagNames = flagNames | OPTS[flags[i]];
                 }
             }
-            flags = optTemp;
         }
 
-        if (flags & OPTS.XDIFF_PATCH_NORMAL) {
-            for (i = 0, ll = lines.length; i < ll; i++) {
-                ranges = lines[i].match(rangeExp);
-                if (ranges) {
-                    lastLinePos = linePos;
-                    linePos = ranges[1] - 1;
-                    while (lastLinePos < linePos) {
-                        newStrArr[newStrArr.length] = origLines[lastLinePos++];
-                    }
-                    while (lines[++i] && (rangeExp.exec(lines[i])) === null) {
-                        firstChar = lines[i].charAt(0);
-                        switch (firstChar) {
-                            case '-':
-                                ++linePos; // Skip including that line
-                                break;
-                            case '+':
-                                newStrArr[newStrArr.length] = lines[i].slice(1);
-                                break;
-                            case ' ':
-                                newStrArr[newStrArr.length] = origLines[linePos++];
-                                break;
-                            default:
-                                throw 'Unrecognized initial character in unidiff line'; // Reconcile with returning errrors arg?
-                        }
-                    }
-                    if (lines[i]) {
-                        i--;
+        if (flagNames & OPTS.FILE_BINARY && (flagNames & OPTS.FILE_TEXT)) { // These flags shouldn't be together
+            throw 'You cannot pass both FILE_BINARY and FILE_TEXT to file_get_contents()';
+        }
+
+        if ((flagNames & OPTS.FILE_USE_INCLUDE_PATH) && ini.include_path && ini.include_path.local_value) {
+            var slash = ini.include_path.local_value.indexOf('/') !== -1 ? '/' : '\\';
+            url = ini.include_path.local_value + slash + url;
+        } else if (!/^(https?|file):/.test(url)) { // Allow references within or below the same directory (should fix to allow other relative references or root reference; could make dependent on parse_url())
+            href = this.window.location.href;
+            pathPos = url.indexOf('/') === 0 ? href.indexOf('/', 8) - 1 : href.lastIndexOf('/');
+            url = href.slice(0, pathPos + 1) + url;
+        }
+
+        var http_options;
+        if (context) {
+            http_options = context.stream_options && context.stream_options.http;
+            http_stream = !!http_options;
+        }
+
+        if (!context || http_stream) {
+            var req = this.window.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest();
+            if (!req) {
+                throw new Error('XMLHttpRequest not supported');
+            }
+
+            var method = http_stream ? http_options.method : 'GET';
+            var async = !!(context && context.stream_params && context.stream_params['phpjs.async']);
+
+            if (ini['phpjs.ajaxBypassCache'] && ini['phpjs.ajaxBypassCache'].local_value) {
+                url += (url.match(/\?/) == null ? '?' : '&') + (new Date())
+                    .getTime(); // Give optional means of forcing bypass of cache
+            }
+
+            req.open(method, url, async);
+            if (async) {
+                var notification = context.stream_params.notification;
+                if (typeof notification === 'function') {
+                    // Fix: make work with req.addEventListener if available: https://developer.mozilla.org/En/Using_XMLHttpRequest
+                    if (0 && req.addEventListener) { // Unimplemented so don't allow to get here
+                        /*
+          req.addEventListener('progress', updateProgress, false);
+          req.addEventListener('load', transferComplete, false);
+          req.addEventListener('error', transferFailed, false);
+          req.addEventListener('abort', transferCanceled, false);
+          */
+                    } else {
+                        req.onreadystatechange = function (aEvt) { // aEvt has stopPropagation(), preventDefault(); see https://developer.mozilla.org/en/NsIDOMEvent
+                            // Other XMLHttpRequest properties: multipart, responseXML, status, statusText, upload, withCredentials
+                            /*
+  PHP Constants:
+  STREAM_NOTIFY_RESOLVE   1       A remote address required for this stream has been resolved, or the resolution failed. See severity  for an indication of which happened.
+  STREAM_NOTIFY_CONNECT   2     A connection with an external resource has been established.
+  STREAM_NOTIFY_AUTH_REQUIRED 3     Additional authorization is required to access the specified resource. Typical issued with severity level of STREAM_NOTIFY_SEVERITY_ERR.
+  STREAM_NOTIFY_MIME_TYPE_IS  4     The mime-type of resource has been identified, refer to message for a description of the discovered type.
+  STREAM_NOTIFY_FILE_SIZE_IS  5     The size of the resource has been discovered.
+  STREAM_NOTIFY_REDIRECTED    6     The external resource has redirected the stream to an alternate location. Refer to message .
+  STREAM_NOTIFY_PROGRESS  7     Indicates current progress of the stream transfer in bytes_transferred and possibly bytes_max as well.
+  STREAM_NOTIFY_COMPLETED 8     There is no more data available on the stream.
+  STREAM_NOTIFY_FAILURE   9     A generic error occurred on the stream, consult message and message_code for details.
+  STREAM_NOTIFY_AUTH_RESULT   10     Authorization has been completed (with or without success).
+
+  STREAM_NOTIFY_SEVERITY_INFO 0     Normal, non-error related, notification.
+  STREAM_NOTIFY_SEVERITY_WARN 1     Non critical error condition. Processing may continue.
+  STREAM_NOTIFY_SEVERITY_ERR  2     A critical error occurred. Processing cannot continue.
+  */
+                            var objContext = {
+                                responseText: req.responseText,
+                                responseXML: req.responseXML,
+                                status: req.status,
+                                statusText: req.statusText,
+                                readyState: req.readyState,
+                                evt: aEvt
+                            }; // properties are not available in PHP, but offered on notification via 'this' for convenience
+                            // notification args: notification_code, severity, message, message_code, bytes_transferred, bytes_max (all int's except string 'message')
+                            // Need to add message, etc.
+                            var bytes_transferred;
+                            switch (req.readyState) {
+                                case 0:
+                                    //     UNINITIALIZED     open() has not been called yet.
+                                    notification.call(objContext, 0, 0, '', 0, 0, 0);
+                                    break;
+                                case 1:
+                                    //     LOADING     send() has not been called yet.
+                                    notification.call(objContext, 0, 0, '', 0, 0, 0);
+                                    break;
+                                case 2:
+                                    //     LOADED     send() has been called, and headers and status are available.
+                                    notification.call(objContext, 0, 0, '', 0, 0, 0);
+                                    break;
+                                case 3:
+                                    //     INTERACTIVE     Downloading; responseText holds partial data.
+                                    bytes_transferred = req.responseText.length * 2; // One character is two bytes
+                                    notification.call(objContext, 7, 0, '', 0, bytes_transferred, 0);
+                                    break;
+                                case 4:
+                                    //     COMPLETED     The operation is complete.
+                                    if (req.status >= 200 && req.status < 400) {
+                                        bytes_transferred = req.responseText.length * 2; // One character is two bytes
+                                        notification.call(objContext, 8, 0, '', req.status, bytes_transferred, 0);
+                                    } else if (req.status === 403) { // Fix: These two are finished except for message
+                                        notification.call(objContext, 10, 2, '', req.status, 0, 0);
+                                    } else { // Errors
+                                        notification.call(objContext, 9, 2, '', req.status, 0, 0);
+                                    }
+                                    break;
+                                default:
+                                    throw 'Unrecognized ready state for file_get_contents()';
+                            }
+                        };
                     }
                 }
             }
-            while (linePos < origLines.length) {
-                newStrArr[newStrArr.length] = origLines[linePos++];
-            }
-        } else if (flags & OPTS.XDIFF_PATCH_REVERSE) { // Only differs from above by a few lines
-            for (i = 0, ll = lines.length; i < ll; i++) {
-                ranges = lines[i].match(rangeExp);
-                if (ranges) {
-                    lastLinePos = linePos;
-                    linePos = ranges[3] - 1;
-                    while (lastLinePos < linePos) {
-                        newStrArr[newStrArr.length] = origLines[lastLinePos++];
-                    }
-                    while (lines[++i] && (rangeExp.exec(lines[i])) === null) {
-                        firstChar = lines[i].charAt(0);
-                        switch (firstChar) {
-                            case '-':
-                                newStrArr[newStrArr.length] = lines[i].slice(1);
-                                break;
-                            case '+':
-                                ++linePos; // Skip including that line
-                                break;
-                            case ' ':
-                                newStrArr[newStrArr.length] = origLines[linePos++];
-                                break;
-                            default:
-                                throw 'Unrecognized initial character in unidiff line'; // Reconcile with returning errrors arg?
-                        }
-                    }
-                    if (lines[i]) {
-                        i--;
+
+            if (http_stream) {
+                var sendHeaders = http_options.header && http_options.header.split(/\r?\n/);
+                var userAgentSent = false;
+                for (i = 0; i < sendHeaders.length; i++) {
+                    var sendHeader = sendHeaders[i];
+                    var breakPos = sendHeader.search(/:\s*/);
+                    var sendHeaderName = sendHeader.substring(0, breakPos);
+                    req.setRequestHeader(sendHeaderName, sendHeader.substring(breakPos + 1));
+                    if (sendHeaderName === 'User-Agent') {
+                        userAgentSent = true;
                     }
                 }
+                if (!userAgentSent) {
+                    var user_agent = http_options.user_agent || (ini.user_agent && ini.user_agent.local_value);
+                    if (user_agent) {
+                        req.setRequestHeader('User-Agent', user_agent);
+                    }
+                }
+                content = http_options.content || null;
+                /*
+      // Presently unimplemented HTTP context options
+      var request_fulluri = http_options.request_fulluri || false; // When set to TRUE, the entire URI will be used when constructing the request. (i.e. GET http://www.example.com/path/to/file.html HTTP/1.0). While this is a non-standard request format, some proxy servers require it.
+      var max_redirects = http_options.max_redirects || 20; // The max number of redirects to follow. Value 1 or less means that no redirects are followed.
+      var protocol_version = http_options.protocol_version || 1.0; // HTTP protocol version
+      var timeout = http_options.timeout || (ini.default_socket_timeout && ini.default_socket_timeout.local_value); // Read timeout in seconds, specified by a float
+      var ignore_errors = http_options.ignore_errors || false; // Fetch the content even on failure status codes.
+      */
             }
-            while (linePos < origLines.length) {
-                newStrArr[newStrArr.length] = origLines[linePos++];
+
+            if (flagNames & OPTS.FILE_TEXT) { // Overrides how encoding is treated (regardless of what is returned from the server)
+                var content_type = 'text/html';
+                if (http_options && http_options['phpjs.override']) { // Fix: Could allow for non-HTTP as well
+                    content_type = http_options['phpjs.override']; // We use this, e.g., in gettext-related functions if character set
+                    //   overridden earlier by bind_textdomain_codeset()
+                } else {
+                    var encoding = (ini['unicode.stream_encoding'] && ini['unicode.stream_encoding'].local_value) ||
+                        'UTF-8';
+                    if (http_options && http_options.header && (/^content-type:/im)
+                        .test(http_options.header)) { // We'll assume a content-type expects its own specified encoding if present
+                        content_type = http_options.header.match(/^content-type:\s*(.*)$/im)[1]; // We let any header encoding stand
+                    }
+                    if (!(/;\s*charset=/)
+                        .test(content_type)) { // If no encoding
+                        content_type += '; charset=' + encoding;
+                    }
+                }
+                req.overrideMimeType(content_type);
+            }
+                // Default is FILE_BINARY, but for binary, we apparently deviate from PHP in requiring the flag, since many if not
+            //     most people will also want a way to have it be auto-converted into native JavaScript text instead
+            else if (flagNames & OPTS.FILE_BINARY) { // Trick at https://developer.mozilla.org/En/Using_XMLHttpRequest to get binary
+                req.overrideMimeType('text/plain; charset=x-user-defined');
+                // Getting an individual byte then requires:
+                // responseText.charCodeAt(x) & 0xFF; // throw away high-order byte (f7) where x is 0 to responseText.length-1 (see notes in our substr())
+            }
+
+            try {
+                if (http_options && http_options['phpjs.sendAsBinary']) { // For content sent in a POST or PUT request (use with file_put_contents()?)
+                    req.sendAsBinary(content); // In Firefox, only available FF3+
+                } else {
+                    req.send(content);
+                }
+            } catch (e) {
+                // catches exception reported in issue #66
+                return false;
+            }
+
+            tmp = req.getAllResponseHeaders();
+            if (tmp) {
+                tmp = tmp.split('\n');
+                for (k = 0; k < tmp.length; k++) {
+                    if (func(tmp[k])) {
+                        newTmp.push(tmp[k]);
+                    }
+                }
+                tmp = newTmp;
+                for (i = 0; i < tmp.length; i++) {
+                    headers[i] = tmp[i];
+                }
+                this.$http_response_header = headers; // see http://php.net/manual/en/reserved.variables.httpresponseheader.php
+            }
+
+            if (offset || maxLen) {
+                if (maxLen) {
+                    return req.responseText.substr(offset || 0, maxLen);
+                }
+                return req.responseText.substr(offset);
+            }
+            return req.responseText;
+        }
+        return false;
+    }, pathinfo: function (path, options) {
+        //  discuss at: http://phpjs.org/functions/pathinfo/
+        // original by: Nate
+        //  revised by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Timo
+        //        note: Inspired by actual PHP source: php5-5.2.6/ext/standard/string.c line #1559
+        //        note: The way the bitwise arguments are handled allows for greater flexibility
+        //        note: & compatability. We might even standardize this code and use a similar approach for
+        //        note: other bitwise PHP functions
+        //        note: php.js tries very hard to stay away from a core.js file with global dependencies, because we like
+        //        note: that you can just take a couple of functions and be on your way.
+        //        note: But by way we implemented this function, if you want you can still declare the PATHINFO_*
+        //        note: yourself, and then you can use: pathinfo('/www/index.html', PATHINFO_BASENAME | PATHINFO_EXTENSION);
+        //        note: which makes it fully compliant with PHP syntax.
+        //  depends on: basename
+        //   example 1: pathinfo('/www/htdocs/index.html', 1);
+        //   returns 1: '/www/htdocs'
+        //   example 2: pathinfo('/www/htdocs/index.html', 'PATHINFO_BASENAME');
+        //   returns 2: 'index.html'
+        //   example 3: pathinfo('/www/htdocs/index.html', 'PATHINFO_EXTENSION');
+        //   returns 3: 'html'
+        //   example 4: pathinfo('/www/htdocs/index.html', 'PATHINFO_FILENAME');
+        //   returns 4: 'index'
+        //   example 5: pathinfo('/www/htdocs/index.html', 2 | 4);
+        //   returns 5: {basename: 'index.html', extension: 'html'}
+        //   example 6: pathinfo('/www/htdocs/index.html', 'PATHINFO_ALL');
+        //   returns 6: {dirname: '/www/htdocs', basename: 'index.html', extension: 'html', filename: 'index'}
+        //   example 7: pathinfo('/www/htdocs/index.html');
+        //   returns 7: {dirname: '/www/htdocs', basename: 'index.html', extension: 'html', filename: 'index'}
+
+        var opt = '',
+            optName = '',
+            optTemp = 0,
+            tmp_arr = {},
+            cnt = 0,
+            i = 0;
+        var have_basename = false,
+            have_extension = false,
+            have_filename = false;
+
+        // Input defaulting & sanitation
+        if (!path) {
+            return false;
+        }
+        if (!options) {
+            options = 'PATHINFO_ALL';
+        }
+
+        // Initialize binary arguments. Both the string & integer (constant) input is
+        // allowed
+        var OPTS = {
+            'PATHINFO_DIRNAME': 1,
+            'PATHINFO_BASENAME': 2,
+            'PATHINFO_EXTENSION': 4,
+            'PATHINFO_FILENAME': 8,
+            'PATHINFO_ALL': 0
+        };
+        // PATHINFO_ALL sums up all previously defined PATHINFOs (could just pre-calculate)
+        for (optName in OPTS) {
+            OPTS.PATHINFO_ALL = OPTS.PATHINFO_ALL | OPTS[optName];
+        }
+        if (typeof options !== 'number') { // Allow for a single string or an array of string flags
+            options = [].concat(options);
+            for (i = 0; i < options.length; i++) {
+                // Resolve string input to bitwise e.g. 'PATHINFO_EXTENSION' becomes 4
+                if (OPTS[options[i]]) {
+                    optTemp = optTemp | OPTS[options[i]];
+                }
+            }
+            options = optTemp;
+        }
+
+        // Internal Functions
+        var __getExt = function (path) {
+            var str = path + '';
+            var dotP = str.lastIndexOf('.') + 1;
+            return !dotP ? false : dotP !== str.length ? str.substr(dotP) : '';
+        };
+
+        // Gather path infos
+        if (options & OPTS.PATHINFO_DIRNAME) {
+            var dirName = path.replace(/\\/g, '/')
+                .replace(/\/[^\/]*\/?$/, ''); // dirname
+            tmp_arr.dirname = dirName === path ? '.' : dirName;
+        }
+
+        if (options & OPTS.PATHINFO_BASENAME) {
+            if (false === have_basename) {
+                have_basename = this.basename(path);
+            }
+            tmp_arr.basename = have_basename;
+        }
+
+        if (options & OPTS.PATHINFO_EXTENSION) {
+            if (false === have_basename) {
+                have_basename = this.basename(path);
+            }
+            if (false === have_extension) {
+                have_extension = __getExt(have_basename);
+            }
+            if (false !== have_extension) {
+                tmp_arr.extension = have_extension;
             }
         }
-        if (typeof error === 'string') {
-            this.window[error] = errors;
+
+        if (options & OPTS.PATHINFO_FILENAME) {
+            if (false === have_basename) {
+                have_basename = this.basename(path);
+            }
+            if (false === have_extension) {
+                have_extension = __getExt(have_basename);
+            }
+            if (false === have_filename) {
+                have_filename = have_basename.slice(0, have_basename.length - (have_extension ? have_extension.length + 1 :
+                    have_extension === false ? 0 : 1));
+            }
+
+            tmp_arr.filename = have_filename;
         }
-        return newStrArr.join('\n');
+
+        // If array contains only 1 element: return string
+        cnt = 0;
+        for (opt in tmp_arr) {
+            cnt++;
+        }
+        if (cnt == 1) {
+            return tmp_arr[opt];
+        }
+
+        // Return full-blown array
+        return tmp_arr;
+    }, realpath: function (path) {
+        //  discuss at: http://phpjs.org/functions/realpath/
+        // original by: mk.keck
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //        note: Returned path is an url like e.g. 'http://yourhost.tld/path/'
+        //   example 1: realpath('../.././_supporters/pj_test_supportfile_1.htm');
+        //   returns 1: 'file:/home/kevin/workspace/_supporters/pj_test_supportfile_1.htm'
+
+        var p = 0,
+            arr = []; /* Save the root, if not given */
+        var r = this.window.location.href; /* Avoid input failures */
+        path = (path + '')
+            .replace('\\', '/'); /* Check if there's a port in path (like 'http://') */
+        if (path.indexOf('://') !== -1) {
+            p = 1;
+        } /* Ok, there's not a port in path, so let's take the root */
+        if (!p) {
+            path = r.substring(0, r.lastIndexOf('/') + 1) + path;
+        } /* Explode the given path into it's parts */
+        arr = path.split('/'); /* The path is an array now */
+        path = []; /* Foreach part make a check */
+        for (var k in arr) { /* This is'nt really interesting */
+            if (arr[k] == '.') {
+                continue;
+            } /* This reduces the realpath */
+            if (arr[k] == '..') {
+                /* But only if there more than 3 parts in the path-array.
+       * The first three parts are for the uri */
+                if (path.length > 3) {
+                    path.pop();
+                }
+            } /* This adds parts to the realpath */
+            else {
+                /* But only if the part is not empty or the uri
+       * (the first three parts ar needed) was not
+       * saved */
+                if ((path.length < 2) || (arr[k] !== '')) {
+                    path.push(arr[k]);
+                }
+            }
+        } /* Returns the absloute path as a string */
+        return path.join('/');
+    }, abs: function (mixed_number) {
+        //  discuss at: http://phpjs.org/functions/abs/
+        // original by: Waldo Malqui Silva
+        // improved by: Karol Kowalski
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
+        //   example 1: abs(4.2);
+        //   returns 1: 4.2
+        //   example 2: abs(-4.2);
+        //   returns 2: 4.2
+        //   example 3: abs(-5);
+        //   returns 3: 5
+        //   example 4: abs('_argos');
+        //   returns 4: 0
+
+        return Math.abs(mixed_number) || 0;
+    }, acos: function (arg) {
+        //  discuss at: http://phpjs.org/functions/acos/
+        // original by: Onno Marsman
+        //   example 1: acos(0.3);
+        //   returns 1: 1.2661036727794992
+
+        return Math.acos(arg);
+    }, acosh: function (arg) {
+        //  discuss at: http://phpjs.org/functions/acosh/
+        // original by: Onno Marsman
+        //   example 1: acosh(8723321.4);
+        //   returns 1: 16.674657798418625
+
+        return Math.log(arg + Math.sqrt(arg * arg - 1));
+    }, asin: function (arg) {
+        //  discuss at: http://phpjs.org/functions/asin/
+        // original by: Onno Marsman
+        //   example 1: asin(0.3);
+        //   returns 1: 0.3046926540153975
+
+        return Math.asin(arg);
+    }, asinh: function (arg) {
+        //  discuss at: http://phpjs.org/functions/asinh/
+        // original by: Onno Marsman
+        //   example 1: asinh(8723321.4);
+        //   returns 1: 16.67465779841863
+
+        return Math.log(arg + Math.sqrt(arg * arg + 1));
+    }, atan: function (arg) {
+        //  discuss at: http://phpjs.org/functions/atan/
+        // original by: Onno Marsman
+        //   example 1: atan(8723321.4);
+        //   returns 1: 1.5707962121596615
+
+        return Math.atan(arg);
+    }, atan2: function (y, x) {
+        //  discuss at: http://phpjs.org/functions/atan2/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: atan2(1, 1);
+        //   returns 1: 0.7853981633974483
+
+        return Math.atan2(y, x);
+    }, atanh: function (arg) {
+        //  discuss at: http://phpjs.org/functions/atanh/
+        // original by: Onno Marsman
+        //   example 1: atanh(0.3);
+        //   returns 1: 0.3095196042031118
+
+        return 0.5 * Math.log((1 + arg) / (1 - arg));
+    }, base_convert: function (number, frombase, tobase) {
+        //  discuss at: http://phpjs.org/functions/base_convert/
+        // original by: Philippe Baumann
+        // improved by: Rafał Kukawski (http://blog.kukawski.pl)
+        //   example 1: base_convert('A37334', 16, 2);
+        //   returns 1: '101000110111001100110100'
+
+        return parseInt(number + '', frombase | 0)
+            .toString(tobase | 0);
+    }, bindec: function (binary_string) {
+        //  discuss at: http://phpjs.org/functions/bindec/
+        // original by: Philippe Baumann
+        //   example 1: bindec('110011');
+        //   returns 1: 51
+        //   example 2: bindec('000110011');
+        //   returns 2: 51
+        //   example 3: bindec('111');
+        //   returns 3: 7
+
+        binary_string = (binary_string + '')
+            .replace(/[^01]/gi, '');
+        return parseInt(binary_string, 2);
+    }, ceil: function (value) {
+        //  discuss at: http://phpjs.org/functions/ceil/
+        // original by: Onno Marsman
+        //   example 1: ceil(8723321.4);
+        //   returns 1: 8723322
+
+        return Math.ceil(value);
+    }, cos: function (arg) {
+        //  discuss at: http://phpjs.org/functions/cos/
+        // original by: Onno Marsman
+        //   example 1: cos(8723321.4);
+        //   returns 1: -0.18127180117605912
+
+        return Math.cos(arg);
+    }, cosh: function (arg) {
+        //  discuss at: http://phpjs.org/functions/cosh/
+        // original by: Onno Marsman
+        //   example 1: cosh(-0.18127180117607017);
+        //   returns 1: 1.0164747716114113
+
+        return (Math.exp(arg) + Math.exp(-arg)) / 2;
+    }, decbin: function (number) {
+        //  discuss at: http://phpjs.org/functions/decbin/
+        // original by: Enrique Gonzalez
+        // bugfixed by: Onno Marsman
+        // improved by: http://stackoverflow.com/questions/57803/how-to-convert-decimal-to-hex-in-javascript
+        //    input by: pilus
+        //    input by: nord_ua
+        //   example 1: decbin(12);
+        //   returns 1: '1100'
+        //   example 2: decbin(26);
+        //   returns 2: '11010'
+        //   example 3: decbin('26');
+        //   returns 3: '11010'
+
+        if (number < 0) {
+            number = 0xFFFFFFFF + number + 1;
+        }
+        return parseInt(number, 10)
+            .toString(2);
+    }, dechex: function (number) {
+        //  discuss at: http://phpjs.org/functions/dechex/
+        // original by: Philippe Baumann
+        // bugfixed by: Onno Marsman
+        // improved by: http://stackoverflow.com/questions/57803/how-to-convert-decimal-to-hex-in-javascript
+        //    input by: pilus
+        //   example 1: dechex(10);
+        //   returns 1: 'a'
+        //   example 2: dechex(47);
+        //   returns 2: '2f'
+        //   example 3: dechex(-1415723993);
+        //   returns 3: 'ab9dc427'
+
+        if (number < 0) {
+            number = 0xFFFFFFFF + number + 1;
+        }
+        return parseInt(number, 10)
+            .toString(16);
+    }, decoct: function (number) {
+        //  discuss at: http://phpjs.org/functions/decoct/
+        // original by: Enrique Gonzalez
+        // bugfixed by: Onno Marsman
+        // improved by: http://stackoverflow.com/questions/57803/how-to-convert-decimal-to-hex-in-javascript
+        //    input by: pilus
+        //   example 1: decoct(15);
+        //   returns 1: '17'
+        //   example 2: decoct(264);
+        //   returns 2: '410'
+
+        if (number < 0) {
+            number = 0xFFFFFFFF + number + 1;
+        }
+        return parseInt(number, 10)
+            .toString(8);
+    }, deg2rad: function (angle) {
+        //  discuss at: http://phpjs.org/functions/deg2rad/
+        // original by: Enrique Gonzalez
+        // improved by: Thomas Grainger (http://graingert.co.uk)
+        //   example 1: deg2rad(45);
+        //   returns 1: 0.7853981633974483
+
+        return angle * .017453292519943295; // (angle / 180) * Math.PI;
+    }, exp: function (arg) {
+        //  discuss at: http://phpjs.org/functions/exp/
+        // original by: Onno Marsman
+        //   example 1: exp(0.3);
+        //   returns 1: 1.3498588075760032
+
+        return Math.exp(arg);
+    }, expm1: function (x) {
+        //  discuss at: http://phpjs.org/functions/expm1/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Precision 'n' can be adjusted as desired
+        //   example 1: expm1(1e-15);
+        //   returns 1: 1.0000000000000007e-15
+
+        var ret = 0,
+            n = 50; // degree of precision
+        var factorial = function factorial(n) {
+            if ((n === 0) || (n === 1)) {
+                return 1;
+            } else {
+                var result = (n * factorial(n - 1));
+                return result;
+            }
+        };
+        for (var i = 1; i < n; i++) {
+            ret += Math.pow(x, i) / factorial(i);
+        }
+        return ret;
+    }, floor: function (value) {
+        //  discuss at: http://phpjs.org/functions/floor/
+        // original by: Onno Marsman
+        //   example 1: floor(8723321.4);
+        //   returns 1: 8723321
+
+        return Math.floor(value);
+    }, fmod: function (x, y) {
+        //  discuss at: http://phpjs.org/functions/fmod/
+        // original by: Onno Marsman
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //   example 1: fmod(5.7, 1.3);
+        //   returns 1: 0.5
+
+        var tmp, tmp2, p = 0,
+            pY = 0,
+            l = 0.0,
+            l2 = 0.0;
+
+        tmp = x.toExponential()
+            .match(/^.\.?(.*)e(.+)$/);
+        p = parseInt(tmp[2], 10) - (tmp[1] + '')
+            .length;
+        tmp = y.toExponential()
+            .match(/^.\.?(.*)e(.+)$/);
+        pY = parseInt(tmp[2], 10) - (tmp[1] + '')
+            .length;
+
+        if (pY > p) {
+            p = pY;
+        }
+
+        tmp2 = (x % y);
+
+        if (p < -100 || p > 20) {
+            // toFixed will give an out of bound error so we fix it like this:
+            l = Math.round(Math.log(tmp2) / Math.log(10));
+            l2 = Math.pow(10, l);
+
+            return (tmp2 / l2)
+                .toFixed(l - p) * l2;
+        } else {
+            return parseFloat(tmp2.toFixed(-p));
+        }
+    }, getrandmax: function () {
+        //  discuss at: http://phpjs.org/functions/getrandmax/
+        // original by: Onno Marsman
+        //   example 1: getrandmax();
+        //   returns 1: 2147483647
+
+        return 2147483647;
+    }, hexdec: function (hex_string) {
+        //  discuss at: http://phpjs.org/functions/hexdec/
+        // original by: Philippe Baumann
+        //   example 1: hexdec('that');
+        //   returns 1: 10
+        //   example 2: hexdec('a0');
+        //   returns 2: 160
+
+        hex_string = (hex_string + '')
+            .replace(/[^a-f0-9]/gi, '');
+        return parseInt(hex_string, 16);
+    }, hypot: function (x, y) {
+        //  discuss at: http://phpjs.org/functions/hypot/
+        // original by: Onno Marsman
+        //   example 1: hypot(3, 4);
+        //   returns 1: 5
+        //   example 2: hypot([], 'a');
+        //   returns 2: 0
+
+        return Math.sqrt(x * x + y * y) || 0;
+    }, is_finite: function (val) {
+        //  discuss at: http://phpjs.org/functions/is_finite/
+        // original by: Onno Marsman
+        //   example 1: is_finite(Infinity);
+        //   returns 1: false
+        //   example 2: is_finite(-Infinity);
+        //   returns 2: false
+        //   example 3: is_finite(0);
+        //   returns 3: true
+
+        var warningType = '';
+
+        if (val === Infinity || val === -Infinity) {
+            return false;
+        }
+
+        //Some warnings for maximum PHP compatibility
+        if (typeof val === 'object') {
+            warningType = (Object.prototype.toString.call(val) === '[object Array]' ? 'array' : 'object');
+        } else if (typeof val === 'string' && !val.match(/^[\+\-]?\d/)) {
+            //simulate PHP's behaviour: '-9a' doesn't give a warning, but 'a9' does.
+            warningType = 'string';
+        }
+        if (warningType) {
+            throw new Error('Warning: is_finite() expects parameter 1 to be double, ' + warningType + ' given');
+        }
+
+        return true;
+    }, is_infinite: function (val) {
+        //  discuss at: http://phpjs.org/functions/is_infinite/
+        // original by: Onno Marsman
+        //   example 1: is_infinite(Infinity);
+        //   returns 1: true
+        //   example 2: is_infinite(-Infinity);
+        //   returns 2: true
+        //   example 3: is_infinite(0);
+        //   returns 3: false
+
+        var warningType = '';
+
+        if (val === Infinity || val === -Infinity) {
+            return true;
+        }
+
+        //Some warnings for maximum PHP compatibility
+        if (typeof val === 'object') {
+            warningType = (Object.prototype.toString.call(val) === '[object Array]' ? 'array' : 'object');
+        } else if (typeof val === 'string' && !val.match(/^[\+\-]?\d/)) {
+            //simulate PHP's behaviour: '-9a' doesn't give a warning, but 'a9' does.
+            warningType = 'string';
+        }
+        if (warningType) {
+            throw new Error('Warning: is_infinite() expects parameter 1 to be double, ' + warningType + ' given');
+        }
+
+        return false;
+    }, is_nan: function (val) {
+        //  discuss at: http://phpjs.org/functions/is_nan/
+        // original by: Onno Marsman
+        //    input by: Robin
+        //   example 1: is_nan(NaN);
+        //   returns 1: true
+        //   example 2: is_nan(0);
+        //   returns 2: false
+
+        var warningType = '';
+
+        if (typeof val === 'number' && isNaN(val)) {
+            return true;
+        }
+
+        //Some errors for maximum PHP compatibility
+        if (typeof val === 'object') {
+            warningType = (Object.prototype.toString.call(val) === '[object Array]' ? 'array' : 'object');
+        } else if (typeof val === 'string' && !val.match(/^[\+\-]?\d/)) {
+            //simulate PHP's behaviour: '-9a' doesn't give a warning, but 'a9' does.
+            warningType = 'string';
+        }
+        if (warningType) {
+            throw new Error('Warning: is_nan() expects parameter 1 to be double, ' + warningType + ' given');
+        }
+
+        return false;
+    }, lcg_value: function () {
+        //  discuss at: http://phpjs.org/functions/lcg_value/
+        // original by: Onno Marsman
+        //        test: skip
+        //   example 1: lcg_value()
+        //   returns 1: 1
+
+        return Math.random();
+    }, log: function (arg, base) {
+        //  discuss at: http://phpjs.org/functions/log/
+        // original by: Onno Marsman
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: log(8723321.4, 7);
+        //   returns 1: 8.212871815082147
+
+        return (typeof base === 'undefined') ?
+            Math.log(arg) :
+            Math.log(arg) / Math.log(base);
+    }, log10: function (arg) {
+        //  discuss at: http://phpjs.org/functions/log10/
+        // original by: Philip Peterson
+        // improved by: Onno Marsman
+        // improved by: Tod Gentille
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: log10(10);
+        //   returns 1: 1
+        //   example 2: log10(1);
+        //   returns 2: 0
+
+        return Math.log(arg) / 2.302585092994046; // Math.LN10
+    }, log1p: function (x) {
+        //  discuss at: http://phpjs.org/functions/log1p/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Precision 'n' can be adjusted as desired
+        //   example 1: log1p(1e-15);
+        //   returns 1: 9.999999999999995e-16
+
+        var ret = 0,
+            n = 50; // degree of precision
+        if (x <= -1) {
+            return '-INF'; // JavaScript style would be to return Number.NEGATIVE_INFINITY
+        }
+        if (x < 0 || x > 1) {
+            return Math.log(1 + x);
+        }
+        for (var i = 1; i < n; i++) {
+            if ((i % 2) === 0) {
+                ret -= Math.pow(x, i) / i;
+            } else {
+                ret += Math.pow(x, i) / i;
+            }
+        }
+        return ret;
+    }, max: function () {
+        //  discuss at: http://phpjs.org/functions/max/
+        // original by: Onno Marsman
+        //  revised by: Onno Marsman
+        // improved by: Jack
+        //        note: Long code cause we're aiming for maximum PHP compatibility
+        //   example 1: max(1, 3, 5, 6, 7);
+        //   returns 1: 7
+        //   example 2: max([2, 4, 5]);
+        //   returns 2: 5
+        //   example 3: max(0, 'hello');
+        //   returns 3: 0
+        //   example 4: max('hello', 0);
+        //   returns 4: 'hello'
+        //   example 5: max(-1, 'hello');
+        //   returns 5: 'hello'
+        //   example 6: max([2, 4, 8], [2, 5, 7]);
+        //   returns 6: [2, 5, 7]
+
+        var ar, retVal, i = 0,
+            n = 0,
+            argv = arguments,
+            argc = argv.length,
+            _obj2Array = function (obj) {
+                if (Object.prototype.toString.call(obj) === '[object Array]') {
+                    return obj;
+                } else {
+                    var ar = [];
+                    for (var i in obj) {
+                        if (obj.hasOwnProperty(i)) {
+                            ar.push(obj[i]);
+                        }
+                    }
+                    return ar;
+                }
+            }; //function _obj2Array
+        _compare = function (current, next) {
+            var i = 0,
+                n = 0,
+                tmp = 0,
+                nl = 0,
+                cl = 0;
+
+            if (current === next) {
+                return 0;
+            } else if (typeof current === 'object') {
+                if (typeof next === 'object') {
+                    current = _obj2Array(current);
+                    next = _obj2Array(next);
+                    cl = current.length;
+                    nl = next.length;
+                    if (nl > cl) {
+                        return 1;
+                    } else if (nl < cl) {
+                        return -1;
+                    }
+                    for (i = 0, n = cl; i < n; ++i) {
+                        tmp = _compare(current[i], next[i]);
+                        if (tmp == 1) {
+                            return 1;
+                        } else if (tmp == -1) {
+                            return -1;
+                        }
+                    }
+                    return 0;
+                }
+                return -1;
+            } else if (typeof next === 'object') {
+                return 1;
+            } else if (isNaN(next) && !isNaN(current)) {
+                if (current == 0) {
+                    return 0;
+                }
+                return (current < 0 ? 1 : -1);
+            } else if (isNaN(current) && !isNaN(next)) {
+                if (next == 0) {
+                    return 0;
+                }
+                return (next > 0 ? 1 : -1);
+            }
+
+            if (next == current) {
+                return 0;
+            }
+            return (next > current ? 1 : -1);
+        }; //function _compare
+        if (argc === 0) {
+            throw new Error('At least one value should be passed to max()');
+        } else if (argc === 1) {
+            if (typeof argv[0] === 'object') {
+                ar = _obj2Array(argv[0]);
+            } else {
+                throw new Error('Wrong parameter count for max()');
+            }
+            if (ar.length === 0) {
+                throw new Error('Array must contain at least one element for max()');
+            }
+        } else {
+            ar = argv;
+        }
+
+        retVal = ar[0];
+        for (i = 1, n = ar.length; i < n; ++i) {
+            if (_compare(retVal, ar[i]) == 1) {
+                retVal = ar[i];
+            }
+        }
+
+        return retVal;
+    }, min: function () {
+        //  discuss at: http://phpjs.org/functions/min/
+        // original by: Onno Marsman
+        //  revised by: Onno Marsman
+        // improved by: Jack
+        //        note: Long code cause we're aiming for maximum PHP compatibility
+        //   example 1: min(1, 3, 5, 6, 7);
+        //   returns 1: 1
+        //   example 2: min([2, 4, 5]);
+        //   returns 2: 2
+        //   example 3: min(0, 'hello');
+        //   returns 3: 0
+        //   example 4: min('hello', 0);
+        //   returns 4: 'hello'
+        //   example 5: min(-1, 'hello');
+        //   returns 5: -1
+        //   example 6: min([2, 4, 8], [2, 5, 7]);
+        //   returns 6: [2, 4, 8]
+
+        var ar, retVal, i = 0,
+            n = 0,
+            argv = arguments,
+            argc = argv.length,
+            _obj2Array = function (obj) {
+                if (Object.prototype.toString.call(obj) === '[object Array]') {
+                    return obj;
+                }
+                var ar = [];
+                for (var i in obj) {
+                    if (obj.hasOwnProperty(i)) {
+                        ar.push(obj[i]);
+                    }
+                }
+                return ar;
+            }; //function _obj2Array
+        _compare = function (current, next) {
+            var i = 0,
+                n = 0,
+                tmp = 0,
+                nl = 0,
+                cl = 0;
+
+            if (current === next) {
+                return 0;
+            } else if (typeof current === 'object') {
+                if (typeof next === 'object') {
+                    current = _obj2Array(current);
+                    next = _obj2Array(next);
+                    cl = current.length;
+                    nl = next.length;
+                    if (nl > cl) {
+                        return 1;
+                    } else if (nl < cl) {
+                        return -1;
+                    }
+                    for (i = 0, n = cl; i < n; ++i) {
+                        tmp = _compare(current[i], next[i]);
+                        if (tmp == 1) {
+                            return 1;
+                        } else if (tmp == -1) {
+                            return -1;
+                        }
+                    }
+                    return 0;
+                }
+                return -1;
+            } else if (typeof next === 'object') {
+                return 1;
+            } else if (isNaN(next) && !isNaN(current)) {
+                if (current == 0) {
+                    return 0;
+                }
+                return (current < 0 ? 1 : -1);
+            } else if (isNaN(current) && !isNaN(next)) {
+                if (next == 0) {
+                    return 0;
+                }
+                return (next > 0 ? 1 : -1);
+            }
+
+            if (next == current) {
+                return 0;
+            }
+            return (next > current ? 1 : -1);
+        }; //function _compare
+        if (argc === 0) {
+            throw new Error('At least one value should be passed to min()');
+        } else if (argc === 1) {
+            if (typeof argv[0] === 'object') {
+                ar = _obj2Array(argv[0]);
+            } else {
+                throw new Error('Wrong parameter count for min()');
+            }
+            if (ar.length === 0) {
+                throw new Error('Array must contain at least one element for min()');
+            }
+        } else {
+            ar = argv;
+        }
+
+        retVal = ar[0];
+        for (i = 1, n = ar.length; i < n; ++i) {
+            if (_compare(retVal, ar[i]) == -1) {
+                retVal = ar[i];
+            }
+        }
+
+        return retVal;
+    }, mt_getrandmax: function () {
+        //  discuss at: http://phpjs.org/functions/mt_getrandmax/
+        // original by: Onno Marsman
+        //   example 1: mt_getrandmax();
+        //   returns 1: 2147483647
+
+        return 2147483647;
+    }, mt_rand: function (min, max) {
+        //  discuss at: http://phpjs.org/functions/mt_rand/
+        // original by: Onno Marsman
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //    input by: Kongo
+        //   example 1: mt_rand(1, 1);
+        //   returns 1: 1
+
+        var argc = arguments.length;
+        if (argc === 0) {
+            min = 0;
+            max = 2147483647;
+        } else if (argc === 1) {
+            throw new Error('Warning: mt_rand() expects exactly 2 parameters, 1 given');
+        } else {
+            min = parseInt(min, 10);
+            max = parseInt(max, 10);
+        }
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }, octdec: function (oct_string) {
+        //  discuss at: http://phpjs.org/functions/octdec/
+        // original by: Philippe Baumann
+        //   example 1: octdec('77');
+        //   returns 1: 63
+
+        oct_string = (oct_string + '')
+            .replace(/[^0-7]/gi, '');
+        return parseInt(oct_string, 8);
+    }, pi: function () {
+        //  discuss at: http://phpjs.org/functions/pi/
+        // original by: Onno Marsman
+        // improved by: dude
+        //   example 1: pi(8723321.4);
+        //   returns 1: 3.141592653589793
+
+        return 3.141592653589793; // Math.PI
+    }, pow: function (base, exp) {
+        //  discuss at: http://phpjs.org/functions/pow/
+        // original by: Onno Marsman
+        //   example 1: pow(8723321.4, 7);
+        //   returns 1: 3.8439091680778995e+48
+
+        return Math.pow(base, exp);
+    }, rad2deg: function (angle) {
+        //  discuss at: http://phpjs.org/functions/rad2deg/
+        // original by: Enrique Gonzalez
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: rad2deg(3.141592653589793);
+        //   returns 1: 180
+
+        return angle * 57.29577951308232; // angle / Math.PI * 180
+    }, rand: function (min, max) {
+        //  discuss at: http://phpjs.org/functions/rand/
+        // original by: Leslie Hoare
+        // bugfixed by: Onno Marsman
+        //        note: See the commented out code below for a version which will work with our experimental (though probably unnecessary) srand() function)
+        //   example 1: rand(1, 1);
+        //   returns 1: 1
+
+        var argc = arguments.length;
+        if (argc === 0) {
+            min = 0;
+            max = 2147483647;
+        } else if (argc === 1) {
+            throw new Error('Warning: rand() expects exactly 2 parameters, 1 given');
+        }
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+
+        /*
+  // See note above for an explanation of the following alternative code
+
+  // +   reimplemented by: Brett Zamir (http://brett-zamir.me)
+  // -    depends on: srand
+  // %          note 1: This is a very possibly imperfect adaptation from the PHP source code
+  var rand_seed, ctx, PHP_RAND_MAX=2147483647; // 0x7fffffff
+
+  if (!this.php_js || this.php_js.rand_seed === undefined) {
+    this.srand();
+  }
+  rand_seed = this.php_js.rand_seed;
+
+  var argc = arguments.length;
+  if (argc === 1) {
+    throw new Error('Warning: rand() expects exactly 2 parameters, 1 given');
+  }
+
+  var do_rand = function (ctx) {
+    return ((ctx * 1103515245 + 12345) % (PHP_RAND_MAX + 1));
+  };
+
+  var php_rand = function (ctxArg) { // php_rand_r
+    this.php_js.rand_seed = do_rand(ctxArg);
+    return parseInt(this.php_js.rand_seed, 10);
+  };
+
+  var number = php_rand(rand_seed);
+
+  if (argc === 2) {
+    number = min + parseInt(parseFloat(parseFloat(max) - min + 1.0) * (number/(PHP_RAND_MAX + 1.0)), 10);
+  }
+  return number;
+  */
+    }, round: function (value, precision, mode) {
+        //  discuss at: http://phpjs.org/functions/round/
+        // original by: Philip Peterson
+        //  revised by: Onno Marsman
+        //  revised by: T.Wild
+        //  revised by: Rafał Kukawski (http://blog.kukawski.pl/)
+        //    input by: Greenseed
+        //    input by: meo
+        //    input by: William
+        //    input by: Josep Sanz (http://www.ws3.es/)
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //        note: Great work. Ideas for improvement:
+        //        note: - code more compliant with developer guidelines
+        //        note: - for implementing PHP constant arguments look at
+        //        note: the pathinfo() function, it offers the greatest
+        //        note: flexibility & compatibility possible
+        //   example 1: round(1241757, -3);
+        //   returns 1: 1242000
+        //   example 2: round(3.6);
+        //   returns 2: 4
+        //   example 3: round(2.835, 2);
+        //   returns 3: 2.84
+        //   example 4: round(1.1749999999999, 2);
+        //   returns 4: 1.17
+        //   example 5: round(58551.799999999996, 2);
+        //   returns 5: 58551.8
+
+        var m, f, isHalf, sgn; // helper variables
+        precision |= 0; // making sure precision is integer
+        m = Math.pow(10, precision);
+        value *= m;
+        sgn = (value > 0) | -(value < 0); // sign of the number
+        isHalf = value % 1 === 0.5 * sgn;
+        f = Math.floor(value);
+
+        if (isHalf) {
+            switch (mode) {
+                case 'PHP_ROUND_HALF_DOWN':
+                    value = f + (sgn < 0); // rounds .5 toward zero
+                    break;
+                case 'PHP_ROUND_HALF_EVEN':
+                    value = f + (f % 2 * sgn); // rouds .5 towards the next even integer
+                    break;
+                case 'PHP_ROUND_HALF_ODD':
+                    value = f + !(f % 2); // rounds .5 towards the next odd integer
+                    break;
+                default:
+                    value = f + (sgn > 0); // rounds .5 away from zero
+            }
+        }
+
+        return (isHalf ? value : Math.round(value)) / m;
+    }, sin: function (arg) {
+        //  discuss at: http://phpjs.org/functions/sin/
+        // original by: Onno Marsman
+        //   example 1: sin(8723321.4);
+        //   returns 1: -0.9834330348825929
+
+        return Math.sin(arg);
+    }, sinh: function (arg) {
+        //  discuss at: http://phpjs.org/functions/sinh/
+        // original by: Onno Marsman
+        //   example 1: sinh(-0.9834330348825909);
+        //   returns 1: -1.1497971402636502
+
+        return (Math.exp(arg) - Math.exp(-arg)) / 2;
+    }, sqrt: function (arg) {
+        //  discuss at: http://phpjs.org/functions/sqrt/
+        // original by: Onno Marsman
+        //   example 1: sqrt(8723321.4);
+        //   returns 1: 2953.5269424875746
+
+        return Math.sqrt(arg);
+    }, tan: function (arg) {
+        //  discuss at: http://phpjs.org/functions/tan/
+        // original by: Onno Marsman
+        //   example 1: tan(8723321.4);
+        //   returns 1: 5.4251848798448234
+
+        return Math.tan(arg);
+    }, tanh: function (arg) {
+        //  discuss at: http://phpjs.org/functions/tanh/
+        // original by: Onno Marsman
+        //   example 1: tanh(5.4251848798444815);
+        //   returns 1: 0.9999612058841574
+
+        return (Math.exp(arg) - Math.exp(-arg)) / (Math.exp(arg) + Math.exp(-arg));
+    }, base64_decode: function (data) {
+        //  discuss at: http://phpjs.org/functions/base64_decode/
+        // original by: Tyler Akins (http://rumkin.com)
+        // improved by: Thunder.m
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //    input by: Aman Gupta
+        //    input by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Onno Marsman
+        // bugfixed by: Pellentesque Malesuada
+        // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //   example 1: base64_decode('S2V2aW4gdmFuIFpvbm5ldmVsZA==');
+        //   returns 1: 'Kevin van Zonneveld'
+
+        var b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+        var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
+            ac = 0,
+            dec = '',
+            tmp_arr = [];
+
+        if (!data) {
+            return data;
+        }
+
+        data += '';
+
+        do { // unpack four hexets into three octets using index points in b64
+            h1 = b64.indexOf(data.charAt(i++));
+            h2 = b64.indexOf(data.charAt(i++));
+            h3 = b64.indexOf(data.charAt(i++));
+            h4 = b64.indexOf(data.charAt(i++));
+
+            bits = h1 << 18 | h2 << 12 | h3 << 6 | h4;
+
+            o1 = bits >> 16 & 0xff;
+            o2 = bits >> 8 & 0xff;
+            o3 = bits & 0xff;
+
+            if (h3 == 64) {
+                tmp_arr[ac++] = String.fromCharCode(o1);
+            } else if (h4 == 64) {
+                tmp_arr[ac++] = String.fromCharCode(o1, o2);
+            } else {
+                tmp_arr[ac++] = String.fromCharCode(o1, o2, o3);
+            }
+        } while (i < data.length);
+
+        dec = tmp_arr.join('');
+
+        return dec;
+    }, base64_encode: function (data) {
+        //  discuss at: http://phpjs.org/functions/base64_encode/
+        // original by: Tyler Akins (http://rumkin.com)
+        // improved by: Bayron Guevara
+        // improved by: Thunder.m
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Rafał Kukawski (http://kukawski.pl)
+        // bugfixed by: Pellentesque Malesuada
+        //   example 1: base64_encode('Kevin van Zonneveld');
+        //   returns 1: 'S2V2aW4gdmFuIFpvbm5ldmVsZA=='
+
+        var b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+        var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
+            ac = 0,
+            enc = '',
+            tmp_arr = [];
+
+        if (!data) {
+            return data;
+        }
+
+        do { // pack three octets into four hexets
+            o1 = data.charCodeAt(i++);
+            o2 = data.charCodeAt(i++);
+            o3 = data.charCodeAt(i++);
+
+            bits = o1 << 16 | o2 << 8 | o3;
+
+            h1 = bits >> 18 & 0x3f;
+            h2 = bits >> 12 & 0x3f;
+            h3 = bits >> 6 & 0x3f;
+            h4 = bits & 0x3f;
+
+            // use hexets to index into b64, and append result to encoded string
+            tmp_arr[ac++] = b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
+        } while (i < data.length);
+
+        enc = tmp_arr.join('');
+
+        var r = data.length % 3;
+
+        return (r ? enc.slice(0, r - 3) : enc) + '==='.slice(r || 3);
+    }, get_headers: function (url, format) {
+        //  discuss at: http://phpjs.org/functions/get_headers/
+        // original by: Paulo Freitas
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: array_filter
+        //        note: This function uses XmlHttpRequest and cannot retrieve resource from different domain.
+        //        note: Synchronous so may lock up browser, mainly here for study purposes.
+        //        test: skip
+        //   example 1: get_headers('http://kevin.vanzonneveld.net/pj_test_supportfile_1.htm')[0];
+        //   returns 1: 'Date: Wed, 13 May 2009 23:53:11 GMT'
+
+        var req = this.window.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest();
+
+        if (!req) {
+            throw new Error('XMLHttpRequest not supported');
+        }
+        var tmp, headers, pair, i, j = 0;
+        ß;
+        req.open('HEAD', url, false);
+        req.send(null);
+
+        if (req.readyState < 3) {
+            return false;
+        }
+
+        tmp = req.getAllResponseHeaders();
+        tmp = tmp.split('\n');
+        tmp = this.array_filter(tmp, function (value) {
+            return value.substring(1) !== '';
+        });
+        headers = format ? {} : [];
+
+        for (var i in tmp) {
+            if (format) {
+                pair = tmp[i].split(':');
+                headers[pair.splice(0, 1)] = pair.join(':')
+                    .substring(1);
+            } else {
+                headers[j++] = tmp[i];
+            }
+        }
+
+        return headers;
+    }, get_meta_tags: function (file) {
+        //  discuss at: http://phpjs.org/functions/get_meta_tags/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: This function uses XmlHttpRequest and cannot retrieve resource from different domain.
+        //        note: Synchronous so may lock up browser, mainly here for study purposes.
+        //  depends on: file_get_contents
+        //        test: skip
+        //   example 1: get_meta_tags('http://kevin.vanzonneveld.net/pj_test_supportfile_2.htm');
+        //   returns 1: {description: 'a php manual', author: 'name', keywords: 'php documentation', 'geo_position': '49.33;-86.59'}
+
+        var fulltxt = '';
+
+        if (false) {
+            // Use this for testing instead of the line above:
+            fulltxt = '<meta name="author" content="name">' + '<meta name="keywords" content="php documentation">' +
+                '<meta name="DESCRIPTION" content="a php manual">' + '<meta name="geo.position" content="49.33;-86.59">' +
+                '</head>';
+        } else {
+            fulltxt = this.file_get_contents(file)
+                .match(/^[\s\S]*<\/head>/i); // We have to disallow some character, so we choose a Unicode non-character
+        }
+
+        var patt = /<meta[^>]*?>/gim;
+        var patt1 = /<meta\s+.*?name\s*=\s*(['"]?)(.*?)\1\s+.*?content\s*=\s*(['"]?)(.*?)\3/gim;
+        var patt2 = /<meta\s+.*?content\s*=\s*(['"?])(.*?)\1\s+.*?name\s*=\s*(['"]?)(.*?)\3/gim;
+        var txt, match, name, arr = {};
+
+        while ((txt = patt.exec(fulltxt)) !== null) {
+            while ((match = patt1.exec(txt)) !== null) {
+                name = match[2].replace(/\W/g, '_')
+                    .toLowerCase();
+                arr[name] = match[4];
+            }
+            while ((match = patt2.exec(txt)) !== null) {
+                name = match[4].replace(/\W/g, '_')
+                    .toLowerCase();
+                arr[name] = match[2];
+            }
+        }
+        return arr;
+    }, http_build_query: function (formdata, numeric_prefix, arg_separator) {
+        //  discuss at: http://phpjs.org/functions/http_build_query/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Legaev Andrey
+        // improved by: Michael White (http://getsprink.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //  revised by: stag019
+        //    input by: Dreamer
+        // bugfixed by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: MIO_KODUKI (http://mio-koduki.blogspot.com/)
+        //        note: If the value is null, key and value are skipped in the http_build_query of PHP while in phpjs they are not.
+        //  depends on: urlencode
+        //   example 1: http_build_query({foo: 'bar', php: 'hypertext processor', baz: 'boom', cow: 'milk'}, '', '&amp;');
+        //   returns 1: 'foo=bar&amp;php=hypertext+processor&amp;baz=boom&amp;cow=milk'
+        //   example 2: http_build_query({'php': 'hypertext processor', 0: 'foo', 1: 'bar', 2: 'baz', 3: 'boom', 'cow': 'milk'}, 'myvar_');
+        //   returns 2: 'myvar_0=foo&myvar_1=bar&myvar_2=baz&myvar_3=boom&php=hypertext+processor&cow=milk'
+
+        var value, key, tmp = [],
+            that = this;
+
+        var _http_build_query_helper = function (key, val, arg_separator) {
+            var k, tmp = [];
+            if (val === true) {
+                val = '1';
+            } else if (val === false) {
+                val = '0';
+            }
+            if (val != null) {
+                if (typeof val === 'object') {
+                    for (k in val) {
+                        if (val[k] != null) {
+                            tmp.push(_http_build_query_helper(key + '[' + k + ']', val[k], arg_separator));
+                        }
+                    }
+                    return tmp.join(arg_separator);
+                } else if (typeof val !== 'function') {
+                    return that.urlencode(key) + '=' + that.urlencode(val);
+                } else {
+                    throw new Error('There was an error processing for http_build_query().');
+                }
+            } else {
+                return '';
+            }
+        };
+
+        if (!arg_separator) {
+            arg_separator = '&';
+        }
+        for (key in formdata) {
+            value = formdata[key];
+            if (numeric_prefix && !isNaN(key)) {
+                key = String(numeric_prefix) + key;
+            }
+            var query = _http_build_query_helper(key, value, arg_separator);
+            if (query !== '') {
+                tmp.push(query);
+            }
+        }
+
+        return tmp.join(arg_separator);
+    }, parse_url: function (str, component) {
+        //       discuss at: http://phpjs.org/functions/parse_url/
+        //      original by: Steven Levithan (http://blog.stevenlevithan.com)
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //         input by: Lorenzo Pisani
+        //         input by: Tony
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //             note: original by http://stevenlevithan.com/demo/parseuri/js/assets/parseuri.js
+        //             note: blog post at http://blog.stevenlevithan.com/archives/parseuri
+        //             note: demo at http://stevenlevithan.com/demo/parseuri/js/assets/parseuri.js
+        //             note: Does not replace invalid characters with '_' as in PHP, nor does it return false with
+        //             note: a seriously malformed URL.
+        //             note: Besides function name, is essentially the same as parseUri as well as our allowing
+        //             note: an extra slash after the scheme/protocol (to allow file:/// as in PHP)
+        //        example 1: parse_url('http://username:password@hostname/path?arg=value#anchor');
+        //        returns 1: {scheme: 'http', host: 'hostname', user: 'username', pass: 'password', path: '/path', query: 'arg=value', fragment: 'anchor'}
+
+        var query, key = ['source', 'scheme', 'authority', 'userInfo', 'user', 'pass', 'host', 'port',
+                'relative', 'path', 'directory', 'file', 'query', 'fragment'
+            ],
+            ini = (this.php_js && this.php_js.ini) || {},
+            mode = (ini['phpjs.parse_url.mode'] &&
+                ini['phpjs.parse_url.mode'].local_value) || 'php',
+            parser = {
+                php: /^(?:([^:\/?#]+):)?(?:\/\/()(?:(?:()(?:([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?))?()(?:(()(?:(?:[^?#\/]*\/)*)()(?:[^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
+                strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
+                loose: /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/\/?)?((?:(([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/ // Added one optional slash to post-scheme to catch file:/// (should restrict this)
+            };
+
+        var m = parser[mode].exec(str),
+            uri = {},
+            i = 14;
+        while (i--) {
+            if (m[i]) {
+                uri[key[i]] = m[i];
+            }
+        }
+
+        if (component) {
+            return uri[component.replace('PHP_URL_', '')
+                .toLowerCase()];
+        }
+        if (mode !== 'php') {
+            var name = (ini['phpjs.parse_url.queryKey'] &&
+                ini['phpjs.parse_url.queryKey'].local_value) || 'queryKey';
+            parser = /(?:^|&)([^&=]*)=?([^&]*)/g;
+            uri[name] = {};
+            query = uri[key[12]] || '';
+            query.replace(parser, function ($0, $1, $2) {
+                if ($1) {
+                    uri[name][$1] = $2;
+                }
+            });
+        }
+        delete uri.source;
+        return uri;
+    }, rawurldecode: function (str) {
+        //       discuss at: http://phpjs.org/functions/rawurldecode/
+        //      original by: Brett Zamir (http://brett-zamir.me)
+        //         input by: travc
+        //         input by: Brett Zamir (http://brett-zamir.me)
+        //         input by: Ratheous
+        //         input by: lovio
+        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //             note: Please be aware that this function expects to decode from UTF-8 encoded strings, as found on
+        //             note: pages served as UTF-8
+        //        example 1: rawurldecode('Kevin+van+Zonneveld%21');
+        //        returns 1: 'Kevin+van+Zonneveld!'
+        //        example 2: rawurldecode('http%3A%2F%2Fkevin.vanzonneveld.net%2F');
+        //        returns 2: 'http://kevin.vanzonneveld.net/'
+        //        example 3: rawurldecode('http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a');
+        //        returns 3: 'http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a'
+
+        return decodeURIComponent((str + '')
+            .replace(/%(?![\da-f]{2})/gi, function () {
+                // PHP tolerates poorly formed escape sequences
+                return '%25';
+            }));
+    }, rawurlencode: function (str) {
+        //       discuss at: http://phpjs.org/functions/rawurlencode/
+        //      original by: Brett Zamir (http://brett-zamir.me)
+        //         input by: travc
+        //         input by: Brett Zamir (http://brett-zamir.me)
+        //         input by: Michael Grier
+        //         input by: Ratheous
+        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //      bugfixed by: Joris
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //             note: This reflects PHP 5.3/6.0+ behavior
+        //             note: Please be aware that this function expects to encode into UTF-8 encoded strings, as found on
+        //             note: pages served as UTF-8
+        //        example 1: rawurlencode('Kevin van Zonneveld!');
+        //        returns 1: 'Kevin%20van%20Zonneveld%21'
+        //        example 2: rawurlencode('http://kevin.vanzonneveld.net/');
+        //        returns 2: 'http%3A%2F%2Fkevin.vanzonneveld.net%2F'
+        //        example 3: rawurlencode('http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a');
+        //        returns 3: 'http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a'
+
+        str = (str + '')
+            .toString();
+
+        // Tilde should be allowed unescaped in future versions of PHP (as reflected below), but if you want to reflect current
+        // PHP behavior, you would need to add ".replace(/~/g, '%7E');" to the following.
+        return encodeURIComponent(str)
+            .replace(/!/g, '%21')
+            .replace(/'/g, '%27')
+            .replace(/\(/g, '%28')
+            .replace(/\)/g, '%29')
+            .replace(/\*/g, '%2A');
+    }, urldecode: function (str) {
+        //       discuss at: http://phpjs.org/functions/urldecode/
+        //      original by: Philip Peterson
+        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //      improved by: Lars Fischer
+        //      improved by: Orlando
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //         input by: AJ
+        //         input by: travc
+        //         input by: Brett Zamir (http://brett-zamir.me)
+        //         input by: Ratheous
+        //         input by: e-mike
+        //         input by: lovio
+        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      bugfixed by: Rob
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //             note: info on what encoding functions to use from: http://xkr.us/articles/javascript/encode-compare/
+        //             note: Please be aware that this function expects to decode from UTF-8 encoded strings, as found on
+        //             note: pages served as UTF-8
+        //        example 1: urldecode('Kevin+van+Zonneveld%21');
+        //        returns 1: 'Kevin van Zonneveld!'
+        //        example 2: urldecode('http%3A%2F%2Fkevin.vanzonneveld.net%2F');
+        //        returns 2: 'http://kevin.vanzonneveld.net/'
+        //        example 3: urldecode('http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a');
+        //        returns 3: 'http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a'
+        //        example 4: urldecode('%E5%A5%BD%3_4');
+        //        returns 4: '\u597d%3_4'
+
+        return decodeURIComponent((str + '')
+            .replace(/%(?![\da-f]{2})/gi, function () {
+                // PHP tolerates poorly formed escape sequences
+                return '%25';
+            })
+            .replace(/\+/g, '%20'));
+    }, urlencode: function (str) {
+        //       discuss at: http://phpjs.org/functions/urlencode/
+        //      original by: Philip Peterson
+        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //      improved by: Lars Fischer
+        //         input by: AJ
+        //         input by: travc
+        //         input by: Brett Zamir (http://brett-zamir.me)
+        //         input by: Ratheous
+        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      bugfixed by: Joris
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //             note: This reflects PHP 5.3/6.0+ behavior
+        //             note: Please be aware that this function expects to encode into UTF-8 encoded strings, as found on
+        //             note: pages served as UTF-8
+        //        example 1: urlencode('Kevin van Zonneveld!');
+        //        returns 1: 'Kevin+van+Zonneveld%21'
+        //        example 2: urlencode('http://kevin.vanzonneveld.net/');
+        //        returns 2: 'http%3A%2F%2Fkevin.vanzonneveld.net%2F'
+        //        example 3: urlencode('http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a');
+        //        returns 3: 'http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a'
+
+        str = (str + '')
+            .toString();
+
+        // Tilde should be allowed unescaped in future versions of PHP (as reflected below), but if you want to reflect current
+        // PHP behavior, you would need to add ".replace(/~/g, '%7E');" to the following.
+        return encodeURIComponent(str)
+            .replace(/!/g, '%21')
+            .replace(/'/g, '%27')
+            .replace(/\(/g, '%28')
+            .replace(/\)/g, '%29')
+            .replace(/\*/g, '%2A')
+            .replace(/%20/g, '+');
     }, utf8_decode: function (str_data) {
         //  discuss at: http://phpjs.org/functions/utf8_decode/
         // original by: Webtoolkit.info (http://www.webtoolkit.info/)
@@ -16316,5 +15493,838 @@ php = {
 
         return utftext;
     }
+    , assert_options: function (what, value) {
+        //  discuss at: http://phpjs.org/functions/assert_options/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: assert_options('ASSERT_CALLBACK');
+        //   returns 1: null
 
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        this.php_js.ini = this.php_js.ini || {};
+        this.php_js.assert_values = this.php_js.assert_values || {};
+        // END REDUNDANT
+
+        var ini, dflt;
+        switch (what) {
+            case 'ASSERT_ACTIVE':
+                ini = 'assert.active';
+                dflt = 1;
+                break;
+            case 'ASSERT_WARNING':
+                ini = 'assert.warning';
+                dflt = 1;
+                throw 'We have not yet implemented warnings for us to throw in JavaScript (assert_options())';
+            case 'ASSERT_BAIL':
+                ini = 'assert.bail';
+                dflt = 0;
+                break;
+            case 'ASSERT_QUIET_EVAL':
+                ini = 'assert.quiet_eval';
+                dflt = 0;
+                break;
+            case 'ASSERT_CALLBACK':
+                ini = 'assert.callback';
+                dflt = null;
+                break;
+            default:
+                throw 'Improper type for assert_options()';
+        }
+        // I presume this is to be the most recent value, instead of the default value
+        var originalValue = this.php_js.assert_values[ini] || (this.php_js.ini[ini] && this.php_js.ini[ini].local_value) ||
+            dflt;
+
+        if (value) {
+            this.php_js.assert_values[ini] = value; // We use 'ini' instead of 'what' as key to be more convenient for assert() to test for current value
+        }
+        return originalValue;
+    }, getenv: function (varname) {
+        //  discuss at: http://phpjs.org/functions/getenv/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: We are not using $_ENV as in PHP, you could define
+        //        note: "$_ENV = this.php_js.ENV;" and get/set accordingly
+        //        note: Returns e.g. 'en-US' when set global this.php_js.ENV is set
+        //        note: Uses global: php_js to store environment info
+        //   example 1: getenv('LC_ALL');
+        //   returns 1: false
+
+        if (!this.php_js || !this.php_js.ENV || !this.php_js.ENV[varname]) {
+            return false;
+        }
+
+        return this.php_js.ENV[varname];
+    }, getlastmod: function () {
+        //  discuss at: http://phpjs.org/functions/getlastmod/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Will not work on browsers which don't support document.lastModified
+        //        test: skip
+        //   example 1: getlastmod();
+        //   returns 1: 1237610043
+
+        return new Date(this.window.document.lastModified)
+            .getTime() / 1000;
+    }, ini_get: function (varname) {
+        //  discuss at: http://phpjs.org/functions/ini_get/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: The ini values must be set by ini_set or manually within an ini file
+        //   example 1: ini_set('date.timezone', 'Asia/Hong_Kong');
+        //   example 1: ini_get('date.timezone');
+        //   returns 1: 'Asia/Hong_Kong'
+
+        if (this.php_js && this.php_js.ini && this.php_js.ini[varname] && this.php_js.ini[varname].local_value !==
+            undefined) {
+            if (this.php_js.ini[varname].local_value === null) {
+                return '';
+            }
+            return this.php_js.ini[varname].local_value;
+        }
+
+        return '';
+    }, ini_set: function (varname, newvalue) {
+        //  discuss at: http://phpjs.org/functions/ini_set/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: This will not set a global_value or access level for the ini item
+        //   example 1: ini_set('date.timezone', 'Asia/Hong_Kong');
+        //   example 1: ini_set('date.timezone', 'America/Chicago');
+        //   returns 1: 'Asia/Hong_Kong'
+
+        var oldval = '';
+        var self = this;
+
+        try {
+            this.php_js = this.php_js || {};
+        } catch (e) {
+            this.php_js = {};
+        }
+
+        this.php_js.ini = this.php_js.ini || {};
+        this.php_js.ini[varname] = this.php_js.ini[varname] || {};
+
+        oldval = this.php_js.ini[varname].local_value;
+
+        var _setArr = function (oldval) {
+            // Although these are set individually, they are all accumulated
+            if (typeof oldval === 'undefined') {
+                self.php_js.ini[varname].local_value = [];
+            }
+            self.php_js.ini[varname].local_value.push(newvalue);
+        };
+
+        switch (varname) {
+            case 'extension':
+                if (typeof this.dl === 'function') {
+                    // This function is only experimental in php.js
+                    this.dl(newvalue);
+                }
+                _setArr(oldval, newvalue);
+                break;
+            default:
+                this.php_js.ini[varname].local_value = newvalue;
+                break;
+        }
+
+        return oldval;
+    }, set_time_limit: function (seconds) {
+        //  discuss at: http://phpjs.org/functions/set_time_limit/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        test: skip
+        //   example 1: set_time_limit(4);
+        //   returns 1: undefined
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        // END REDUNDANT
+
+        this.window.setTimeout(function () {
+            if (!this.php_js.timeoutStatus) {
+                this.php_js.timeoutStatus = true;
+            }
+            throw 'Maximum execution time exceeded';
+        }, seconds * 1000);
+    }, version_compare: function (v1, v2, operator) {
+        //       discuss at: http://phpjs.org/functions/version_compare/
+        //      original by: Philippe Jausions (http://pear.php.net/user/jausions)
+        //      original by: Aidan Lister (http://aidanlister.com/)
+        // reimplemented by: Kankrelune (http://www.webfaktory.info/)
+        //      improved by: Brett Zamir (http://brett-zamir.me)
+        //      improved by: Scott Baker
+        //      improved by: Theriault
+        //        example 1: version_compare('8.2.5rc', '8.2.5a');
+        //        returns 1: 1
+        //        example 2: version_compare('8.2.50', '8.2.52', '<');
+        //        returns 2: true
+        //        example 3: version_compare('5.3.0-dev', '5.3.0');
+        //        returns 3: -1
+        //        example 4: version_compare('4.1.0.52','4.01.0.51');
+        //        returns 4: 1
+
+        this.php_js = this.php_js || {};
+        this.php_js.ENV = this.php_js.ENV || {};
+        // END REDUNDANT
+        // Important: compare must be initialized at 0.
+        var i = 0,
+            x = 0,
+            compare = 0,
+            // vm maps textual PHP versions to negatives so they're less than 0.
+            // PHP currently defines these as CASE-SENSITIVE. It is important to
+            // leave these as negatives so that they can come before numerical versions
+            // and as if no letters were there to begin with.
+            // (1alpha is < 1 and < 1.1 but > 1dev1)
+            // If a non-numerical value can't be mapped to this table, it receives
+            // -7 as its value.
+            vm = {
+                'dev': -6,
+                'alpha': -5,
+                'a': -5,
+                'beta': -4,
+                'b': -4,
+                'RC': -3,
+                'rc': -3,
+                '#': -2,
+                'p': 1,
+                'pl': 1
+            },
+            // This function will be called to prepare each version argument.
+            // It replaces every _, -, and + with a dot.
+            // It surrounds any nonsequence of numbers/dots with dots.
+            // It replaces sequences of dots with a single dot.
+            //    version_compare('4..0', '4.0') == 0
+            // Important: A string of 0 length needs to be converted into a value
+            // even less than an unexisting value in vm (-7), hence [-8].
+            // It's also important to not strip spaces because of this.
+            //   version_compare('', ' ') == 1
+            prepVersion = function (v) {
+                v = ('' + v)
+                    .replace(/[_\-+]/g, '.');
+                v = v.replace(/([^.\d]+)/g, '.$1.')
+                    .replace(/\.{2,}/g, '.');
+                return (!v.length ? [-8] : v.split('.'));
+            };
+        // This converts a version component to a number.
+        // Empty component becomes 0.
+        // Non-numerical component becomes a negative number.
+        // Numerical component becomes itself as an integer.
+        numVersion = function (v) {
+            return !v ? 0 : (isNaN(v) ? vm[v] || -7 : parseInt(v, 10));
+        };
+        v1 = prepVersion(v1);
+        v2 = prepVersion(v2);
+        x = Math.max(v1.length, v2.length);
+        for (i = 0; i < x; i++) {
+            if (v1[i] == v2[i]) {
+                continue;
+            }
+            v1[i] = numVersion(v1[i]);
+            v2[i] = numVersion(v2[i]);
+            if (v1[i] < v2[i]) {
+                compare = -1;
+                break;
+            } else if (v1[i] > v2[i]) {
+                compare = 1;
+                break;
+            }
+        }
+        if (!operator) {
+            return compare;
+        }
+
+        // Important: operator is CASE-SENSITIVE.
+        // "No operator" seems to be treated as "<."
+        // Any other values seem to make the function return null.
+        switch (operator) {
+            case '>':
+            case 'gt':
+                return (compare > 0);
+            case '>=':
+            case 'ge':
+                return (compare >= 0);
+            case '<=':
+            case 'le':
+                return (compare <= 0);
+            case '==':
+            case '=':
+            case 'eq':
+                return (compare === 0);
+            case '<>':
+            case '!=':
+            case 'ne':
+                return (compare !== 0);
+            case '':
+            case '<':
+            case 'lt':
+                return (compare < 0);
+            default:
+                return null;
+        }
+    }, json_decode: function (str_json) {
+        //       discuss at: http://phpjs.org/functions/json_decode/
+        //      original by: Public Domain (http://www.json.org/json2.js)
+        // reimplemented by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      improved by: T.J. Leahy
+        //      improved by: Michael White
+        //        example 1: json_decode('[ 1 ]');
+        //        returns 1: [1]
+
+        /*
+    http://www.JSON.org/json2.js
+    2008-11-19
+    Public Domain.
+    NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+    See http://www.JSON.org/js.html
+  */
+
+        var json = this.window.JSON;
+        if (typeof json === 'object' && typeof json.parse === 'function') {
+            try {
+                return json.parse(str_json);
+            } catch (err) {
+                if (!(err instanceof SyntaxError)) {
+                    throw new Error('Unexpected error type in json_decode()');
+                }
+                this.php_js = this.php_js || {};
+                this.php_js.last_error_json = 4; // usable by json_last_error()
+                return null;
+            }
+        }
+
+        var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+        var j;
+        var text = str_json;
+
+        // Parsing happens in four stages. In the first stage, we replace certain
+        // Unicode characters with escape sequences. JavaScript handles many characters
+        // incorrectly, either silently deleting them, or treating them as line endings.
+        cx.lastIndex = 0;
+        if (cx.test(text)) {
+            text = text.replace(cx, function (a) {
+                return '\\u' + ('0000' + a.charCodeAt(0)
+                    .toString(16))
+                    .slice(-4);
+            });
+        }
+
+        // In the second stage, we run the text against regular expressions that look
+        // for non-JSON patterns. We are especially concerned with '()' and 'new'
+        // because they can cause invocation, and '=' because it can cause mutation.
+        // But just to be safe, we want to reject all unexpected forms.
+        // We split the second stage into 4 regexp operations in order to work around
+        // crippling inefficiencies in IE's and Safari's regexp engines. First we
+        // replace the JSON backslash pairs with '@' (a non-JSON character). Second, we
+        // replace all simple value tokens with ']' characters. Third, we delete all
+        // open brackets that follow a colon or comma or that begin the text. Finally,
+        // we look to see that the remaining characters are only whitespace or ']' or
+        // ',' or ':' or '{' or '}'. If that is so, then the text is safe for eval.
+        if ((/^[\],:{}\s]*$/)
+            .test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@')
+                .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']')
+                .replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
+
+            // In the third stage we use the eval function to compile the text into a
+            // JavaScript structure. The '{' operator is subject to a syntactic ambiguity
+            // in JavaScript: it can begin a block or an object literal. We wrap the text
+            // in parens to eliminate the ambiguity.
+            j = eval('(' + text + ')');
+
+            return j;
+        }
+
+        this.php_js = this.php_js || {};
+        this.php_js.last_error_json = 4; // usable by json_last_error()
+        return null;
+    }, json_encode: function (mixed_val) {
+        //       discuss at: http://phpjs.org/functions/json_encode/
+        //      original by: Public Domain (http://www.json.org/json2.js)
+        // reimplemented by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        //      improved by: Michael White
+        //         input by: felix
+        //      bugfixed by: Brett Zamir (http://brett-zamir.me)
+        //        example 1: json_encode('Kevin');
+        //        returns 1: '"Kevin"'
+
+        /*
+    http://www.JSON.org/json2.js
+    2008-11-19
+    Public Domain.
+    NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+    See http://www.JSON.org/js.html
+  */
+        var retVal, json = this.window.JSON;
+        try {
+            if (typeof json === 'object' && typeof json.stringify === 'function') {
+                retVal = json.stringify(mixed_val); // Errors will not be caught here if our own equivalent to resource
+                //  (an instance of PHPJS_Resource) is used
+                if (retVal === undefined) {
+                    throw new SyntaxError('json_encode');
+                }
+                return retVal;
+            }
+
+            var value = mixed_val;
+
+            var quote = function (string) {
+                var escapable =
+                    /[\\\"\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+                var meta = { // table of character substitutions
+                    '\b': '\\b',
+                    '\t': '\\t',
+                    '\n': '\\n',
+                    '\f': '\\f',
+                    '\r': '\\r',
+                    '"': '\\"',
+                    '\\': '\\\\'
+                };
+
+                escapable.lastIndex = 0;
+                return escapable.test(string) ? '"' + string.replace(escapable, function (a) {
+                    var c = meta[a];
+                    return typeof c === 'string' ? c : '\\u' + ('0000' + a.charCodeAt(0)
+                        .toString(16))
+                        .slice(-4);
+                }) + '"' : '"' + string + '"';
+            };
+
+            var str = function (key, holder) {
+                var gap = '';
+                var indent = '    ';
+                var i = 0; // The loop counter.
+                var k = ''; // The member key.
+                var v = ''; // The member value.
+                var length = 0;
+                var mind = gap;
+                var partial = [];
+                var value = holder[key];
+
+                // If the value has a toJSON method, call it to obtain a replacement value.
+                if (value && typeof value === 'object' && typeof value.toJSON === 'function') {
+                    value = value.toJSON(key);
+                }
+
+                // What happens next depends on the value's type.
+                switch (typeof value) {
+                    case 'string':
+                        return quote(value);
+
+                    case 'number':
+                        // JSON numbers must be finite. Encode non-finite numbers as null.
+                        return isFinite(value) ? String(value) : 'null';
+
+                    case 'boolean':
+                    case 'null':
+                        // If the value is a boolean or null, convert it to a string. Note:
+                        // typeof null does not produce 'null'. The case is included here in
+                        // the remote chance that this gets fixed someday.
+                        return String(value);
+
+                    case 'object':
+                        // If the type is 'object', we might be dealing with an object or an array or
+                        // null.
+                        // Due to a specification blunder in ECMAScript, typeof null is 'object',
+                        // so watch out for that case.
+                        if (!value) {
+                            return 'null';
+                        }
+                        if ((this.PHPJS_Resource && value instanceof this.PHPJS_Resource) || (window.PHPJS_Resource &&
+                            value instanceof window.PHPJS_Resource)) {
+                            throw new SyntaxError('json_encode');
+                        }
+
+                        // Make an array to hold the partial results of stringifying this object value.
+                        gap += indent;
+                        partial = [];
+
+                        // Is the value an array?
+                        if (Object.prototype.toString.apply(value) === '[object Array]') {
+                            // The value is an array. Stringify every element. Use null as a placeholder
+                            // for non-JSON values.
+                            length = value.length;
+                            for (i = 0; i < length; i += 1) {
+                                partial[i] = str(i, value) || 'null';
+                            }
+
+                            // Join all of the elements together, separated with commas, and wrap them in
+                            // brackets.
+                            v = partial.length === 0 ? '[]' : gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind +
+                                ']' : '[' + partial.join(',') + ']';
+                            gap = mind;
+                            return v;
+                        }
+
+                        // Iterate through all of the keys in the object.
+                        for (k in value) {
+                            if (Object.hasOwnProperty.call(value, k)) {
+                                v = str(k, value);
+                                if (v) {
+                                    partial.push(quote(k) + (gap ? ': ' : ':') + v);
+                                }
+                            }
+                        }
+
+                        // Join all of the member texts together, separated with commas,
+                        // and wrap them in braces.
+                        v = partial.length === 0 ? '{}' : gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' :
+                            '{' + partial.join(',') + '}';
+                        gap = mind;
+                        return v;
+                    case 'undefined':
+                    // Fall-through
+                    case 'function':
+                    // Fall-through
+                    default:
+                        throw new SyntaxError('json_encode');
+                }
+            };
+
+            // Make a fake root object containing our value under the key of ''.
+            // Return the result of stringifying the value.
+            return str('', {
+                '': value
+            });
+
+        } catch (err) { // Todo: ensure error handling above throws a SyntaxError in all cases where it could
+            // (i.e., when the JSON global is not available and there is an error)
+            if (!(err instanceof SyntaxError)) {
+                throw new Error('Unexpected error type in json_encode()');
+            }
+            this.php_js = this.php_js || {};
+            this.php_js.last_error_json = 4; // usable by json_last_error()
+            return null;
+        }
+    }, json_last_error: function () {
+        //  discuss at: http://phpjs.org/functions/json_last_error/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: json_last_error();
+        //   returns 1: 0
+
+        /*
+  JSON_ERROR_NONE = 0
+  JSON_ERROR_DEPTH = 1 // max depth limit to be removed per PHP comments in json.c (not possible in JS?)
+  JSON_ERROR_STATE_MISMATCH = 2 // internal use? also not documented
+  JSON_ERROR_CTRL_CHAR = 3 // [\u0000-\u0008\u000B-\u000C\u000E-\u001F] if used directly within json_decode(),
+                                  // but JSON functions auto-escape these, so error not possible in JavaScript
+  JSON_ERROR_SYNTAX = 4
+  */
+        return this.php_js && this.php_js.last_error_json ? this.php_js.last_error_json : 0;
+    }, call_user_func: function (cb) {
+        //  discuss at: http://phpjs.org/functions/call_user_func/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Diplom@t (http://difane.com/)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: call_user_func('isNaN', 'a');
+        //   returns 1: true
+
+        var func;
+
+        if (typeof cb === 'string') {
+            func = (typeof this[cb] === 'function') ? this[cb] : func = (new Function(null, 'return ' + cb))();
+        } else if (Object.prototype.toString.call(cb) === '[object Array]') {
+            func = (typeof cb[0] === 'string') ? eval(cb[0] + "['" + cb[1] + "']") : func = cb[0][cb[1]];
+        } else if (typeof cb === 'function') {
+            func = cb;
+        }
+
+        if (typeof func !== 'function') {
+            throw new Error(func + ' is not a valid function');
+        }
+
+        var parameters = Array.prototype.slice.call(arguments, 1);
+        return (typeof cb[0] === 'string') ? func.apply(eval(cb[0]), parameters) : (typeof cb[0] !== 'object') ? func.apply(
+            null, parameters) : func.apply(cb[0], parameters);
+    }, call_user_func_array: function (cb, parameters) {
+        //  discuss at: http://phpjs.org/functions/call_user_func_array/
+        // original by: Thiago Mata (http://thiagomata.blog.com)
+        //  revised by: Jon Hohle
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Diplom@t (http://difane.com/)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: call_user_func_array('isNaN', ['a']);
+        //   returns 1: true
+        //   example 2: call_user_func_array('isNaN', [1]);
+        //   returns 2: false
+
+        var func;
+
+        if (typeof cb === 'string') {
+            func = (typeof this[cb] === 'function') ? this[cb] : func = (new Function(null, 'return ' + cb))();
+        } else if (Object.prototype.toString.call(cb) === '[object Array]') {
+            func = (typeof cb[0] === 'string') ? eval(cb[0] + "['" + cb[1] + "']") : func = cb[0][cb[1]];
+        } else if (typeof cb === 'function') {
+            func = cb;
+        }
+
+        if (typeof func !== 'function') {
+            throw new Error(func + ' is not a valid function');
+        }
+
+        return (typeof cb[0] === 'string') ? func.apply(eval(cb[0]), parameters) : (typeof cb[0] !== 'object') ? func.apply(
+            null, parameters) : func.apply(cb[0], parameters);
+    }, create_function: function (args, code) {
+        //       discuss at: http://phpjs.org/functions/create_function/
+        //      original by: Johnny Mast (http://www.phpvrouwen.nl)
+        // reimplemented by: Brett Zamir (http://brett-zamir.me)
+        //        example 1: f = create_function('a, b', "return (a + b);");
+        //        example 1: f(1, 2);
+        //        returns 1: 3
+
+        try {
+            return Function.apply(null, args.split(',')
+                .concat(code));
+        } catch (e) {
+            return false;
+        }
+    }, function_exists: function (func_name) {
+        //  discuss at: http://phpjs.org/functions/function_exists/
+        // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Steve Clay
+        // improved by: Legaev Andrey
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: function_exists('isFinite');
+        //   returns 1: true
+
+        if (typeof func_name === 'string') {
+            func_name = this.window[func_name];
+        }
+        return typeof func_name === 'function';
+    }, get_defined_functions: function () {
+        //  discuss at: http://phpjs.org/functions/get_defined_functions/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //        note: Test case 1: If get_defined_functions can find itself in the defined functions, it worked :)
+        //   example 1: function test_in_array (array, p_val) {for(var i = 0, l = array.length; i < l; i++) {if(array[i] == p_val) return true;} return false;}
+        //   example 1: funcs = get_defined_functions();
+        //   example 1: found = test_in_array(funcs, 'get_defined_functions');
+        //   example 1: $result = found;
+        //   returns 1: true
+
+        var i = '',
+            arr = [],
+            already = {};
+
+        for (i in this.window) {
+            try {
+                if (typeof this.window[i] === 'function') {
+                    if (!already[i]) {
+                        already[i] = 1;
+                        arr.push(i);
+                    }
+                } else if (typeof this.window[i] === 'object') {
+                    for (var j in this.window[i]) {
+                        if (typeof this.window[j] === 'function' && this.window[j] && !already[j]) {
+                            already[j] = 1;
+                            arr.push(j);
+                        }
+                    }
+                }
+            } catch (e) {
+                // Some objects in Firefox throw exceptions when their properties are accessed (e.g., sessionStorage)
+            }
+        }
+
+        return arr;
+    }, gopher_parsedir: function (dirent) {
+        //  discuss at: http://phpjs.org/functions/gopher_parsedir/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: var entry = gopher_parsedir('0All about my gopher site.\t/allabout.txt\tgopher.example.com\t70\u000d\u000a');
+        //   example 1: entry.title;
+        //   returns 1: 'All about my gopher site.'
+
+        /* Types
+   * 0 = plain text file
+   * 1 = directory menu listing
+   * 2 = CSO search query
+   * 3 = error message
+   * 4 = BinHex encoded text file
+   * 5 = binary archive file
+   * 6 = UUEncoded text file
+   * 7 = search engine query
+   * 8 = telnet session pointer
+   * 9 = binary file
+   * g = Graphics file format, primarily a GIF file
+   * h = HTML file
+   * i = informational message
+   * s = Audio file format, primarily a WAV file
+   */
+
+        var entryPattern = /^(.)(.*?)\t(.*?)\t(.*?)\t(.*?)\u000d\u000a$/;
+        var entry = dirent.match(entryPattern);
+
+        if (entry === null) {
+            throw 'Could not parse the directory entry';
+            // return false;
+        }
+
+        var type = entry[1];
+        switch (type) {
+            case 'i':
+                type = 255; // GOPHER_INFO
+                break;
+            case '1':
+                type = 1; // GOPHER_DIRECTORY
+                break;
+            case '0':
+                type = 0; // GOPHER_DOCUMENT
+                break;
+            case '4':
+                type = 4; // GOPHER_BINHEX
+                break;
+            case '5':
+                type = 5; // GOPHER_DOSBINARY
+                break;
+            case '6':
+                type = 6; // GOPHER_UUENCODED
+                break;
+            case '9':
+                type = 9; // GOPHER_BINARY
+                break;
+            case 'h':
+                type = 254; // GOPHER_HTTP
+                break;
+            default:
+                return {
+                    type: -1,
+                    data: dirent
+                }; // GOPHER_UNKNOWN
+        }
+        return {
+            type: type,
+            title: entry[2],
+            path: entry[3],
+            host: entry[4],
+            port: entry[5]
+        };
+    }, escapeshellarg: function (arg) {
+        //  discuss at: http://phpjs.org/functions/escapeshellarg/
+        // original by: Felix Geisendoerfer (http://www.debuggable.com/felix)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        //   example 1: escapeshellarg("kevin's birthday");
+        //   returns 1: "'kevin\\'s birthday'"
+
+        var ret = '';
+
+        ret = arg.replace(/[^\\]'/g, function (m, i, s) {
+            return m.slice(0, 1) + '\\\'';
+        });
+
+        return "'" + ret + "'";
+    }, preg_grep: function (pattern, input, flags) {
+        //  discuss at: http://phpjs.org/functions/preg_grep/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: If pass pattern as string, must escape backslashes, even for single quotes
+        //        note: The regular expression itself must be expressed JavaScript style
+        //        note: It is not recommended to submit the pattern as a string, as we may implement
+        //        note: parsing of PHP-style expressions (flags, etc.) in the future
+        //   example 1: var arr = [1, 4, 4.5, 3, 'a', 4.4];
+        //   example 1: preg_grep("/^(\\d+)?\\.\\d+$/", arr);
+        //   returns 1: {2: 4.5, 5: 4.4}
+
+        var p = '';
+        var retObj = {};
+        var invert = (flags === 1 || flags === 'PREG_GREP_INVERT'); // Todo: put flags as number and do bitwise checks (at least if other flags allowable); see pathinfo()
+
+        if (typeof pattern === 'string') {
+            pattern = eval(pattern);
+        }
+
+        if (invert) {
+            for (p in input) {
+                if ((input[p] + '')
+                    .search(pattern) === -1) {
+                    retObj[p] = input[p];
+                }
+            }
+        } else {
+            for (p in input) {
+                if ((input[p] + '')
+                    .search(pattern) !== -1) {
+                    retObj[p] = input[p];
+                }
+            }
+        }
+
+        return retObj;
+    }, preg_quote: function (str, delimiter) {
+        //  discuss at: http://phpjs.org/functions/preg_quote/
+        // original by: booeyOH
+        // improved by: Ates Goral (http://magnetiq.com)
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Brett Zamir (http://brett-zamir.me)
+        // bugfixed by: Onno Marsman
+        //   example 1: preg_quote("$40");
+        //   returns 1: '\\$40'
+        //   example 2: preg_quote("*RRRING* Hello?");
+        //   returns 2: '\\*RRRING\\* Hello\\?'
+        //   example 3: preg_quote("\\.+*?[^]$(){}=!<>|:");
+        //   returns 3: '\\\\\\.\\+\\*\\?\\[\\^\\]\\$\\(\\)\\{\\}\\=\\!\\<\\>\\|\\:'
+
+        return String(str)
+            .replace(new RegExp('[.\\\\+*?\\[\\^\\]$(){}=!<>|:\\' + (delimiter || '') + '-]', 'g'), '\\$&');
+    }, sql_regcase: function (str) {
+        //  discuss at: http://phpjs.org/functions/sql_regcase/
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //  depends on: setlocale
+        //   example 1: sql_regcase('Foo - bar.');
+        //   returns 1: '[Ff][Oo][Oo] - [Bb][Aa][Rr].'
+
+        this.setlocale('LC_ALL', 0);
+        var i = 0,
+            upper = '',
+            lower = '',
+            pos = 0,
+            retStr = '';
+
+        upper = this.php_js.locales[this.php_js.localeCategories.LC_CTYPE].LC_CTYPE.upper;
+        lower = this.php_js.locales[this.php_js.localeCategories.LC_CTYPE].LC_CTYPE.lower;
+
+        for (i = 0; i < str.length; i++) {
+            if (((pos = upper.indexOf(str.charAt(i))) !== -1) || ((pos = lower.indexOf(str.charAt(i))) !== -1)) {
+                retStr += '[' + upper.charAt(pos) + lower.charAt(pos) + ']';
+            } else {
+                retStr += str.charAt(i);
+            }
+        }
+        return retStr;
+    }, i18n_loc_get_default: function () {
+        //  discuss at: http://phpjs.org/functions/i18n_loc_get_default/
+        //        http: //kevin.vanzonneveld.net
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Renamed in PHP6 from locale_get_default(). Not listed yet at php.net
+        //        note: List of locales at http://demo.icu-project.org/icu-bin/locexp
+        //        note: To be usable with sort() if it is passed the SORT_LOCALE_STRING sorting flag: http://php.net/manual/en/function.sort.php
+        //  depends on: i18n_loc_set_default
+        //   example 1: i18n_loc_set_default('pt_PT');
+        //   example 1: i18n_loc_get_default();
+        //   returns 1: 'pt_PT'
+
+        try {
+            this.php_js = this.php_js || {};
+        } catch (e) {
+            this.php_js = {};
+        }
+
+        // Ensure defaults are set up
+        return this.php_js.i18nLocale || (i18n_loc_set_default('en_US_POSIX'), 'en_US_POSIX');
+    }, i18n_loc_set_default: function (name) {
+        //  discuss at: http://phpjs.org/functions/i18n_loc_set_default/
+        //        http: //kevin.vanzonneveld.net
+        // original by: Brett Zamir (http://brett-zamir.me)
+        //        note: Renamed in PHP6 from locale_set_default(). Not listed yet at php.net
+        //        note: List of locales at http://demo.icu-project.org/icu-bin/locexp (use for implementing other locales here)
+        //        note: To be usable with sort() if it is passed the SORT_LOCALE_STRING sorting flag: http://php.net/manual/en/function.sort.php
+        //   example 1: i18n_loc_set_default('pt_PT');
+        //   returns 1: true
+
+        // BEGIN REDUNDANT
+        this.php_js = this.php_js || {};
+        // END REDUNDANT
+
+        this.php_js.i18nLocales = {
+            en_US_POSIX: {
+                sorting: function (str1, str2) { // Fix: This one taken from strcmp, but need for other locales; we don't use localeCompare since its locale is not settable
+                    return (str1 == str2) ? 0 : ((str1 > str2) ? 1 : -1);
+                }
+            }
+        };
+
+        this.php_js.i18nLocale = name;
+        return true;
+    }
 };

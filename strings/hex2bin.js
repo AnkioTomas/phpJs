@@ -1,17 +1,8 @@
-function bin2hex (bin)
-{
+function hex2bin(hex) {
+    var bytes = [];
 
-    var i = 0, l = bin.length, chr, hex = ''
+    for (var i = 0; i < hex.length - 1; i += 2)
+        bytes.push(parseInt(hex.substr(i, 2), 16));
 
-    for (i; i < l; ++i)
-    {
-
-        chr = bin.charCodeAt(i).toString(16)
-
-        hex += chr.length < 2 ? '0' + chr : chr
-
-    }
-
-    return hex
-
+    return String.fromCharCode.apply(String, bytes);
 }

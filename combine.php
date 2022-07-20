@@ -1,27 +1,21 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: SongKejing
- * QQ: 597481334
- * Date: 2017/7/12
- * Time: 16:03
- */
+
+use GK\JavascriptPacker;
 
 /**
  * 获取当前文件夹下面所有的文件夹
  * @param $dir
  * @return array
  */
-function dir_get($dir)
+function dir_get($dir): array
 {
-    $dir = trim($dir, DIRECTORY_SEPARATOR);
     $data = array();
     if (is_dir($dir)) {
         $dp = dir($dir);
         while ($file = $dp->read()) {
             if ($file != '.' && $file != '..') {
-                if (is_dir($dir . DIRECTORY_SEPARATOR . $file)) {
-                    $data[] = $dir . DIRECTORY_SEPARATOR . $file;
+                if (is_dir($dir . $file)) {
+                    $data[] = $dir . $file;
                 }
             }
         }
@@ -43,7 +37,6 @@ function dir_get_files($dir, $file_types = array(), $ignore_dir_or_file = [])
             $ignore_dir_or_file[] = $each;
         }
     }
-    $dir = trim($dir, DIRECTORY_SEPARATOR);
     $data = array();
     if (is_dir($dir)) {
         $files = scandir($dir);
@@ -105,13 +98,12 @@ function replace_once($search, $replace, $string)
     return substr_replace($string, $replace, $pos, strlen($search));
 }
 
-define('CURRENT_DIR', __DIR__.DIRECTORY_SEPARATOR);
-
+const CURRENT_DIR = __DIR__ . DIRECTORY_SEPARATOR;
 //保存的文件
 $file = sprintf('%sphp_%s.js', CURRENT_DIR, date('Y_m_d_H_i_s'));
 $all_content = '';
 $md = '# js_for_php_function
-js实现php函数库，方便php开发人员快速在js业务中快速使用已经熟悉的php函数库。 
+js实现php函数库，方便php开发人员快速在js业务中快速使用已经熟悉的php函数库。
 使用方式，直接引入
 ```
 <script src="php.min.js"></script>
@@ -131,16 +123,23 @@ foreach(dir_get(CURRENT_DIR) as $each_dir){
         $content = file_get_contents($each_file);
         $content = replace_once('function', '', $content);
         $content = replace_once('(', ': function(', $content);
-        if(empty($all_content)){
+        if (empty($all_content)) {
             $all_content = $content;
-        }else{
-            $all_content .= ','.$content;
+        } else {
+            $all_content .= ',' . $content;
         }
     }
 }
+if ($all_content == "") {
+    print_r("There was no data!");
+    return;
+}
+$js = sprintf('var php={%s};', $all_content);
 //文件内容
-file_put_contents($file, sprintf('php = {
-%s
-};', $all_content));
+file_put_contents("php.js", $js);
+require_once "JavascriptPacker.php";
+$packer = new JavaScriptPacker($js, 0, true, true);
+file_put_contents("php.min.js", $packer->pack());
+
 //md
 file_put_contents(sprintf('%sREADME.md', CURRENT_DIR), $md);
