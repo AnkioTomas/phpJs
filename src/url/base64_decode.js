@@ -1,4 +1,4 @@
-function base64_decode(data) {
+function base64_decode(str) {
   //  discuss at: http://phpjs.org/functions/base64_decode/
   // original by: Tyler Akins (http://rumkin.com)
   // improved by: Thunder.m
@@ -12,40 +12,95 @@ function base64_decode(data) {
   //   example 1: base64_decode('S2V2aW4gdmFuIFpvbm5ldmVsZA==');
   //   returns 1: 'Kevin van Zonneveld'
 
-  var b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
-    ac = 0,
-    dec = '',
-    tmp_arr = [];
+  var table = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+    'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+    'w', 'x', 'y', 'z', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9', '+', '/'
+  ];
+  var UTF8ToUTF16 = function (str) {
+    var res = [], len = str.length;
+    var i = 0;
+    for (i = 0; i < len; i++) {
+      var code = str.charCodeAt(i);
+      // 对第一个字节进行判断
+      if (((code >> 7) & 0xFF) === 0x0) {
+        // 单字节
+        // 0xxxxxxx
+        res.push(str.charAt(i));
+      } else if (((code >> 5) & 0xFF) === 0x6) {
+        // 双字节
+        // 110xxxxx 10xxxxxx
+        var code2 = str.charCodeAt(++i);
+        var byte1 = (code & 0x1F) << 6;
+        var byte2 = code2 & 0x3F;
+        var utf16 = byte1 | byte2;
+        res.push(String.fromCharCode(utf16));
+      } else if (((code >> 4) & 0xFF) === 0xE) {
+        // 三字节
+        // 1110xxxx 10xxxxxx 10xxxxxx
+        var code2 = str.charCodeAt(++i);
+        var code3 = str.charCodeAt(++i);
+        var byte1 = (code << 4) | ((code2 >> 2) & 0x0F);
+        var byte2 = ((code2 & 0x03) << 6) | (code3 & 0x3F);
+        var utf16 = ((byte1 & 0x00FF) << 8) | byte2;
+        res.push(String.fromCharCode(utf16));
+      }
 
-  if (!data) {
-    return data;
+      /**else if (((code >> 3) & 0xFF) === 0x1E) {
+        // 四字节
+        // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+      } else if (((code >> 2) & 0xFF) === 0x3E) {
+        // 五字节
+        // 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+      } else  if (((code >> 1) & 0xFF) == 0x7E) {
+        // 六字节
+        // 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+      }
+       */
+    }
+
+    return res.join('');
+  };
+  if (!str) {
+    return '';
   }
 
-  data += '';
+  var len = str.length;
+  var i = 0;
+  var res = [];
 
-  do { // unpack four hexets into three octets using index points in b64
-    h1 = b64.indexOf(data.charAt(i++));
-    h2 = b64.indexOf(data.charAt(i++));
-    h3 = b64.indexOf(data.charAt(i++));
-    h4 = b64.indexOf(data.charAt(i++));
+  let c1;
+  let c2;
+  let c3;
+  let code1;
+  let code2;
+  let code3;
+  let code4;
+  while (i < len) {
+    code1 = table.indexOf(str.charAt(i++));
+    code2 = table.indexOf(str.charAt(i++));
+    code3 = table.indexOf(str.charAt(i++));
+    code4 = table.indexOf(str.charAt(i++));
 
-    bits = h1 << 18 | h2 << 12 | h3 << 6 | h4;
+    c1 = (code1 << 2) | (code2 >> 4);
+    c2 = ((code2 & 0xF) << 4) | (code3 >> 2);
+    c3 = ((code3 & 0x3) << 6) | code4;
 
-    o1 = bits >> 16 & 0xff;
-    o2 = bits >> 8 & 0xff;
-    o3 = bits & 0xff;
+    res.push(String.fromCharCode(c1));
 
-    if (h3 == 64) {
-      tmp_arr[ac++] = String.fromCharCode(o1);
-    } else if (h4 == 64) {
-      tmp_arr[ac++] = String.fromCharCode(o1, o2);
-    } else {
-      tmp_arr[ac++] = String.fromCharCode(o1, o2, o3);
+    if (code3 !== 64) {
+      res.push(String.fromCharCode(c2));
     }
-  } while (i < data.length);
+    if (code4 !== 64) {
+      res.push(String.fromCharCode(c3));
+    }
 
-  dec = tmp_arr.join('');
+  }
 
-  return dec;
+  return UTF8ToUTF16(res.join(''));
 }
