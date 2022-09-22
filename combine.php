@@ -134,7 +134,7 @@ if ($all_content == "") {
     print_r("There was no data!");
     return;
 }
-$js = sprintf('var php={%s};module.exports=php;', $all_content);
+$js = sprintf('var php={%s};if(module)module.exports=php;', $all_content);
 //文件内容
 file_put_contents("php.js", $js);
 require_once "JavascriptPacker.php";

@@ -16424,4 +16424,4 @@ Oy
         return true;
     }
 };
-module.exports = php;
+if (module) module.exports = php;
