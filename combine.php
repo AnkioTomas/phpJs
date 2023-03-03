@@ -25,7 +25,7 @@ function dir_get($dir): array
 
 /**
  * 获取文件夹下面的所有文件
- * @param $dir 文件夹目录绝对地址
+ * @param $dir
  * @param array $file_types :文件类型array('pdf', 'doc')
  * @param array $ignore_dir_or_file : 忽略的文件或文件夹
  * @return array
@@ -102,6 +102,7 @@ const CURRENT_DIR = __DIR__ . DIRECTORY_SEPARATOR . "src" . DIRECTORY_SEPARATOR;
 //保存的文件
 $file = sprintf('%sphp_%s.js', CURRENT_DIR, date('Y_m_d_H_i_s'));
 $all_content = '';
+$library = "";
 $md = '# js_for_php_function
 js实现php函数库，方便php开发人员快速在js业务中快速使用已经熟悉的php函数库。
 使用方式，直接引入
@@ -118,23 +119,28 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 foreach(dir_get(CURRENT_DIR) as $each_dir){
     $md .= sprintf("## %s\n", pathinfo($each_dir)['filename']);
     $js_files = dir_get_files($each_dir, ['js']);
-    foreach($js_files as $each_file){
-        $md .= sprintf("[%s](http://php.net/manual/zh/function.%s.php)  \n", pathinfo($each_file)['filename'], str_replace('_', '-', pathinfo($each_file)['filename']));
-        $content = file_get_contents($each_file);
-        $content = replace_once('function', '', $content);
-        $content = replace_once('(', ': function(', $content);
-        if (empty($all_content)) {
-            $all_content = $content;
+    foreach($js_files as $each_file) {
+        if (strpos($each_file, ".library.js") !== false) {
+            $library .= file_get_contents($each_file);
         } else {
-            $all_content .= ',' . $content;
+            $md .= sprintf("[%s](http://php.net/manual/zh/function.%s.php)  \n", pathinfo($each_file)['filename'], str_replace('_', '-', pathinfo($each_file)['filename']));
+            $content = file_get_contents($each_file);
+            $content = replace_once('function', '', $content);
+            $content = replace_once('(', ': function(', $content);
+            if (empty($all_content)) {
+                $all_content = $content;
+            } else {
+                $all_content .= ',' . $content;
+            }
         }
+
     }
 }
 if ($all_content == "") {
     print_r("There was no data!");
     return;
 }
-$js = sprintf('var php={%s};if(module)module.exports=php;', $all_content);
+$js = sprintf('%s;var php={%s};', $library, $all_content);
 //文件内容
 file_put_contents("php.js", $js);
 require_once "JavascriptPacker.php";

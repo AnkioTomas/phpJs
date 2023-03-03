@@ -330,7 +330,7 @@ js实现php函数库，方便php开发人员快速在js业务中快速使用已�
 [tanh](http://php.net/manual/zh/function.tanh.php)  
 ## url
 
-[base64_decode](http://php.net/manual/zh/function.base64-decode.php)  
+[base64Library](http://php.net/manual/zh/function.base64-decode.php)  
 [base64_encode](http://php.net/manual/zh/function.base64-encode.php)  
 [get_headers](http://php.net/manual/zh/function.get-headers.php)  
 [get_meta_tags](http://php.net/manual/zh/function.get-meta-tags.php)  
